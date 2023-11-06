@@ -11,7 +11,7 @@ namespace beatleader_analyzer
 {
     public class Analyze
     {
-        public static List<double> GetDataFromPathOne(string folderPath, string characteristic, string difficulty)
+        public static List<double> GetDataFromPathOne(string folderPath, string characteristic, string difficulty, float timescale = 1)
         {
             try
             {
@@ -20,7 +20,7 @@ namespace beatleader_analyzer
                 var diff = map.Difficulties.FirstOrDefault(d => d.Difficulty == difficulty && d.Characteristic == characteristic);
                 if (diff.Data.colorNotes.Count >= 20)
                 {
-                    return BeatmapScanner.Analyzer(diff.Data.colorNotes, diff.Data.burstSliders, diff.Data.bombNotes, diff.Data.obstacles, map.Info._beatsPerMinute);
+                    return BeatmapScanner.Analyzer(diff.Data.colorNotes, diff.Data.burstSliders, diff.Data.bombNotes, diff.Data.obstacles, map.Info._beatsPerMinute * timescale);
                 }
                 else
                 {
@@ -34,7 +34,7 @@ namespace beatleader_analyzer
             }
         }
 
-        public static List<List<double>> GetDataFromPathAll(string folderPath)
+        public static List<List<double>> GetDataFromPathAll(string folderPath, float timescale = 1)
         {
             try
             {
@@ -48,7 +48,7 @@ namespace beatleader_analyzer
                     if (difficulty.Data.colorNotes.Count >= 20)
                     {
                         output.Add(new());
-                        output[output.Count - 1] = BeatmapScanner.Analyzer(difficulty.Data.colorNotes, difficulty.Data.burstSliders, difficulty.Data.bombNotes, difficulty.Data.obstacles, map.Info._beatsPerMinute);
+                        output[output.Count - 1] = BeatmapScanner.Analyzer(difficulty.Data.colorNotes, difficulty.Data.burstSliders, difficulty.Data.bombNotes, difficulty.Data.obstacles, map.Info._beatsPerMinute * timescale);
                     }
                 }
                 return output;
@@ -60,7 +60,7 @@ namespace beatleader_analyzer
             }
         }
 
-        public static List<List<double>> GetDataFromZip(MemoryStream zip)
+        public static List<List<double>> GetDataFromZip(MemoryStream zip, float timescale = 1)
         {
             try
             {
@@ -73,7 +73,7 @@ namespace beatleader_analyzer
                     if (difficulty.Data.colorNotes.Count >= 20)
                     {
                         output.Add(new());
-                        output[output.Count - 1] = BeatmapScanner.Analyzer(difficulty.Data.colorNotes, difficulty.Data.burstSliders, difficulty.Data.bombNotes, difficulty.Data.obstacles, map.Info._beatsPerMinute);
+                        output[output.Count - 1] = BeatmapScanner.Analyzer(difficulty.Data.colorNotes, difficulty.Data.burstSliders, difficulty.Data.bombNotes, difficulty.Data.obstacles, map.Info._beatsPerMinute * timescale);
                     }
                 }
                 return output;
@@ -85,13 +85,13 @@ namespace beatleader_analyzer
             }
         }
 
-        public static List<double> GetDataOneDiff(DifficultyV3 difficulty, float bpm)
+        public static List<double> GetDataOneDiff(DifficultyV3 difficulty, float bpm, float timescale = 1)
         {
             try
             {
                 if (difficulty.colorNotes.Count >= 20)
                 {
-                    return BeatmapScanner.Analyzer(difficulty.colorNotes, difficulty.burstSliders, difficulty.bombNotes, difficulty.obstacles, bpm);
+                    return BeatmapScanner.Analyzer(difficulty.colorNotes, difficulty.burstSliders, difficulty.bombNotes, difficulty.obstacles, bpm * timescale);
                 }
                 else
                 {
@@ -105,7 +105,7 @@ namespace beatleader_analyzer
             }
         }
 
-        public static List<List<double>> GetDataAllDiff(BeatmapV3 beatmap)
+        public static List<List<double>> GetDataAllDiff(BeatmapV3 beatmap, float timescale = 1)
         {
             try
             {
@@ -116,7 +116,7 @@ namespace beatleader_analyzer
                     if (difficulty.Data.colorNotes.Count >= 20)
                     {
                         output.Add(new());
-                        output[output.Count - 1] = BeatmapScanner.Analyzer(difficulty.Data.colorNotes, difficulty.Data.burstSliders, difficulty.Data.bombNotes, difficulty.Data.obstacles, beatmap.Info._beatsPerMinute);
+                        output[output.Count - 1] = BeatmapScanner.Analyzer(difficulty.Data.colorNotes, difficulty.Data.burstSliders, difficulty.Data.bombNotes, difficulty.Data.obstacles, beatmap.Info._beatsPerMinute * timescale);
                     }
                 }
                 return output;
