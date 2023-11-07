@@ -13,7 +13,7 @@ namespace Analyzer.BeatmapScanner
 
         #region Analyzer
 
-        public static List<double> Analyzer(List<Colornote> notes, List<Burstslider> chains, List<Bombnote> bombs, List<Obstacle> obstacles, float bpm)
+        public static List<double> Analyzer(List<Notes> notes, List<Chains> chains, List<Bombs> bombs, List<Walls> walls, float bpm)
         {
             #region Prep
 

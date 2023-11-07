@@ -14,9 +14,9 @@ namespace beatleader_analyzer
 
             try
             {
-                if (diff.colorNotes.Count >= 20)
+                if (diff.Notes.Count >= 20)
                 {
-                    ratings.Add(new(characteristic, difficulty, Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(diff.colorNotes, diff.burstSliders, diff.bombNotes, diff.obstacles, bpm * timescale)));
+                    ratings.Add(new(characteristic, difficulty, Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(diff.Notes, diff.Chains, diff.Bombs, diff.Walls, bpm * timescale)));
                     return ratings;
                 }
                 else
@@ -39,9 +39,9 @@ namespace beatleader_analyzer
             {
                 foreach (var difficulty in beatmap.Difficulties)
                 {
-                    if (difficulty.Data.colorNotes.Count >= 20)
+                    if (difficulty.Data.Notes.Count >= 20)
                     {
-                        ratings.Add(new(difficulty.Characteristic, difficulty.Difficulty, Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(difficulty.Data.colorNotes, difficulty.Data.burstSliders, difficulty.Data.bombNotes, difficulty.Data.obstacles, beatmap.Info._beatsPerMinute * timescale)));
+                        ratings.Add(new(difficulty.Characteristic, difficulty.Difficulty, Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(difficulty.Data.Notes, difficulty.Data.Chains, difficulty.Data.Bombs, difficulty.Data.Walls, beatmap.Info._beatsPerMinute * timescale)));
                     }
                 }
                 return ratings;

@@ -31,15 +31,15 @@ namespace Analyzer.BeatmapScanner.Data
         }
 
 
-        public Cube(Colornote note)
+        public Cube(Notes note)
         {
-            AngleOffset = note.a;
-            CutDirection = note.d;
-            Type = note.c;
-            Time = note.b;
+            AngleOffset = note.AngleOffset;
+            CutDirection = note.CutDirection;
+            Type = note.Color;
+            Time = note.Beats;
             Line = note.x;
             Layer = note.y;
-            Direction = note.d;
+            Direction = note.CutDirection;
         }
     }
 }
