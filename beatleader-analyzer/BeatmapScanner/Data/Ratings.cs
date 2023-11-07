@@ -12,10 +12,10 @@ namespace beatleader_analyzer.BeatmapScanner.Data
         public double Linear { get; set; }
         public double Pattern { get; set; }
 
-        public Ratings(string characteristic, string diffifficulty, List<double> ratings)
+        public Ratings(string characteristic, string difficulty, List<double> ratings)
         {
             Characteristic = characteristic;
-            Difficulty = diffifficulty;
+            Difficulty = difficulty;
             Pass = ratings[0];
             Tech = ratings[1];
             Nerf = ratings[2];
