@@ -16,9 +16,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
             List<double> value = new();
             List<SwingData> redSwingData = new();
             List<SwingData> blueSwingData = new();
-            List<List<SwingData>>? redPatternData = new();
-            List<List<SwingData>>? bluePatternData = new();
-            List<SwingData>? data = new();
+            List<List<SwingData>> redPatternData = new();
+            List<List<SwingData>> bluePatternData = new();
+            List<SwingData> data = new();
 
             if (red.Count() > 2)
             {
@@ -103,10 +103,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if(data.Count() > 2)
             {
-                double pattern = data.Select(x => x.Pattern).Average();
-                value.Add(pattern);
                 double linear = data.Where(x => x.Linear == true).Count() / (double)data.Count();
                 value.Add(linear);
+                double pattern = data.Select(x => x.Pattern).Average();
+                value.Add(pattern);
             }
             else
             {

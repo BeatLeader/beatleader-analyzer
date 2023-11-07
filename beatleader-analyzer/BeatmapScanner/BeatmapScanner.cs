@@ -9,7 +9,7 @@ namespace Analyzer.BeatmapScanner
     internal class BeatmapScanner
     {
         static public List<Cube> Cubes = new();
-        static public List<SwingData>? Datas = new();
+        static public List<SwingData> Datas = new();
 
         #region Analyzer
 
@@ -19,7 +19,7 @@ namespace Analyzer.BeatmapScanner
 
             List<double> value = new();
             List<Cube> cube = new();
-            List<SwingData>? data = new();
+            List<SwingData> data = new();
 
             foreach (var note in notes)
             {
