@@ -31,7 +31,7 @@ namespace Analyzer.BeatmapScanner.Data
         }
 
 
-        public Cube(Notes note)
+        public Cube(Note note)
         {
             AngleOffset = note.AngleOffset;
             CutDirection = note.CutDirection;

@@ -8,7 +8,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 {
     internal class Analyze
     {
-        public static (List<double> value, List<SwingData> data) UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, double bpm, List<Bombs> bombs)
+        public static (List<double> value, List<SwingData> data) UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, double bpm, List<Bomb> bombs)
         {
             double leftDiff = 0;
             double rightDiff = 0;
