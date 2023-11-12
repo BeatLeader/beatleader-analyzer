@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System;
 using System.Linq;
-using Parser.Map.Difficulty.V3.Grid;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
     internal class Analyze
     {
-        public static (List<double> value, List<SwingData> data) UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, double bpm, List<Bomb> bombs)
+        public static List<double> UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, double bpm)
         {
             double leftDiff = 0;
             double rightDiff = 0;
@@ -114,7 +113,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 value.Add(0);
             }
 
-            return (value, data);
+            return value;
         }
     }
 }

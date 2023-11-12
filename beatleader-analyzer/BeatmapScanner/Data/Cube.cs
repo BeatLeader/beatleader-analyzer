@@ -14,7 +14,11 @@ namespace Analyzer.BeatmapScanner.Data
         public double Direction { get; set; } = 8;
         public bool Head { get; set; } = false;
         public bool Pattern { get; set; } = false;
-
+        public bool Chain { get; set; } = false;
+        public int TailLine { get; set; } = 0;
+        public int TailLayer {  get; set; } = 0;
+        public float Squish { get; set; } = 0f;
+        
         public Cube()
         {
         }

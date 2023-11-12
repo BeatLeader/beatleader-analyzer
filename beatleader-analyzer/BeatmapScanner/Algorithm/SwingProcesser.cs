@@ -38,6 +38,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swingData.Add(new SwingData(currentBeat, currentAngle, cubes[i]));
                     (swingData.Last().EntryPosition, swingData.Last().ExitPosition) = CalcBaseEntryExit(currentPosition, currentAngle);
                     swingData.Last().Pattern = 0;
+                    if (cubes[i].Chain)
+                    {
+                        swingData.Last().Pattern += 0.1;
+                        var angleInRadians = ConvertDegreesToRadians(currentAngle);
+                        swingData.Last().ExitPosition = ((cubes[i].TailLine * 0.333333 + Math.Cos(angleInRadians) * 0.166667 + 0.166667) * cubes[i].Squish, (cubes[i].TailLayer * 0.333333 + Math.Sin(angleInRadians) * 0.166667 + 0.166667) * cubes[i].Squish);
+                    }
                 }
                 else // Pattern
                 {
