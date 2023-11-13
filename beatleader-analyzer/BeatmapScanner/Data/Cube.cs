@@ -40,7 +40,7 @@ namespace Analyzer.BeatmapScanner.Data
             AngleOffset = note.AngleOffset;
             CutDirection = note.CutDirection;
             Type = note.Color;
-            Time = note.Beats;
+            Time = note.BpmTime;
             Line = note.x;
             Layer = note.y;
             Direction = note.CutDirection;
