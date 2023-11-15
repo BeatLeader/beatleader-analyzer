@@ -67,7 +67,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if(redSwingData != null)
             {
-                redSwingData = DiffToPass.CalcSwingDiff(redSwingData, blueSwingData, bpm);
+                redSwingData = DiffToPass.CalcSwingDiff(redSwingData, bpm);
                 leftDiff = DiffToPass.CalcAverage(redSwingData, 8);
                 leftDiff += DiffToPass.CalcAverage(redSwingData, 16);
                 leftDiff += DiffToPass.CalcAverage(redSwingData, 32);
@@ -77,7 +77,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
             if(blueSwingData != null)
             {
-                blueSwingData = DiffToPass.CalcSwingDiff(blueSwingData, redSwingData, bpm);
+                blueSwingData = DiffToPass.CalcSwingDiff(blueSwingData, bpm);
                 rightDiff = DiffToPass.CalcAverage(blueSwingData, 8);
                 rightDiff += DiffToPass.CalcAverage(blueSwingData, 16);
                 rightDiff += DiffToPass.CalcAverage(blueSwingData, 32);
@@ -93,7 +93,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 tech = test.Skip((int)(data.Count() * 0.25)).Average();
             }
 
-            double balanced_pass = Math.Max(leftDiff, rightDiff);
+            double balanced_pass = Math.Max(leftDiff, rightDiff) * 0.8 + Math.Min(leftDiff, rightDiff) * 0.2;
+
             value.Add(balanced_pass);
             double balanced_tech = tech * (-(Math.Pow(Math.Abs(-1.4), -balanced_pass)) + 1);
             value.Add(balanced_tech);
