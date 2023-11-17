@@ -10,7 +10,7 @@ namespace beatleader_analyzer.BeatmapScanner.Data
         public double Tech { get; set; }
         public double Nerf { get; set; }
         public double Linear { get; set; }
-        public double Pattern { get; set; }
+        public double Multi { get; set; }
 
         public Ratings(string characteristic, string difficulty, List<double> ratings)
         {
@@ -20,7 +20,7 @@ namespace beatleader_analyzer.BeatmapScanner.Data
             Tech = ratings[1];
             Nerf = ratings[2];
             Linear = ratings[3];
-            Pattern = ratings[4];
+            Multi = ratings[4];
         }
     }
 }
