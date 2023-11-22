@@ -29,7 +29,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double yHitDist = swingData[i].EntryPosition.y - swingData[i].ExitPosition.y;
                 data.Last().HitDistance = Math.Sqrt(Math.Pow(xHitDist, 2) + Math.Pow(yHitDist, 2));
                 data.Last().HitDiff = data.Last().HitDistance / (data.Last().HitDistance + 2) + 1;
-                data.Last().Stress = (swingData[i].AngleStrain + swingData[i].PathStrain) * data.Last().HitDiff;
+                data.Last().Stress = (Math.Min(swingData[i].AngleStrain * 0.5, 0.5) + swingData[i].PathStrain) * data.Last().HitDiff;
                 swingData[i].SwingDiff = data.Last().SwingSpeed * (-Math.Pow(1.4, -data.Last().SwingSpeed) + 1) * (data.Last().Stress / (data.Last().Stress + 2) + 1);
             }
 
