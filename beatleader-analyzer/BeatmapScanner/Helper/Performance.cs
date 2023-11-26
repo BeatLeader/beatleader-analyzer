@@ -93,5 +93,18 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             }
 #endif
         }
+
+#if NETSTANDARD2_0_OR_GREATER
+        public static void Sort<T, TComparer>(this ref Span<T> span, TComparer comparer) where TComparer : IComparer<T>
+        {
+            if (span.Length > 1)
+            {
+                // SLOW
+                T[] array = span.ToArray();
+                Array.Sort(array, comparer);
+                span = array.AsSpan();
+            }
+        }
+#endif
     }
 }

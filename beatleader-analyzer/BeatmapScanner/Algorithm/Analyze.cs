@@ -90,6 +90,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (data.Count > 2)
             {
+                // We can sort the original list here, as only count and average is accessed after this line
+                data.Sort(CompareAngleAndPathStrain);
                 tech = AverageAnglePath(CollectionsMarshal.AsSpan(data)[(int)(data.Count * 0.25)..]);
             }
 
@@ -116,6 +118,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             return value;
         }
+
+        private static readonly Comparer<SwingData> CompareAngleAndPathStrain = Comparer<SwingData>.Create((a, b) => (a.AngleStrain + a.PathStrain).CompareTo(b.AngleStrain + b.PathStrain));
 
         public static double AverageAnglePath(Span<SwingData> list)
         {
