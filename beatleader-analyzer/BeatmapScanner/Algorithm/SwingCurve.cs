@@ -45,13 +45,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 Point point2 = new(point3.X - 1 * Math.Cos(ConvertDegreesToRadians(swingData[i].Angle)),
                     point3.Y - 1 * Math.Sin(ConvertDegreesToRadians(swingData[i].Angle)));
 
-                List<Point> points = new()
-                {
+                List<Point> points =
+                [
                     point0,
                     point1,
                     point2,
                     point3
-                };
+                ];
 
                 var point = BezierCurve(points);
 
@@ -59,10 +59,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 List<double> angleChangeList = new(point.Count);
                 List<double> angleList = new(point.Count);
                 double distance = 0;
-                for (int f = point.Count - 1; f >= 1; f--)
+                for (int f = point.Count - 2; f >= 0; f--)
                 {
-                    angleList.Add(Mod(ConvertRadiansToDegrees(Math.Atan2(point[f].Y - point[f - 1].Y, point[f].X - point[f - 1].X)), 360));
-                    distance += Math.Sqrt(Math.Pow(point[f].Y - point[f - 1].Y, 2) + Math.Pow(point[f].X - point[f - 1].X, 2));
+                    angleList.Add(Mod(ConvertRadiansToDegrees(Math.Atan2(point[f].Y - point[f + 1].Y, point[f].X - point[f + 1].X)), 360));
+                    distance += Math.Sqrt(Math.Pow(point[f].Y - point[f + 1].Y, 2) + Math.Pow(point[f].X - point[f + 1].X, 2));
                     if (f < point.Count - 2)
                     {
                         angleChangeList.Add(180 - Math.Abs(Math.Abs(angleList[^1] - angleList[^2]) - 180));
@@ -138,16 +138,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     ForContent(i);
                 }
             }
-        }
-
-        public static double Average(Span<double> list)
-        {
-            double sum = 0;
-            foreach(double val in list)
-            {
-                sum += val;
-            }
-            return sum / list.Length;
         }
     }
 }
