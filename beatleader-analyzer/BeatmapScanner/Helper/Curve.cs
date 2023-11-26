@@ -11,33 +11,29 @@ namespace Analyzer.BeatmapScanner.Helper
         {
             return BinomialCoefficient(n, i) * Math.Pow(t, n - i) * Math.Pow(1 - t, i);
         }
-
-        public static List<Point> BezierCurve(List<Point> points, int nTimes = 1000)
+        const int nTimes = 25;
+        private static readonly double[] tCached = Enumerable.Range(0, nTimes).Select(i => i / (double)(nTimes - 1)).ToArray();
+        public static List<Point> BezierCurve(List<Point> points)
         {
             int nPoints = points.Count;
-            List<double> xPoints = points.Select(p => p.X).ToList();
-            List<double> yPoints = points.Select(p => p.Y).ToList();
-            double[] t = Enumerable.Range(0, nTimes).Select(i => i / (double)(nTimes - 1)).ToArray();
 
-            List<double> resultX = new();
-            List<double> resultY = new();
+            List<Point> result = new(points.Count);
 
             for (int i = 0; i < nTimes; i++)
             {
-                double currentT = t[i];
+                double currentT = tCached[i];
                 double x = 0;
                 double y = 0;
                 for (int j = 0; j < nPoints; j++)
                 {
                     double poly = BernsteinPoly(j, nPoints - 1, currentT);
-                    x += xPoints[j] * poly;
-                    y += yPoints[j] * poly;
+                    x += points[j].X * poly;
+                    y += points[j].Y * poly;
                 }
-                resultX.Add(x);
-                resultY.Add(y);
+                result.Add(new(x, y));
             }
 
-            return resultX.Zip(resultY, (x, y) => new Point(x, y)).ToList();
+            return result;
         }
 
         private static long BinomialCoefficient(int n, int k)

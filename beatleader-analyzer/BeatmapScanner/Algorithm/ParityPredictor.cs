@@ -10,19 +10,19 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static List<SwingData> Predict(List<List<SwingData>> patternData, bool leftOrRight)
         {
-            if (patternData.Count() < 1)
+            if (patternData.Count < 1)
             {
                 return null;
             }
 
             var newPatternData = new List<SwingData>();
 
-            for (int p = 0; p < patternData.Count(); p++)
+            for (int p = 0; p < patternData.Count; p++)
             {
                 var testData1 = patternData[p];
                 var testData2 = SwingData.DeepCopy(patternData[p]);
 
-                for (int i = 0; i < testData1.Count(); i++)
+                for (int i = 0; i < testData1.Count; i++)
                 {
                     if (i > 0)
                     {
@@ -43,7 +43,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         testData1[0].Forehand = true;
                     }
                 }
-                for (int i = 0; i < testData2.Count(); i++)
+                for (int i = 0; i < testData2.Count; i++)
                 {
                     if (i > 0)
                     {
@@ -76,7 +76,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     newPatternData.AddRange(testData2);
                 }
             }
-            for (int i = 0; i < newPatternData.Count(); i++)
+            for (int i = 0; i < newPatternData.Count; i++)
             {
                 newPatternData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { newPatternData[i] }, leftOrRight) * 2;
             }

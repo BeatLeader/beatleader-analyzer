@@ -11,7 +11,7 @@ namespace Analyzer.BeatmapScanner.Helper
         {
             double strainAmount = 0;
 
-            for (int i = 0; i < swingData.Count(); i++)
+            for (int i = 0; i < swingData.Count; i++)
             {
                 if (swingData[i].Forehand)
                 {
@@ -40,11 +40,11 @@ namespace Analyzer.BeatmapScanner.Helper
             return strainAmount;
         }
 
-        public static double BezierAngleStrainCalc(List<double> angleData, bool forehand, bool leftOrRight)
+        public static double BezierAngleStrainCalc(Span<double> angleData, bool forehand, bool leftOrRight)
         {
             var strainAmount = 0d;
 
-            for (int i = 0; i < angleData.Count(); i++)
+            for (int i = 0; i < angleData.Length; i++)
             {
                 if (forehand)
                 {
