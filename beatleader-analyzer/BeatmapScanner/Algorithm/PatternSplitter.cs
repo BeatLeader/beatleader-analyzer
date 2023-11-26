@@ -8,14 +8,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static List<List<SwingData>> Split(List<SwingData> swingData)
         {
-            if (swingData.Count() < 2)
+            if (swingData.Count < 2)
             {
                 return null;
             }
 
-            for (int i = 0; i < swingData.Count(); i++)
+            for (int i = 0; i < swingData.Count; i++)
             {
-                if (i > 0 && i + 1 < swingData.Count())
+                if (i > 0 && i + 1 < swingData.Count)
                 {
                     swingData[i].SwingFrequency = 2 / (swingData[i + 1].Time - swingData[i - 1].Time);
                 }
@@ -31,7 +31,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             List<List<SwingData>> patternList = new();
             List<SwingData> tempPList = new();
 
-            for (int i = 0; i < swingData.Count(); i++)
+            for (int i = 0; i < swingData.Count; i++)
             {
                 if (i > 0)
                 {
@@ -40,8 +40,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         if (!patternFound)
                         {
                             patternFound = true;
-                            tempPList.Remove(tempPList.Last());
-                            if (tempPList.Count() > 0)
+                            tempPList.Remove(tempPList[^1]);
+                            if (tempPList.Count > 0)
                             {
                                 patternList.Add(tempPList);
                             }
@@ -54,7 +54,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     }
                     else
                     {
-                        if (tempPList.Count() > 0 && patternFound)
+                        if (tempPList.Count > 0 && patternFound)
                         {
                             tempPList.Add(swingData[i]);
                             patternList.Add(tempPList);
@@ -73,7 +73,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
 
-            if (tempPList.Count > 0 && patternList.Count() == 0)
+            if (tempPList.Count > 0 && patternList.Count == 0)
             {
                 patternList.Add(tempPList);
             }

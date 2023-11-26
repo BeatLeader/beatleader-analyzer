@@ -23,13 +23,13 @@ namespace Analyzer.BeatmapScanner.Helper
                 {
                     // Pattern found
                     length = cubes.Where(c => c.Time == cubes[n].Time).Count() - 1;
-                    var arrow = cubes.Where(c => c.CutDirection != 8 && c.Time == cubes[n].Time);
+                    Cube[] arrow = cubes.Where(c => c.CutDirection != 8 && c.Time == cubes[n].Time).ToArray();
                     double direction = 0;
-                    if (arrow.Count() == 0)
+                    if (arrow.Length == 0)
                     {
                         // Pattern got no arrow
                         var foundArrow = cubes.Where(c => c.CutDirection != 8 && c.Time > cubes[n].Time).ToList();
-                        if (foundArrow.Count() > 0)
+                        if (foundArrow.Count > 0)
                         {
                             // An arrow note is found after the note
                             direction = ReverseCutDirection(Mod(DirectionToDegree[foundArrow[0].CutDirection] + foundArrow[0].AngleOffset, 360));
@@ -50,7 +50,7 @@ namespace Analyzer.BeatmapScanner.Helper
                     else
                     {
                         // Use the arrow to determine the direction
-                        direction = ReverseCutDirection(Mod(DirectionToDegree[arrow.Last().CutDirection] + arrow.Last().AngleOffset, 360));
+                        direction = ReverseCutDirection(Mod(DirectionToDegree[arrow[^1].CutDirection] + arrow[^1].AngleOffset, 360));
                     }
                     // Simulate a swing to determine the entry point of the pattern
                     (double x, double y) pos;

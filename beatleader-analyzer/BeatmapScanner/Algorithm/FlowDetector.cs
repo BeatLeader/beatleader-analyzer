@@ -13,7 +13,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static void Detect(List<Cube> cubes, bool leftOrRight)
         {
-            if (cubes.Count() < 2)
+            if (cubes.Count < 2)
             {
                 return;
             }
@@ -101,7 +101,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
             // Rest of the notes
-            for (int i = 2; i < cubes.Count() - 1; i++)
+            for (int i = 2; i < cubes.Count - 1; i++)
             {
                 if (cubes[i].CutDirection == 8)
                 { 
@@ -202,7 +202,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
             // Fix dot flow that only work from one way
-            for (int i = 2; i < cubes.Count() - 2; i++)
+            for (int i = 2; i < cubes.Count - 2; i++)
             {
                 if (cubes[i].CutDirection == 8 && !cubes[i].Pattern)
                 {
@@ -221,39 +221,39 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
             // Handle the last notes
-            if (cubes.Last().CutDirection == 8)
+            if (cubes[^1].CutDirection == 8)
             {
-                if ((cubes.Last().Time - cubes[cubes.Count() - 2].Time <= 0.25 && SliderCond(cubes[cubes.Count() - 2], cubes.Last(), lastSimPos))
-                    || cubes.Last().Time - cubes[cubes.Count() - 2].Time <= 0.1429)
+                if ((cubes[^1].Time - cubes[^2].Time <= 0.25 && SliderCond(cubes[^2], cubes[^1], lastSimPos))
+                    || cubes[^1].Time - cubes[^2].Time <= 0.1429)
                 {
-                    (cubes.Last().Direction, lastSimPos) = FindAngleViaPos(cubes, cubes.Count - 1, cubes.Count - 2, cubes[cubes.Count() - 2].Direction, true);
-                    if (cubes[cubes.Count() - 2].CutDirection == 8)
+                    (cubes[^1].Direction, lastSimPos) = FindAngleViaPos(cubes, cubes.Count - 1, cubes.Count - 2, cubes[^2].Direction, true);
+                    if (cubes[^2].CutDirection == 8)
                     {
-                        cubes[cubes.Count() - 2].Direction = cubes.Last().Direction;
+                        cubes[^2].Direction = cubes[^1].Direction;
                     }
-                    cubes.Last().Pattern = true;
-                    if (!cubes[cubes.Count() - 2].Pattern)
+                    cubes[^1].Pattern = true;
+                    if (!cubes[^2].Pattern)
                     {
-                        cubes[cubes.Count() - 2].Pattern = true;
-                        cubes[cubes.Count() - 2].Head = true;
+                        cubes[^2].Pattern = true;
+                        cubes[^2].Head = true;
                     }
                 }
                 else
                 {
-                    (cubes.Last().Direction, lastSimPos) = FindAngleViaPos(cubes, cubes.Count - 1, cubes.Count - 2, cubes[cubes.Count() - 2].Direction, false);
+                    (cubes[^1].Direction, lastSimPos) = FindAngleViaPos(cubes, cubes.Count - 1, cubes.Count - 2, cubes[^2].Direction, false);
                 }
             }
             else
             {
-                cubes.Last().Direction = Mod(DirectionToDegree[cubes.Last().CutDirection] + cubes.Last().AngleOffset, 360);
-                if (((cubes.Last().Time - cubes[cubes.Count() - 2].Time < 0.25 && SliderCond(cubes[cubes.Count() - 2], cubes.Last(), lastSimPos))
-                    || cubes.Last().Time - cubes[cubes.Count() - 2].Time <= 0.1429) && IsSameDir(cubes[cubes.Count() - 2].Direction, cubes.Last().Direction))
+                cubes[^1].Direction = Mod(DirectionToDegree[cubes[^1].CutDirection] + cubes[^1].AngleOffset, 360);
+                if (((cubes[^1].Time - cubes[^2].Time < 0.25 && SliderCond(cubes[^2], cubes[^1], lastSimPos))
+                    || cubes[^1].Time - cubes[^2].Time <= 0.1429) && IsSameDir(cubes[^2].Direction, cubes[^1].Direction))
                 {
-                    cubes.Last().Pattern = true;
-                    if (!cubes[cubes.Count() - 2].Pattern)
+                    cubes[^1].Pattern = true;
+                    if (!cubes[^2].Pattern)
                     {
-                        cubes[cubes.Count() - 2].Pattern = true;
-                        cubes[cubes.Count() - 2].Head = true;
+                        cubes[^2].Pattern = true;
+                        cubes[^2].Head = true;
                     }
                 }
             }

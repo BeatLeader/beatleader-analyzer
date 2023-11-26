@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
+using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -19,7 +21,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             List<List<SwingData>> bluePatternData = new();
             List<SwingData> data = new();
 
-            if (red.Count() > 2)
+            if (red.Count > 2)
             {
                 FlowDetector.Detect(red, false);
                 redSwingData = SwingProcesser.Process(red);
@@ -42,7 +44,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
 
-            if (blue.Count() > 2)
+            if (blue.Count > 2)
             {
                 FlowDetector.Detect(blue, true);
                 blueSwingData = SwingProcesser.Process(blue);
@@ -86,26 +88,26 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 rightDiff /= 5;
             }
 
-            if (data.Count() > 2)
+            if (data.Count > 2)
             {
-                var test = data.Select(c => c.AngleStrain + c.PathStrain).ToList();
-                test.Sort();
-                tech = test.Skip((int)(data.Count() * 0.25)).Average();
+                // We can sort the original list here, as only count and average is accessed after this line
+                data.Sort(CompareAngleAndPathStrain);
+                tech = AverageAnglePath(CollectionsMarshal.AsSpan(data)[(int)(data.Count * 0.25)..]);
             }
 
             double balanced_pass = Math.Max(leftDiff, rightDiff) * 0.8 + Math.Min(leftDiff, rightDiff) * 0.2;
 
             value.Add(balanced_pass);
-            double balanced_tech = tech * (-(Math.Pow(Math.Abs(-1.4), -balanced_pass)) + 1);
+            double balanced_tech = tech * (-(Math.Pow(1.4, -balanced_pass)) + 1);
             value.Add(balanced_tech);
-            double low_note_nerf = 1 / (1 + Math.Pow(Math.E, -0.6 * (data.Count() / 100 + 1.5)));
+            double low_note_nerf = 1 / (1 + Math.Pow(Math.E, -0.6 * (data.Count / 100 + 1.5)));
             value.Add(low_note_nerf);
 
-            if(data.Count() > 2)
+            if(data.Count > 2)
             {
-                double linear = data.Where(x => x.Linear == true).Count() / (double)data.Count();
+                double linear = data.Where(x => x.Linear == true).Count() / (double)data.Count;
                 value.Add(linear);
-                double pattern = data.Select(x => x.Pattern).Average();
+                double pattern = AveragePattern(CollectionsMarshal.AsSpan(data));
                 value.Add(pattern);
             }
             else
@@ -115,6 +117,28 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
 
             return value;
+        }
+
+        private static readonly Comparer<SwingData> CompareAngleAndPathStrain = Comparer<SwingData>.Create((a, b) => (a.AngleStrain + a.PathStrain).CompareTo(b.AngleStrain + b.PathStrain));
+
+        public static double AverageAnglePath(Span<SwingData> list)
+        {
+            double sum = 0;
+            foreach(SwingData val in list)
+            {
+                sum += val.AngleStrain + val.PathStrain;
+            }
+            return sum / list.Length;
+        }
+
+        public static double AveragePattern(Span<SwingData> list)
+        {
+            double sum = 0;
+            foreach(SwingData val in list)
+            {
+                sum += val.Pattern;
+            }
+            return sum / list.Length;
         }
     }
 }

@@ -3,7 +3,7 @@ using Parser.Map.Difficulty.V3.Grid;
 
 namespace Analyzer.BeatmapScanner.Data
 {
-    internal class Cube
+    public class Cube
     {
         public float Time { get; set; } = 0;
         public int Line { get; set; } = 0;

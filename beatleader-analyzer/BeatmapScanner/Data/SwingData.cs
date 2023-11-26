@@ -2,7 +2,7 @@
 
 namespace Analyzer.BeatmapScanner.Data
 {
-    internal class SwingData
+    public class SwingData
     {
         public Cube Start { get; set; } = null;
         public double Time { get; set; } = 0;
@@ -77,15 +77,5 @@ namespace Analyzer.BeatmapScanner.Data
         }
     }
 
-    internal class Point
-    {
-        public double X { get; set; }
-        public double Y { get; set; }
-
-        public Point(double x, double y)
-        {
-            X = x;
-            Y = y;
-        }
-    }
+    internal readonly record struct Point(double X, double Y);
 }

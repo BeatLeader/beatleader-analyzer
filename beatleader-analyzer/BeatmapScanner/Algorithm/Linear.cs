@@ -22,7 +22,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             swings[0].Linear = true;
             swings[1].Linear = true;
 
-            for (int i = 2; i < swings.Count(); i++)
+            for (int i = 2; i < swings.Count; i++)
             {
                 if (IsInLinearPath(swings[i - 2], swings[i - 1], swings[i]))
                 {
