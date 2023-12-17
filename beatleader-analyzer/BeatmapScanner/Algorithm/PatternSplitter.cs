@@ -1,4 +1,5 @@
 ﻿using Analyzer.BeatmapScanner.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -35,7 +36,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 if (i > 0)
                 {
-                    if (1 / (swingData[i].Time - swingData[i - 1].Time) - swingData[i].SwingFrequency <= SFMargin)
+                    if (Math.Abs(1 / (swingData[i].Time - swingData[i - 1].Time) - swingData[i].SwingFrequency) <= SFMargin)
                     {
                         if (!patternFound)
                         {

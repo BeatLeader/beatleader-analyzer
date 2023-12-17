@@ -116,8 +116,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 int firstIndex = (int)(angleChangeList.Count * first) - 1;
                 int lastIndex = (int)(angleChangeList.Count * last) - 1;
 
-                // Not sure if the +1 is necessary
-                curveComplexity = Math.Abs((lengthOfList * Average(CollectionsMarshal.AsSpan(angleChangeList).Slice(firstIndex, lastIndex - firstIndex + 1)) - 180) / 180);
+                curveComplexity = Math.Abs((lengthOfList * Average(CollectionsMarshal.AsSpan(angleChangeList).Slice(firstIndex, lastIndex - firstIndex)) - 180) / 180);
                 pathAngleStrain = BezierAngleStrainCalc(CollectionsMarshal.AsSpan(angleList)[pathLookbackIndex..angleList.Count], swingData[i].Forehand, leftOrRight) / angleList.Count * 2;
 
                 swingData[i].PositionComplexity = positionComplexity;

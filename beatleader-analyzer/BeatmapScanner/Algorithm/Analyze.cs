@@ -9,7 +9,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 {
     internal class Analyze
     {
-        public static List<double> UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, double bpm)
+        public static List<double> UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm, float njs)
         {
             double leftDiff = 0;
             double rightDiff = 0;
@@ -23,7 +23,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (red.Count > 2)
             {
-                FlowDetector.Detect(red, false);
+                FlowDetector.Detect(red, bpm, njs, false);
                 redSwingData = SwingProcesser.Process(red);
                 if (redSwingData != null)
                 {
@@ -46,7 +46,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (blue.Count > 2)
             {
-                FlowDetector.Detect(blue, true);
+                FlowDetector.Detect(blue, bpm, njs, true);
                 blueSwingData = SwingProcesser.Process(blue);
                 if (blueSwingData != null)
                 {
