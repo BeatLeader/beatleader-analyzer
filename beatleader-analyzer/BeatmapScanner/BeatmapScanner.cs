@@ -18,7 +18,7 @@ namespace Analyzer.BeatmapScanner
                 cubes.Add(new Cube(note));
             }
 
-            cubes.OrderBy(c => c.Time);
+            cubes = cubes.OrderBy(c => c.Time).ToList();
 
             foreach (var chain in chains)
             {
@@ -32,8 +32,8 @@ namespace Analyzer.BeatmapScanner
                 }
             }
 
-            var red = cubes.Where(c => c.Type == 0).OrderBy(c => c.Time).ToList();
-            var blue = cubes.Where(c => c.Type == 1).OrderBy(c => c.Time).ToList();
+            var red = cubes.Where(c => c.Type == 0).ToList();
+            var blue = cubes.Where(c => c.Type == 1).ToList();
 
             value = Analyze.UseLackWizAlgorithm(red, blue, bpm, njs);
 

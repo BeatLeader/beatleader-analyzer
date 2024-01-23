@@ -25,7 +25,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 testValue = -45;
             }
 
-            cubes.OrderBy(c => c.Time);
             // Pre-order the stack/window/tower here if possible
             HandlePattern(cubes);
             (double x, double y) lastSimPos = (0, 0);
