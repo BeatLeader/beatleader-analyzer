@@ -21,6 +21,7 @@ namespace Analyzer.BeatmapScanner.Data
         public double PreviousDistance { get; set; } = 0;
         public double PositionComplexity { get; set; } = 0;
         public double CurveComplexity { get; set; } = 0;
+        public double EnergyCost { get; set; } = 0;
 
         public SwingData()
         {

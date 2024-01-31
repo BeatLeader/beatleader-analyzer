@@ -5,6 +5,7 @@ using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
 using System.Linq;
 using beatleader_analyzer.BeatmapScanner.Data;
 using System.Runtime.InteropServices;
+using beatleader_analyzer.BeatmapScanner.Algorithm;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -142,6 +143,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
             perSwing.ForEach(x => { x.Pass /= 5;
                 x.Tech /= 5;
             });
+
+            // stamina calc
+            double staminaDiffLeft = StaminaCalculator.CalcStamina(redSwingData, bpm);
+            double staminaDiffRight = StaminaCalculator.CalcStamina(blueSwingData, bpm);
+            double stamina_rating = Math.Max(staminaDiffLeft, staminaDiffRight);
+            value.Add(stamina_rating);
 
             return (value, perSwing);
         }

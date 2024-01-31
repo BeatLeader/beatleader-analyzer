@@ -9,6 +9,7 @@ namespace beatleader_analyzer.BeatmapScanner.Data
         public double Pass { get; set; }
         public double Tech { get; set; }
         public double Nerf { get; set; }
+        public double Stamina { get; set; }
         public List<PerSwing> PerSwing { get; set; }
 
         public Ratings(string characteristic, string difficulty, List<double> ratings, List<PerSwing> perSwing)
@@ -18,6 +19,7 @@ namespace beatleader_analyzer.BeatmapScanner.Data
             Pass = ratings[0];
             Tech = ratings[1];
             Nerf = ratings[2];
+            Stamina = ratings[3];
             PerSwing = perSwing;
         }
     }
