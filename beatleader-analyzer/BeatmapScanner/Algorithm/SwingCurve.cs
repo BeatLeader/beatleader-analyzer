@@ -14,7 +14,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 {
     public class SwingCurve
     {
-        public static bool UseParallel { get; set; } = false;
+        public static bool UseParallel { get; set; } = true;
         public static void Calc(List<SwingData> swingData, bool leftOrRight)
         {
             if (swingData.Count < 2)

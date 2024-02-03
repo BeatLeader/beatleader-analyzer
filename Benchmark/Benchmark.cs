@@ -19,7 +19,7 @@ namespace Benchmark
     public class Benchmark
     {
         [ParamsAllValues]
-        public bool UseParallelFor { get; set; } = true;
+        public bool UseParallelFor { get; set; }
         BeatmapV3 map;
         Analyze analyzer;
 
@@ -34,7 +34,7 @@ namespace Benchmark
         public void GetRating()
         {
             SwingCurve.UseParallel = UseParallelFor;
-            Console.WriteLine(analyzer.GetRating(map, "Standard")[0].Pass);
+            analyzer.GetRating(map, "Standard");
         }
     }
 }
