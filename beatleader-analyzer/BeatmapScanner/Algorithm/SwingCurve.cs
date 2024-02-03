@@ -22,13 +22,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return;
             }
 
-            double pathLookback;
-            (double x, double y) simHandCurPos;
-            (double x, double y) simHandPrePos;
-            double curveComplexity;
-            double pathAngleStrain;
-            double positionComplexity;
-
             swingData[0].PathStrain = 0;
             swingData[0].PositionComplexity = 0;
             swingData[0].PreviousDistance = 0;
@@ -54,8 +47,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 ];
 
                 var point = BezierCurve(points);
-
-                positionComplexity = 0;
+                
+                double positionComplexity = 0;
                 List<double> angleChangeList = new(point.Count);
                 List<double> angleList = new(point.Count);
                 double distance = 0;
@@ -71,7 +64,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 distance -= 0.75;
                 if (i > 1)
                 {
-                    simHandCurPos = swingData[i].EntryPosition;
+                    (double x, double y) simHandCurPos = swingData[i].EntryPosition;
+                    (double x, double y) simHandPrePos;
                     if (!swingData[i].Reset && !swingData[i - 1].Reset)
                     {
                         simHandPrePos = swingData[i - 2].EntryPosition;
@@ -99,7 +93,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double lengthOfList = angleChangeList.Count * 0.6;
                 double first;
                 double last;
-
+                
+                double pathLookback;
                 if (swingData[i].Reset)
                 {
                     pathLookback = 0.9;
@@ -115,9 +110,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 int pathLookbackIndex = (int)(angleList.Count * pathLookback);
                 int firstIndex = (int)(angleChangeList.Count * first) - 1;
                 int lastIndex = (int)(angleChangeList.Count * last) - 1;
-
-                curveComplexity = Math.Abs((lengthOfList * Average(CollectionsMarshal.AsSpan(angleChangeList).Slice(firstIndex, lastIndex - firstIndex)) - 180) / 180);
-                pathAngleStrain = BezierAngleStrainCalc(CollectionsMarshal.AsSpan(angleList)[pathLookbackIndex..angleList.Count], swingData[i].Forehand, leftOrRight) / angleList.Count * 2;
+                
+                double curveComplexity = Math.Abs((lengthOfList * Average(CollectionsMarshal.AsSpan(angleChangeList).Slice(firstIndex, lastIndex - firstIndex)) - 180) / 180);
+                double pathAngleStrain = BezierAngleStrainCalc(CollectionsMarshal.AsSpan(angleList)[pathLookbackIndex..angleList.Count], swingData[i].Forehand, leftOrRight) / angleList.Count * 2;
 
                 swingData[i].PositionComplexity = positionComplexity;
                 swingData[i].PreviousDistance = distance;
