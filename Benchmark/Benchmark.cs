@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Benchmark
@@ -25,7 +26,7 @@ namespace Benchmark
         [GlobalSetup]
         public void Globalsetup()
         {
-            map = new Parse().TryDownloadLink(@"https://r2cdn.beatsaver.com/522d0727d30469e09522d193438ec3698b757693.zip").Last();
+            map = new Parse().TryDownloadLink(@"https://r2cdn.beatsaver.com/417f22a92dc4efb0750a4ea538e45eaf50ce628b.zip").Last();
             analyzer = new Analyze();
         }
 
@@ -33,7 +34,7 @@ namespace Benchmark
         public void GetRating()
         {
             SwingCurve.UseParallel = UseParallelFor;
-            analyzer.GetRating(map);
+            analyzer.GetRating(map, "Standard");
         }
     }
 }
