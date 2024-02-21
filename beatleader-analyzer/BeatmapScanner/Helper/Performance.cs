@@ -20,7 +20,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             // First Sum via SIMD Vector Instructions
             while(list.Length - offset >= Vector<double>.Count)
             {
-#if NETSTANDARD2_0_OR_GREATER
+#if NETSTANDARD2_0_OR_GREATER || NET48_OR_GREATER
                 sum += Vector.Dot(VectorExtensions.Create<double>(list.Slice(offset, Vector<double>.Count)), Vector<double>.One);
 #else
                 sum += Vector.Sum(new Vector<double>(list.Slice(offset, Vector<double>.Count)));
@@ -58,7 +58,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             }
         }
 
-        #if NETSTANDARD2_0_OR_GREATER
+        #if NETSTANDARD2_0_OR_GREATER || NET48_OR_GREATER
         public static class CollectionsMarshal
         {
             static class ArrayAccessor<T>
@@ -73,7 +73,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
         private static class VectorExtensions
         {
-#if NETSTANDARD2_0_OR_GREATER
+#if NETSTANDARD2_0_OR_GREATER || NET48_OR_GREATER
             // Adapted from: source.dot.net/#System.Private.CoreLib/src/libraries/System.Private.CoreLib/src/System/Numerics/Vector_1.cs
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static Vector<T> Create<T>(ReadOnlySpan<T> values) where T : struct
@@ -94,7 +94,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 #endif
         }
 
-#if NETSTANDARD2_0_OR_GREATER
+#if NETSTANDARD2_0_OR_GREATER || NET48_OR_GREATER
         public static void Sort<T, TComparer>(this ref Span<T> span, TComparer comparer) where TComparer : IComparer<T>
         {
             if (span.Length > 1)
