@@ -95,7 +95,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 tech = AverageAnglePath(CollectionsMarshal.AsSpan(data)[(int)(data.Count * 0.25)..]);
             }
 
-            double balanced_pass = Math.Max(leftDiff, rightDiff) * 0.8 + Math.Min(leftDiff, rightDiff) * 0.2;
+            double balanced_pass = leftDiff * 0.5 + rightDiff * 0.5;
 
             value.Add(balanced_pass);
             double balanced_tech = tech * (-(Math.Pow(1.4, -balanced_pass)) + 1);
