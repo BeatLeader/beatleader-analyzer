@@ -42,6 +42,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return 0;
             }
 
+            swingData = swingData.OrderBy(s => s.Time).ToList();
+
             var difficultyIndex = new List<double>();
 
             for (int i = 0; i < swingData.Count; i++)
