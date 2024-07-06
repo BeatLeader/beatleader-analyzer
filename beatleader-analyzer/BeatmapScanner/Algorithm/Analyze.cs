@@ -73,7 +73,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 compiled.AddRange(DiffToPass.CalcSwingDiff(blueSwingData, bpm));
             }
 
-            double balanced_pass = DiffToPass.CalcRollingAverage(compiled, bpm / 60) / 2;
+            double balanced_pass = DiffToPass.CalcRollingAverage(compiled, bpm / 60);
 
             if (data.Count > 2)
             {

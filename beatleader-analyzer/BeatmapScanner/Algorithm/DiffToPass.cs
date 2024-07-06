@@ -46,6 +46,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             for (int i = 0; i < swingData.Count; i++)
             {
+                var onesaber = true;
                 var window = new List<double>
                 {
                     swingData[i].SwingDiff
@@ -53,10 +54,15 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 var limit = swingData[i].Time + bps;
                 for (int j = i + 1; j < swingData.Count; j++)
                 {
-                    if (swingData[j].Time <= limit && swingData[j].Time >= swingData[i].Time) window.Add(swingData[j].SwingDiff);
+                    if (swingData[j].Time <= limit && swingData[j].Time >= swingData[i].Time)
+                    {
+                        window.Add(swingData[j].SwingDiff);
+                        if (swingData[i].Start.Type != swingData[j].Start.Type) onesaber = false;
+                    }
                     else break; 
                 }
                 var windowDiff = window.Average() * 0.8;
+                if (onesaber) windowDiff /= 2;
                 difficultyIndex.Add(windowDiff);
             }
 
