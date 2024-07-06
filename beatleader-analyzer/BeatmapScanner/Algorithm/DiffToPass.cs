@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -36,25 +35,29 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return swingData;
         }
 
-
-        public static double CalcAverage(List<SwingData> swingData, int WINDOW)
+        public static double CalcRollingAverage(List<SwingData> swingData, double bps)
         {
             if (swingData.Count < 2)
             {
                 return 0;
             }
 
-            var qDiff = new CircularBuffer(stackalloc double[WINDOW]);
             var difficultyIndex = new List<double>();
 
-            for (int i = 1; i < swingData.Count; i++)
+            for (int i = 0; i < swingData.Count; i++)
             {
-                qDiff.Enqueue(swingData[i].SwingDiff);
-                if (i >= WINDOW)
+                var window = new List<double>
                 {
-                    var windowDiff = Average(qDiff.Buffer) * 0.8;
-                    difficultyIndex.Add(windowDiff);
+                    swingData[i].SwingDiff
+                };
+                var limit = swingData[i].Time + bps;
+                for (int j = i + 1; j < swingData.Count; j++)
+                {
+                    if (swingData[j].Time <= limit && swingData[j].Time >= swingData[i].Time) window.Add(swingData[j].SwingDiff);
+                    else break; 
                 }
+                var windowDiff = window.Average() * 0.8;
+                difficultyIndex.Add(windowDiff);
             }
 
             if (difficultyIndex.Count > 0)

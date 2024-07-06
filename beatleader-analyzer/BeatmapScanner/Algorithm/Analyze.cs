@@ -11,8 +11,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static List<double> UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm, float njs)
         {
-            double leftDiff = 0;
-            double rightDiff = 0;
             double tech = 0;
             List<double> value = new();
             List<SwingData> redSwingData = new();
@@ -20,6 +18,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             List<List<SwingData>> redPatternData = new();
             List<List<SwingData>> bluePatternData = new();
             List<SwingData> data = new();
+            List<SwingData> compiled = new();
 
             if (red.Count > 2)
             {
@@ -69,24 +68,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if(redSwingData != null)
             {
-                redSwingData = DiffToPass.CalcSwingDiff(redSwingData, bpm);
-                leftDiff = DiffToPass.CalcAverage(redSwingData, 8);
-                leftDiff += DiffToPass.CalcAverage(redSwingData, 16);
-                leftDiff += DiffToPass.CalcAverage(redSwingData, 32);
-                leftDiff += DiffToPass.CalcAverage(redSwingData, 48);
-                leftDiff += DiffToPass.CalcAverage(redSwingData, 96);
-                leftDiff /= 5;
+                compiled = DiffToPass.CalcSwingDiff(redSwingData, bpm);
             }
             if(blueSwingData != null)
             {
-                blueSwingData = DiffToPass.CalcSwingDiff(blueSwingData, bpm);
-                rightDiff = DiffToPass.CalcAverage(blueSwingData, 8);
-                rightDiff += DiffToPass.CalcAverage(blueSwingData, 16);
-                rightDiff += DiffToPass.CalcAverage(blueSwingData, 32);
-                rightDiff += DiffToPass.CalcAverage(blueSwingData, 48);
-                rightDiff += DiffToPass.CalcAverage(blueSwingData, 96);
-                rightDiff /= 5;
+                compiled.AddRange(DiffToPass.CalcSwingDiff(blueSwingData, bpm));
             }
+
+            double balanced_pass = DiffToPass.CalcRollingAverage(compiled, bpm / 60) / 2;
 
             if (data.Count > 2)
             {
@@ -94,8 +83,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 data.Sort(CompareAngleAndPathStrain);
                 tech = AverageAnglePath(CollectionsMarshal.AsSpan(data)[(int)(data.Count * 0.25)..]);
             }
-
-            double balanced_pass = leftDiff * 0.5 + rightDiff * 0.5;
 
             value.Add(balanced_pass);
             double balanced_tech = tech * (-(Math.Pow(1.4, -balanced_pass)) + 1);
