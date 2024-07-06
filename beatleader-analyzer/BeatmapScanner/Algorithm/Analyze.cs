@@ -35,7 +35,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (redSwingData != null)
                 {
                     SwingCurve.Calc(redSwingData, false);
-                    Linear.CalculateLinear(redSwingData);
                 }
                 if (redSwingData != null)
                 {
@@ -58,7 +57,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (blueSwingData != null)
                 {
                     SwingCurve.Calc(blueSwingData, true);
-                    Linear.CalculateLinear(blueSwingData);
                 }
                 if (blueSwingData != null)
                 {
@@ -90,19 +88,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
             double low_note_nerf = 1 / (1 + Math.Pow(Math.E, -0.6 * (data.Count / 100 + 1.5)));
             value.Add(low_note_nerf);
 
-            if(data.Count > 2)
-            {
-                double linear = data.Where(x => x.Linear == true).Count() / (double)data.Count;
-                value.Add(linear);
-                double pattern = AveragePattern(CollectionsMarshal.AsSpan(data));
-                value.Add(pattern);
-            }
-            else
-            {
-                value.Add(0);
-                value.Add(0);
-            }
-
             return value;
         }
 
@@ -114,16 +99,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
             foreach(SwingData val in list)
             {
                 sum += val.AngleStrain + val.PathStrain;
-            }
-            return sum / list.Length;
-        }
-
-        public static double AveragePattern(Span<SwingData> list)
-        {
-            double sum = 0;
-            foreach(SwingData val in list)
-            {
-                sum += val.Pattern;
             }
             return sum / list.Length;
         }

@@ -13,8 +13,6 @@ namespace Analyzer.BeatmapScanner.Data
         public double SwingDiff { get; set; } = 0;
         public bool Forehand { get; set; } = true;
         public bool Reset { get; set; } = false;
-        public bool Linear { get; set; } = false;
-        public double Pattern { get; set; } = 0;
         public double PathStrain { get; set; } = 0;
         public double AngleStrain { get; set; } = 0;
         public double AnglePathStrain { get; set; } = 0;
