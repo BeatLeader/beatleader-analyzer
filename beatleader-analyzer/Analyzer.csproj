@@ -2,7 +2,7 @@
 
   <PropertyGroup>
 	  <!--net48-->
-    <TargetFrameworks>net48;net8.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net48</TargetFrameworks>
     <RootNamespace>beatleader_analyzer</RootNamespace>
 	  <LangVersion>preview</LangVersion>
   </PropertyGroup>
