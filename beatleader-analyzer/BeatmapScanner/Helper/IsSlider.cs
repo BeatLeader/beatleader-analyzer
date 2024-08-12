@@ -50,41 +50,41 @@ namespace Analyzer.BeatmapScanner.Helper
                     }
                     break;
                 case double d when d > 112.5 && d <= 157.5:
-                    if (y1 < y2)
+                    if (y1 < y2 && x1 >= x2)
                     {
                         return true;
                     }
-                    if (x1 > x2)
+                    if (x1 > x2 && y1 <= y2)
                     {
                         return true;
                     }
                     break;
                 case double d when d > 22.5 && d <= 67.5:
-                    if (y1 < y2)
+                    if (y1 < y2 && x1 <= x2)
                     {
                         return true;
                     }
-                    if (x1 < x2)
+                    if (x1 < x2 && y1 <= y2)
                     {
                         return true;
                     }
                     break;
                 case double d when d > 202.5 && d <= 247.5:
-                    if (y1 > y2)
+                    if (y1 > y2 && x1 >= x2)
                     {
                         return true;
                     }
-                    if (x1 > x2)
+                    if (x1 > x2 && y1 >= y2)
                     {
                         return true;
                     }
                     break;
                 case double d when d > 292.5 && d <= 337.5:
-                    if (y1 > y2)
+                    if (y1 > y2 && x1 <= x2)
                     {
                         return true;
                     }
-                    if (x1 < x2)
+                    if (x1 < x2 && y1 >= y2)
                     {
                         return true;
                     }
