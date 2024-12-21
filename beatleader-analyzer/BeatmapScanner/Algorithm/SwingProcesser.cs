@@ -14,7 +14,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static List<SwingData> Process(List<Cube> cubes)
         {
-            int[] headCubes = cubes.Where(x => x.Head).Select((val, index) => index).ToArray();
+            int[] headCubes = cubes.Select((val, index) => (val, index)).Where(x => x.val.Head).Select(x => x.index).ToArray();
             var swingData = new List<SwingData>();
             (double x, double y) lastSimPos = (0, 0);
             if (cubes.Count == 0)
