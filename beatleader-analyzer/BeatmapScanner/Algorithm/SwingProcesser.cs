@@ -6,6 +6,7 @@ using static Analyzer.BeatmapScanner.Helper.CalculateBaseEntryExit;
 using static Analyzer.BeatmapScanner.Helper.IsSameDirection;
 using static Analyzer.BeatmapScanner.Helper.Helper;
 using static Analyzer.BeatmapScanner.Helper.FindAngleViaPosition;
+using Parser.Map.Difficulty.V3.Event.V3;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -13,6 +14,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static List<SwingData> Process(List<Cube> cubes)
         {
+            int[] headCubes = cubes.Where(x => x.Head).Select((val, index) => index).ToArray();
             var swingData = new List<SwingData>();
             (double x, double y) lastSimPos = (0, 0);
             if (cubes.Count == 0)
@@ -47,13 +49,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
                 else // Pattern
                 {
-                    for (int f = i; f > 0; f--)
+                    var nextHeadCubeIndex = headCubes.LastOrDefault(index => index < i);
+                    if (nextHeadCubeIndex is not 0)
                     {
-                        if (cubes[f].Head)
-                        {
-                            (currentAngle, lastSimPos) = FindAngleViaPos(cubes, i, f, previousAngle, true);
-                            break;
-                        }
+                        (currentAngle, lastSimPos) = FindAngleViaPos(cubes, i, nextHeadCubeIndex, previousAngle, true);
                     }
                     if (!IsSameDir(currentAngle, previousAngle))
                     {
