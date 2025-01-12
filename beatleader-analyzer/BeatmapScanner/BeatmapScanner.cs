@@ -3,14 +3,15 @@ using Analyzer.BeatmapScanner.Data;
 using System.Collections.Generic;
 using Parser.Map.Difficulty.V3.Grid;
 using System.Linq;
+using beatleader_analyzer.BeatmapScanner.Data;
 
 namespace Analyzer.BeatmapScanner
 {
     internal class BeatmapScanner
     {
-        public static (List<double>, List<(double, double, double)>) Analyzer(List<Note> notes, List<Chain> chains, List<Bomb> bombs, List<Wall> walls, float bpm, float njs)
+        public static (List<double>, List<PerSwing>) Analyzer(List<Note> notes, List<Chain> chains, List<Bomb> bombs, List<Wall> walls, float bpm, float njs)
         {
-            List<(double Time, double Pass, double Tech)> perSwing = [];
+            List<PerSwing> perSwing = [];
             List<double> value = [];
             List<Cube> cubes = [];
 

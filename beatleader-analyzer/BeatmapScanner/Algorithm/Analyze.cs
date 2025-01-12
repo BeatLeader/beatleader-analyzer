@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
 using System.Linq;
+using beatleader_analyzer.BeatmapScanner.Data;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
     internal class Analyze
     {
-        public static (List<double>, List<(double Time, double Pass, double Tech)>) UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm, float njs)
+        public static (List<double>, List<PerSwing>) UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm, float njs)
         {
             double leftDiff = 0;
             double rightDiff = 0;
@@ -18,8 +19,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
             List<SwingData> blueSwingData = [];
             List<List<SwingData>> redPatternData = [];
             List<List<SwingData>> bluePatternData = [];
-            List<(double Time, double Pass, double Tech)> redPerSwing = [];
-            List<(double Time, double Pass, double Tech)> bluePerSwing = [];
+            List<PerSwing> redPerSwing = [];
+            List<PerSwing> bluePerSwing = [];
             List<SwingData> data = [];
 
             if (red.Count > 2)
@@ -104,7 +105,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             double low_note_nerf = 1 / (1 + Math.Pow(Math.E, -0.6 * (data.Count / 100 + 1.5)));
             value.Add(low_note_nerf);
 
-            List<(double Time, double, double)> perSwing = [];
+            List<PerSwing> perSwing = [];
             perSwing.AddRange(redPerSwing);
             perSwing.AddRange(bluePerSwing);
             perSwing = [.. perSwing.OrderBy(x => x.Time)];
@@ -134,9 +135,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return sum / list.Length;
         }
 
-        public static List<(double, double, double)> AddList(List<(double Time, double Pass, double Tech)> list, List<(double Time, double Pass, double Tech)> list2)
+        public static List<PerSwing> AddList(List<PerSwing> list, List<PerSwing> list2)
         {
-            List<(double, double, double)> newList = [];
+            List<PerSwing> newList = [];
             List<double> Pass = [];
             List<double> Tech = [];
 
@@ -150,7 +151,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (Pass.Count <= i) return newList;
                 Pass[i] += list2[i].Pass;
                 Tech[i] += list2[i].Tech;
-                newList.Add((list2[i].Time, Pass[i], Tech[i]));
+                newList.Add(new(list2[i].Time, Pass[i], Tech[i]));
             }
 
             return newList;
