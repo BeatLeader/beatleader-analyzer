@@ -4,6 +4,7 @@ using System;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
 using System.Linq;
 using beatleader_analyzer.BeatmapScanner.Data;
+using System.Runtime.InteropServices;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
