@@ -6,7 +6,6 @@ using static Analyzer.BeatmapScanner.Helper.CalculateBaseEntryExit;
 using static Analyzer.BeatmapScanner.Helper.IsSameDirection;
 using static Analyzer.BeatmapScanner.Helper.Helper;
 using static Analyzer.BeatmapScanner.Helper.FindAngleViaPosition;
-using Parser.Map.Difficulty.V3.Event.V3;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {

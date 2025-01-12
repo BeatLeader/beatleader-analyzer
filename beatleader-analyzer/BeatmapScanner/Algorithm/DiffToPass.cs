@@ -37,33 +37,33 @@ namespace Analyzer.BeatmapScanner.Algorithm
         }
 
 
-        public static double CalcAverage(List<SwingData> swingData, int WINDOW)
+        public static List<(double Time, double Pass, double Tech)> CalcAverage(List<SwingData> swingData, int WINDOW)
         {
             if (swingData.Count < 2)
             {
-                return 0;
+                return [];
             }
 
             var qDiff = new CircularBuffer(stackalloc double[WINDOW]);
-            var difficultyIndex = new List<double>();
-
+            var difficultyIndex = new List<(double Time, double Pass, double Tech)>();
             for (int i = 1; i < swingData.Count; i++)
             {
                 qDiff.Enqueue(swingData[i].SwingDiff);
                 if (i >= WINDOW)
                 {
                     var windowDiff = Average(qDiff.Buffer) * 0.8;
-                    difficultyIndex.Add(windowDiff);
+                    difficultyIndex.Add((swingData[i].Time, windowDiff, swingData[i].AngleStrain + swingData[i].PathStrain));
                 }
+                else difficultyIndex.Add((swingData[i].Time, 0, swingData[i].AngleStrain + swingData[i].PathStrain));
             }
 
             if (difficultyIndex.Count > 0)
             {
-                return difficultyIndex.Max();
+                return difficultyIndex;
             }
             else
             {
-                return 0;
+                return [];
             }
         }
     }
