@@ -71,22 +71,38 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 redSwingData = DiffToPass.CalcSwingDiff(redSwingData, bpm);
                 redPerSwing = DiffToPass.CalcAverage(redSwingData, 8);
-                redPerSwing = AddList(redPerSwing, DiffToPass.CalcAverage(redSwingData, 16));
-                redPerSwing = AddList(redPerSwing, DiffToPass.CalcAverage(redSwingData, 32));
-                redPerSwing = AddList(redPerSwing, DiffToPass.CalcAverage(redSwingData, 48));
-                redPerSwing = AddList(redPerSwing, DiffToPass.CalcAverage(redSwingData, 96));
                 leftDiff = redPerSwing.Select(x => x.Pass).Max();
+                var temp = DiffToPass.CalcAverage(redSwingData, 16);
+                leftDiff += temp.Select(x => x.Pass).Max();
+                redPerSwing = AddList(redPerSwing, temp);
+                temp = DiffToPass.CalcAverage(redSwingData, 32);
+                leftDiff += temp.Select(x => x.Pass).Max();
+                redPerSwing = AddList(redPerSwing, temp);
+                temp = DiffToPass.CalcAverage(redSwingData, 48);
+                leftDiff += temp.Select(x => x.Pass).Max();
+                redPerSwing = AddList(redPerSwing, temp);
+                temp = DiffToPass.CalcAverage(redSwingData, 96);
+                leftDiff += temp.Select(x => x.Pass).Max();
+                redPerSwing = AddList(redPerSwing, temp);
                 leftDiff /= 5;
             }
             if(blueSwingData != null)
             {
                 blueSwingData = DiffToPass.CalcSwingDiff(blueSwingData, bpm);
                 bluePerSwing = DiffToPass.CalcAverage(blueSwingData, 8);
-                bluePerSwing = AddList(bluePerSwing, DiffToPass.CalcAverage(blueSwingData, 16));
-                bluePerSwing = AddList(bluePerSwing, DiffToPass.CalcAverage(blueSwingData, 32));
-                bluePerSwing = AddList(bluePerSwing, DiffToPass.CalcAverage(blueSwingData, 48));
-                bluePerSwing = AddList(bluePerSwing, DiffToPass.CalcAverage(blueSwingData, 96));
                 rightDiff = bluePerSwing.Select(x => x.Pass).Max();
+                var temp = DiffToPass.CalcAverage(blueSwingData, 16);
+                rightDiff += temp.Select(x => x.Pass).Max();
+                bluePerSwing = AddList(bluePerSwing, temp);
+                temp = DiffToPass.CalcAverage(blueSwingData, 32);
+                rightDiff += temp.Select(x => x.Pass).Max();
+                bluePerSwing = AddList(bluePerSwing, temp);
+                temp = DiffToPass.CalcAverage(blueSwingData, 48);
+                rightDiff += temp.Select(x => x.Pass).Max();
+                bluePerSwing = AddList(bluePerSwing, temp);
+                temp = DiffToPass.CalcAverage(blueSwingData, 96);
+                rightDiff += temp.Select(x => x.Pass).Max();
+                bluePerSwing = AddList(bluePerSwing, temp);
                 rightDiff /= 5;
             }
 
