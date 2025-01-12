@@ -109,6 +109,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
             perSwing.AddRange(redPerSwing);
             perSwing.AddRange(bluePerSwing);
             perSwing = [.. perSwing.OrderBy(x => x.Time)];
+            perSwing.ForEach(x => { x.Pass /= 5;
+                x.Tech /= 5;
+            });
 
             return (value, perSwing);
         }
