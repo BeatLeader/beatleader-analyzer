@@ -68,11 +68,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
 
-            if(redSwingData != null)
+            if (redSwingData != null)
             {
                 redSwingData = DiffToPass.CalcSwingDiff(redSwingData, bpm);
                 redPerSwing = DiffToPass.CalcAverage(redSwingData, 8);
-                if (bluePerSwing.Count > 0)
+                if (redPerSwing.Count > 0)
                 {
                     leftDiff = redPerSwing.Select(x => x.Pass).Max();
                     var temp = DiffToPass.CalcAverage(redSwingData, 16);
@@ -120,7 +120,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 tech = AverageAnglePath(CollectionsMarshal.AsSpan(data)[(int)(data.Count * 0.25)..]);
             }
 
-            double balanced_pass = leftDiff * 0.5 + rightDiff * 0.5;
+            double balanced_pass = Math.Max(leftDiff, rightDiff) * 0.7 + Math.Min(leftDiff, rightDiff) * 0.3;
 
             value.Add(balanced_pass);
             double balanced_tech = tech * (-(Math.Pow(1.4, -balanced_pass)) + 1);
