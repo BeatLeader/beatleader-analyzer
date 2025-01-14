@@ -8,7 +8,7 @@ namespace Analyzer.BeatmapScanner.Helper
         {
             if(prev.CutDirection == 8)
             {
-                if (next.Time - prev.Time <= 0.125)
+                if (next.Time - prev.Time <= 0.25)
                 {
                     if (prev.Line == next.Line && prev.Layer == next.Layer && next.CutDirection == 8) return true;
                     if (IsSlid(sim.x, sim.y, next.Line, next.Layer, prev.Direction)) return true;
