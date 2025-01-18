@@ -19,6 +19,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
         public static void CalculateLinear(List<SwingData> swings)
         {
+            if (swings.Count < 2) return;
             swings[0].Linear = true;
             swings[1].Linear = true;
 
