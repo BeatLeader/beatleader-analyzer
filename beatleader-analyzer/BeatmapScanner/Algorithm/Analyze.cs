@@ -125,7 +125,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             value.Add(balanced_pass);
             double balanced_tech = tech * (-(Math.Pow(1.4, -balanced_pass)) + 1);
             value.Add(balanced_tech);
-            double low_note_nerf = 1 / (1 + Math.Pow(Math.E, -1.4 * -(data.Count / 50)));
+            double low_note_nerf = 1 / (1 + Math.Pow(Math.E, -1.4 - (data.Count / 50)));
             value.Add(low_note_nerf);
 
             List<PerSwing> perSwing = [];
