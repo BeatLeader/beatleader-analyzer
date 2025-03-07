@@ -9,15 +9,18 @@ namespace Analyzer.BeatmapScanner
 {
     internal class BeatmapScanner
     {
-        public static (List<double>, List<PerSwing>) Analyzer(List<Note> notes, List<Chain> chains, List<Bomb> bombs, List<Wall> walls, float bpm, float njs)
+        public static (List<double>, List<PerSwing>) Analyzer(List<Note> notes, List<Chain> chains, List<Bomb> bombs, List<Wall> walls, float bpm, float timescale)
         {
             List<PerSwing> perSwing = [];
             List<double> value = [];
             List<Cube> cubes = [];
 
+            bpm *= timescale;
             foreach (var note in notes)
             {
-                cubes.Add(new Cube(note));
+                var cube = new Cube(note);
+                cube.Njs *= timescale;
+                cubes.Add(cube);
             }
 
             cubes = cubes.OrderBy(c => c.Time).ToList();
@@ -37,7 +40,7 @@ namespace Analyzer.BeatmapScanner
             var red = cubes.Where(c => c.Type == 0).ToList();
             var blue = cubes.Where(c => c.Type == 1).ToList();
 
-            (value, perSwing) = Analyze.UseLackWizAlgorithm(red, blue, bpm, njs);
+            (value, perSwing) = Analyze.UseLackWizAlgorithm(red, blue, bpm);
 
             return (value, perSwing);
         }

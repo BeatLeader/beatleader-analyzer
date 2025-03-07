@@ -12,6 +12,7 @@ namespace Analyzer.BeatmapScanner.Data
         public int CutDirection { get; set; } = 0;
         public double AngleOffset { get; set; } = 0;
         public double Direction { get; set; } = 8;
+        public float Njs { get; set; } = 0;
         public bool Head { get; set; } = false;
         public bool Pattern { get; set; } = false;
         public bool Chain { get; set; } = false;
@@ -32,6 +33,7 @@ namespace Analyzer.BeatmapScanner.Data
             Line = cube.Line;
             Layer = cube.Layer;
             Direction = cube.Direction;
+            Njs = cube.Njs;
         }
 
 
@@ -44,6 +46,7 @@ namespace Analyzer.BeatmapScanner.Data
             Line = note.x;
             Layer = note.y;
             Direction = note.CutDirection;
+            Njs = note.njs;
         }
     }
 }

@@ -9,7 +9,7 @@ namespace beatleader_analyzer
 {
     public class Analyze
     {
-        public List<Ratings> GetRating(DifficultyV3 diff, string characteristic, string difficulty, float bpm, float njs, float timescale = 1)
+        public List<Ratings> GetRating(DifficultyV3 diff, string characteristic, string difficulty, float bpm, float timescale = 1)
         {
             List<Ratings> ratings = [];
 
@@ -17,7 +17,7 @@ namespace beatleader_analyzer
             {
                 if (diff.Notes.Count >= 20)
                 {
-                    (List<double> rating, List<PerSwing> perSwing) = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(diff.Notes, diff.Chains, diff.Bombs, diff.Walls, bpm * timescale, njs * timescale);
+                    (List<double> rating, List<PerSwing> perSwing) = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(diff.Notes, diff.Chains, diff.Bombs, diff.Walls, bpm, timescale);
                     ratings.Add(new(characteristic, difficulty, rating, perSwing));
                     return ratings;
                 }
@@ -44,7 +44,7 @@ namespace beatleader_analyzer
                 {
                     if (difficulty.Data.Notes.Count >= 20)
                     {
-                        (List<double> rating, List<PerSwing> perSwing) = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(difficulty.Data.Notes, difficulty.Data.Chains, difficulty.Data.Bombs, difficulty.Data.Walls, beatmap.Info._beatsPerMinute * timescale, data._difficultyBeatmaps.Where(x => x._difficulty == difficulty.Difficulty).FirstOrDefault()._noteJumpMovementSpeed * timescale);
+                        (List<double> rating, List<PerSwing> perSwing) = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(difficulty.Data.Notes, difficulty.Data.Chains, difficulty.Data.Bombs, difficulty.Data.Walls, beatmap.Info._beatsPerMinute, timescale);
                         ratings.Add(new(difficulty.Characteristic, difficulty.Difficulty, rating, perSwing));
                     }
                 }
