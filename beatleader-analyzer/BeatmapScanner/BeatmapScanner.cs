@@ -9,7 +9,7 @@ namespace Analyzer.BeatmapScanner
 {
     internal class BeatmapScanner
     {
-        public static (List<double>, List<PerSwing>) Analyzer(List<Note> notes, List<Chain> chains, List<Bomb> bombs, List<Wall> walls, float bpm, float timescale)
+        public static (List<double>, List<PerSwing>) Analyzer(List<Note> notes, List<Chain> chains, List<Bomb> bombs, List<Wall> walls, float bpm, float timescale, float njsMult = 1)
         {
             List<PerSwing> perSwing = [];
             List<double> value = [];
@@ -19,7 +19,7 @@ namespace Analyzer.BeatmapScanner
             foreach (var note in notes)
             {
                 var cube = new Cube(note);
-                cube.Njs *= timescale;
+                cube.Njs *= timescale * njsMult;
                 cubes.Add(cube);
             }
 
