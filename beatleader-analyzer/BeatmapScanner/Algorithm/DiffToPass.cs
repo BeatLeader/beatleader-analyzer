@@ -1,4 +1,5 @@
 ﻿using Analyzer.BeatmapScanner.Data;
+using beatleader_analyzer.BeatmapScanner.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,41 +30,42 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double yHitDist = swingData[i].EntryPosition.y - swingData[i].ExitPosition.y;
                 data[^1].HitDistance = Math.Sqrt(Math.Pow(xHitDist, 2) + Math.Pow(yHitDist, 2));
                 data[^1].HitDiff = data[^1].HitDistance / (data[^1].HitDistance + 2) + 1;
-                data[^1].Stress = (Math.Min(swingData[i].AngleStrain * 0.5, 0.5) + swingData[i].PathStrain) * data[^1].HitDiff;
+                data[^1].Stress = (swingData[i].AngleStrain / 10 + swingData[i].PathStrain) * data[^1].HitDiff;
                 swingData[i].SwingDiff = data[^1].SwingSpeed * (-Math.Pow(1.4, -data[^1].SwingSpeed) + 1) * (data[^1].Stress / (data[^1].Stress + 2) + 1);
+                swingData[i].SwingDiff *= NjsBuff.CalculateNjsBuff(swingData[i].Start.Njs);
             }
 
             return swingData;
         }
 
 
-        public static double CalcAverage(List<SwingData> swingData, int WINDOW)
+        public static List<PerSwing> CalcAverage(List<SwingData> swingData, int WINDOW)
         {
             if (swingData.Count < 2)
             {
-                return 0;
+                return [];
             }
 
             var qDiff = new CircularBuffer(stackalloc double[WINDOW]);
-            var difficultyIndex = new List<double>();
-
+            var difficultyIndex = new List<PerSwing>();
             for (int i = 1; i < swingData.Count; i++)
             {
                 qDiff.Enqueue(swingData[i].SwingDiff);
                 if (i >= WINDOW)
                 {
                     var windowDiff = Average(qDiff.Buffer) * 0.8;
-                    difficultyIndex.Add(windowDiff);
+                    difficultyIndex.Add(new(swingData[i].Time, windowDiff, swingData[i].AngleStrain + swingData[i].PathStrain));
                 }
+                else difficultyIndex.Add(new(swingData[i].Time, 0, swingData[i].AngleStrain + swingData[i].PathStrain));
             }
 
             if (difficultyIndex.Count > 0)
             {
-                return difficultyIndex.Max();
+                return difficultyIndex;
             }
             else
             {
-                return 0;
+                return [];
             }
         }
     }

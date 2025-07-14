@@ -1,29 +1,32 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System.Collections.Generic;
 using System;
-using System.Linq;
-using System.Runtime.InteropServices;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
+using System.Linq;
+using beatleader_analyzer.BeatmapScanner.Data;
+using System.Runtime.InteropServices;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
     internal class Analyze
     {
-        public static List<double> UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm, float njs)
+        public static (List<double>, List<PerSwing>) UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm)
         {
             double leftDiff = 0;
             double rightDiff = 0;
             double tech = 0;
-            List<double> value = new();
-            List<SwingData> redSwingData = new();
-            List<SwingData> blueSwingData = new();
-            List<List<SwingData>> redPatternData = new();
-            List<List<SwingData>> bluePatternData = new();
-            List<SwingData> data = new();
+            List<double> value = [];
+            List<SwingData> redSwingData = [];
+            List<SwingData> blueSwingData = [];
+            List<List<SwingData>> redPatternData = [];
+            List<List<SwingData>> bluePatternData = [];
+            List<PerSwing> redPerSwing = [];
+            List<PerSwing> bluePerSwing = [];
+            List<SwingData> data = [];
 
             if (red.Count > 2)
             {
-                FlowDetector.Detect(red, bpm, njs, false);
+                FlowDetector.Detect(red, bpm, false);
                 redSwingData = SwingProcesser.Process(red);
                 if (redSwingData != null)
                 {
@@ -36,7 +39,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (redSwingData != null)
                 {
                     SwingCurve.Calc(redSwingData, false);
-                    Linear.CalculateLinear(redSwingData);
                 }
                 if (redSwingData != null)
                 {
@@ -46,7 +48,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (blue.Count > 2)
             {
-                FlowDetector.Detect(blue, bpm, njs, true);
+                FlowDetector.Detect(blue, bpm, true);
                 blueSwingData = SwingProcesser.Process(blue);
                 if (blueSwingData != null)
                 {
@@ -59,7 +61,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (blueSwingData != null)
                 {
                     SwingCurve.Calc(blueSwingData, true);
-                    Linear.CalculateLinear(blueSwingData);
                 }
                 if (blueSwingData != null)
                 {
@@ -67,56 +68,82 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
 
-            if(redSwingData != null)
+            if (redSwingData != null)
             {
                 redSwingData = DiffToPass.CalcSwingDiff(redSwingData, bpm);
-                leftDiff = DiffToPass.CalcAverage(redSwingData, 8);
-                leftDiff += DiffToPass.CalcAverage(redSwingData, 16);
-                leftDiff += DiffToPass.CalcAverage(redSwingData, 32);
-                leftDiff += DiffToPass.CalcAverage(redSwingData, 48);
-                leftDiff += DiffToPass.CalcAverage(redSwingData, 96);
-                leftDiff /= 5;
+                redPerSwing = DiffToPass.CalcAverage(redSwingData, 8);
+                if (redPerSwing.Count > 0)
+                {
+                    leftDiff = redPerSwing.Select(x => x.Pass).Max();
+                    var temp = DiffToPass.CalcAverage(redSwingData, 16);
+                    leftDiff += temp.Select(x => x.Pass).Max();
+                    redPerSwing = AddList(redPerSwing, temp);
+                    temp = DiffToPass.CalcAverage(redSwingData, 32);
+                    leftDiff += temp.Select(x => x.Pass).Max();
+                    redPerSwing = AddList(redPerSwing, temp);
+                    temp = DiffToPass.CalcAverage(redSwingData, 48);
+                    leftDiff += temp.Select(x => x.Pass).Max();
+                    redPerSwing = AddList(redPerSwing, temp);
+                    temp = DiffToPass.CalcAverage(redSwingData, 96);
+                    leftDiff += temp.Select(x => x.Pass).Max();
+                    redPerSwing = AddList(redPerSwing, temp);
+                    leftDiff /= 5;
+                }
             }
-            if(blueSwingData != null)
+            if (blueSwingData != null)
             {
                 blueSwingData = DiffToPass.CalcSwingDiff(blueSwingData, bpm);
-                rightDiff = DiffToPass.CalcAverage(blueSwingData, 8);
-                rightDiff += DiffToPass.CalcAverage(blueSwingData, 16);
-                rightDiff += DiffToPass.CalcAverage(blueSwingData, 32);
-                rightDiff += DiffToPass.CalcAverage(blueSwingData, 48);
-                rightDiff += DiffToPass.CalcAverage(blueSwingData, 96);
-                rightDiff /= 5;
+                bluePerSwing = DiffToPass.CalcAverage(blueSwingData, 8);
+                if (bluePerSwing.Count > 0)
+                {
+                    rightDiff = bluePerSwing.Select(x => x.Pass).Max();
+                    var temp = DiffToPass.CalcAverage(blueSwingData, 16);
+                    rightDiff += temp.Select(x => x.Pass).Max();
+                    bluePerSwing = AddList(bluePerSwing, temp);
+                    temp = DiffToPass.CalcAverage(blueSwingData, 32);
+                    rightDiff += temp.Select(x => x.Pass).Max();
+                    bluePerSwing = AddList(bluePerSwing, temp);
+                    temp = DiffToPass.CalcAverage(blueSwingData, 48);
+                    rightDiff += temp.Select(x => x.Pass).Max();
+                    bluePerSwing = AddList(bluePerSwing, temp);
+                    temp = DiffToPass.CalcAverage(blueSwingData, 96);
+                    rightDiff += temp.Select(x => x.Pass).Max();
+                    bluePerSwing = AddList(bluePerSwing, temp);
+                    rightDiff /= 5;
+                }
             }
 
             if (data.Count > 2)
             {
+                foreach (var item in data)
+                {
+                    var buff = NjsBuff.CalculateNjsBuff(item.Start.Njs);
+                    item.AngleStrain *= buff;
+                    item.PathStrain *= buff;
+                }
+
                 // We can sort the original list here, as only count and average is accessed after this line
                 data.Sort(CompareAngleAndPathStrain);
                 tech = AverageAnglePath(CollectionsMarshal.AsSpan(data)[(int)(data.Count * 0.25)..]);
             }
 
-            double balanced_pass = leftDiff * 0.5 + rightDiff * 0.5;
+            double balanced_pass = Math.Max(leftDiff, rightDiff) * 0.7 + Math.Min(leftDiff, rightDiff) * 0.3;
 
             value.Add(balanced_pass);
             double balanced_tech = tech * (-(Math.Pow(1.4, -balanced_pass)) + 1);
             value.Add(balanced_tech);
-            double low_note_nerf = 1 / (1 + Math.Pow(Math.E, -0.6 * (data.Count / 100 + 1.5)));
+            double low_note_nerf = 1 / (1 + Math.Pow(Math.E, -1.4 - (data.Count / 50)));
             value.Add(low_note_nerf);
 
-            if(data.Count > 2)
-            {
-                double linear = data.Where(x => x.Linear == true).Count() / (double)data.Count;
-                value.Add(linear);
-                double pattern = AveragePattern(CollectionsMarshal.AsSpan(data));
-                value.Add(pattern);
-            }
-            else
-            {
-                value.Add(0);
-                value.Add(0);
-            }
+            List<PerSwing> perSwing = [];
+            perSwing.AddRange(redPerSwing);
+            perSwing.AddRange(bluePerSwing);
+            perSwing = [.. perSwing.OrderBy(x => x.Time)];
+            perSwing.ForEach(x => { x.Pass /= 5;
+                x.Tech /= 5;
+            });
 
-            return value;
+            return (value, perSwing);
         }
 
         private static readonly Comparer<SwingData> CompareAngleAndPathStrain = Comparer<SwingData>.Create((a, b) => (a.AngleStrain + a.PathStrain).CompareTo(b.AngleStrain + b.PathStrain));
@@ -139,6 +166,28 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 sum += val.Pattern;
             }
             return sum / list.Length;
+        }
+
+        public static List<PerSwing> AddList(List<PerSwing> list, List<PerSwing> list2)
+        {
+            List<PerSwing> newList = [];
+            List<double> Pass = [];
+            List<double> Tech = [];
+
+            foreach (var val in list)
+            {
+                Pass.Add(val.Pass);
+                Tech.Add(val.Tech);
+            }
+            for (int i = 0; i < list2.Count; i++)
+            {
+                if (Pass.Count <= i) return newList;
+                Pass[i] += list2[i].Pass;
+                Tech[i] += list2[i].Tech;
+                newList.Add(new(list2[i].Time, Pass[i], Tech[i]));
+            }
+
+            return newList;
         }
     }
 }

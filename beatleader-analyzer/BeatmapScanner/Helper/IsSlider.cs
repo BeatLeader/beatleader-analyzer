@@ -4,16 +4,16 @@ namespace Analyzer.BeatmapScanner.Helper
 {
     internal class IsSlider
     {
-        public static bool SliderCond(Cube prev, Cube next, (double x, double y) sim, float bpm, float njs)
+        public static bool SliderCond(Cube prev, Cube next, (double x, double y) sim, float bpm)
         {
             if(prev.CutDirection == 8)
             {
-                if (next.Time - prev.Time <= 0.125)
+                if (next.Time - prev.Time <= 0.25)
                 {
                     if (prev.Line == next.Line && prev.Layer == next.Layer && next.CutDirection == 8) return true;
                     if (IsSlid(sim.x, sim.y, next.Line, next.Layer, prev.Direction)) return true;
                 }
-                if ((next.Time - prev.Time) / (bpm / 60) * njs <= 1 && next.CutDirection == 8) return true;
+                if ((next.Time - prev.Time) / (bpm / 60) * prev.Njs <= 1 && next.CutDirection == 8) return true;
                 return false;
             }
 

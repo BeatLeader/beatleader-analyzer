@@ -29,8 +29,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
             var patternFound = false;
             var SFList = swingData.Select(s => s.SwingFrequency);
             var SFMargin = SFList.Average() / 32;
-            List<List<SwingData>> patternList = new();
-            List<SwingData> tempPList = new();
+            List<List<SwingData>> patternList = [];
+            List<SwingData> tempPList = [];
 
             for (int i = 0; i < swingData.Count; i++)
             {
