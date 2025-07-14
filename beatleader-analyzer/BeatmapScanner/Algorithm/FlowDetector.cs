@@ -11,7 +11,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 {
     internal class FlowDetector
     {
-        public static void Detect(List<Cube> cubes, float bpm, float njs, bool leftOrRight)
+        public static void Detect(List<Cube> cubes, float bpm, bool leftOrRight)
         {
             if (cubes.Count < 2)
             {
@@ -104,7 +104,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 if (cubes[i].CutDirection == 8)
                 { 
-                    if ((SliderCond(cubes[i - 1], cubes[i], lastSimPos, bpm, njs))
+                    if ((SliderCond(cubes[i - 1], cubes[i], lastSimPos, bpm))
                         || cubes[i].Time - cubes[i - 1].Time <= 0.0625)
                     {
                         // Pattern
@@ -187,7 +187,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 else // Is an arrow
                 {
                     cubes[i].Direction = Mod(DirectionToDegree[cubes[i].CutDirection] + cubes[i].AngleOffset, 360);
-                    if ((cubes[i].Time - cubes[i - 1].Time <= 0.125 && SliderCond(cubes[i - 1], cubes[i], lastSimPos, bpm, njs) && IsSameDir(cubes[i - 1].Direction, cubes[i].Direction))
+                    if ((cubes[i].Time - cubes[i - 1].Time <= 0.125 && SliderCond(cubes[i - 1], cubes[i], lastSimPos, bpm) && IsSameDir(cubes[i - 1].Direction, cubes[i].Direction))
                         || cubes[i].Time - cubes[i - 1].Time <= 0.0625)
                     {
                         cubes[i].Pattern = true;
@@ -222,7 +222,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             // Handle the last notes
             if (cubes[^1].CutDirection == 8)
             {
-                if ((cubes[^1].Time - cubes[^2].Time <= 0.125 && SliderCond(cubes[^2], cubes[^1], lastSimPos, bpm, njs))
+                if ((cubes[^1].Time - cubes[^2].Time <= 0.125 && SliderCond(cubes[^2], cubes[^1], lastSimPos, bpm))
                     || cubes[^1].Time - cubes[^2].Time <= 0.0625)
                 {
                     (cubes[^1].Direction, lastSimPos) = FindAngleViaPos(cubes, cubes.Count - 1, cubes.Count - 2, cubes[^2].Direction, true);
@@ -245,7 +245,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             else
             {
                 cubes[^1].Direction = Mod(DirectionToDegree[cubes[^1].CutDirection] + cubes[^1].AngleOffset, 360);
-                if (((cubes[^1].Time - cubes[^2].Time <= 0.125 && SliderCond(cubes[^2], cubes[^1], lastSimPos, bpm, njs))
+                if (((cubes[^1].Time - cubes[^2].Time <= 0.125 && SliderCond(cubes[^2], cubes[^1], lastSimPos, bpm))
                     || cubes[^1].Time - cubes[^2].Time <= 0.0625) && IsSameDir(cubes[^2].Direction, cubes[^1].Direction))
                 {
                     cubes[^1].Pattern = true;

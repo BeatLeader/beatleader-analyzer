@@ -32,6 +32,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 data[^1].HitDiff = data[^1].HitDistance / (data[^1].HitDistance + 2) + 1;
                 data[^1].Stress = (swingData[i].AngleStrain / 10 + swingData[i].PathStrain) * data[^1].HitDiff;
                 swingData[i].SwingDiff = data[^1].SwingSpeed * (-Math.Pow(1.4, -data[^1].SwingSpeed) + 1) * (data[^1].Stress / (data[^1].Stress + 2) + 1);
+                swingData[i].SwingDiff *= NjsBuff.CalculateNjsBuff(swingData[i].Start.Njs);
             }
 
             return swingData;

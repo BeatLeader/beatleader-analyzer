@@ -10,7 +10,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 {
     internal class Analyze
     {
-        public static (List<double>, List<PerSwing>) UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm, float njs)
+        public static (List<double>, List<PerSwing>) UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm)
         {
             double leftDiff = 0;
             double rightDiff = 0;
@@ -26,7 +26,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (red.Count > 2)
             {
-                FlowDetector.Detect(red, bpm, njs, false);
+                FlowDetector.Detect(red, bpm, false);
                 redSwingData = SwingProcesser.Process(red);
                 if (redSwingData != null)
                 {
@@ -48,7 +48,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (blue.Count > 2)
             {
-                FlowDetector.Detect(blue, bpm, njs, true);
+                FlowDetector.Detect(blue, bpm, true);
                 blueSwingData = SwingProcesser.Process(blue);
                 if (blueSwingData != null)
                 {
@@ -115,6 +115,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (data.Count > 2)
             {
+                foreach (var item in data)
+                {
+                    var buff = NjsBuff.CalculateNjsBuff(item.Start.Njs);
+                    item.AngleStrain *= buff;
+                    item.PathStrain *= buff;
+                }
+
                 // We can sort the original list here, as only count and average is accessed after this line
                 data.Sort(CompareAngleAndPathStrain);
                 tech = AverageAnglePath(CollectionsMarshal.AsSpan(data)[(int)(data.Count * 0.25)..]);
