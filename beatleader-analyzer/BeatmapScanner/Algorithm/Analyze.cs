@@ -147,7 +147,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             // stamina calc
             double staminaDiffLeft = StaminaCalculator.CalcStamina(redSwingData, bpm);
             double staminaDiffRight = StaminaCalculator.CalcStamina(blueSwingData, bpm);
-            double stamina_rating = Math.Max(staminaDiffLeft, staminaDiffRight);
+            double stamina_rating = Math.Max(staminaDiffLeft, staminaDiffRight) * 0.9 + Math.Min(staminaDiffLeft, staminaDiffRight) * 0.1;
             value.Add(stamina_rating);
 
             return (value, perSwing);
