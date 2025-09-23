@@ -9,7 +9,7 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
     {
         public static double CalcStamina(List<SwingData> swingData, double bpm)
         {
-            const double ratingScale = 1 / 680.0;
+            const double ratingScale = 1 / 4000.0;
             const double regenSeconds = 240; // 4 minutes to regenerate all energy
             swingData = CalcEnergyCost(swingData, bpm);
 
@@ -48,10 +48,22 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
 
         public static List<SwingData> CalcEnergyCost(List<SwingData> swingData, double bpm)
         {
-            const double frequencyScalingPower = 1;
+            // calculates energy cost per swing using a simple linear predictions model
+            // derived from https://www.desmos.com/calculator/gkesplq7gh
+            // kinetic energy is proportional to squared velocity
+            // velocity is proportional to swing amplitude and swings per second
+            // multiply those, square, and simplify to get kinetic energy per swing
+
+            const double predictionsTime = 0.025; // in seconds
+            const double predictionsSquared = predictionsTime * predictionsTime;
+            const double piSquared = Math.PI * Math.PI;
+
             foreach (SwingData swing in swingData)
             {
-                swing.EnergyCost = Math.Pow(swing.SwingFrequency * bpm / 60, frequencyScalingPower);
+                var swingsPerSecond = Math.Max(swing.SwingFrequency * bpm / 60, 2); // assume lowest reasonable swing speed equivalent to 2 swings per second
+                var spsSquared = swingsPerSecond * swingsPerSecond;
+
+                swing.EnergyCost = spsSquared / (piSquared * spsSquared * predictionsSquared + 1);
             }
 
             return swingData;
