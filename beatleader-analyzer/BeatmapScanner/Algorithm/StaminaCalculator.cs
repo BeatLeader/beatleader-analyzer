@@ -1,7 +1,6 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace beatleader_analyzer.BeatmapScanner.Algorithm
 {
@@ -9,7 +8,7 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
     {
         public static double CalcStamina(List<SwingData> swingData, double bpm)
         {
-            const double ratingScale = 1 / 4000.0;
+            const double ratingScale = 1 / 6100.0;
             const double regenSeconds = 240; // 4 minutes to regenerate all energy
             swingData = CalcEnergyCost(swingData, bpm);
 
@@ -57,6 +56,7 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
             const double predictionsTime = 0.025; // in seconds
             const double predictionsSquared = predictionsTime * predictionsTime;
             const double piSquared = Math.PI * Math.PI;
+            const double pathStrainScaling = 3.75; // how much path strain increases swing energy cost
 
             foreach (SwingData swing in swingData)
             {
@@ -64,6 +64,7 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
                 var spsSquared = swingsPerSecond * swingsPerSecond;
 
                 swing.EnergyCost = spsSquared / (piSquared * spsSquared * predictionsSquared + 1);
+                swing.EnergyCost *= 1 + swing.PathStrain * pathStrainScaling;
             }
 
             return swingData;
