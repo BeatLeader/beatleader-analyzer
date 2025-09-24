@@ -4,6 +4,13 @@ using System.Collections.Generic;
 
 namespace beatleader_analyzer.BeatmapScanner.Algorithm
 {
+    /* Stamina rating calculator based on the following principles:
+     * - total energy capacity and energy regeneration speed are linked
+     * - on average regenerating all energy takes around 4 minutes
+     * - each swing in a map has an energy cost associated with it
+     * - calculate the minimum energy capacity needed to never run out of energy: this is the stamina rating
+     */
+
     internal class StaminaCalculator
     {
         public static double CalcStamina(List<SwingData> swingData, double bpm)
