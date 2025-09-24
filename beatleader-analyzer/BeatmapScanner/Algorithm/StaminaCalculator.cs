@@ -72,6 +72,8 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
 
                 swing.EnergyCost = spsSquared / (piSquared * spsSquared * predictionsSquared + 1);
                 swing.EnergyCost *= 1 + swing.PathStrain * pathStrainScaling;
+
+                if (swing.Reset) swing.EnergyCost *= 2.0; // account for the extra swing on a reset
             }
 
             return swingData;
