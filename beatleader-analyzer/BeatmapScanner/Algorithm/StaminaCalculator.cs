@@ -15,7 +15,7 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
     {
         public static double CalcStamina(List<SwingData> swingData, double bpm)
         {
-            const double ratingScale = 1 / 6100.0;
+            const double ratingScale = 1 / 6400.0;
             const double regenSeconds = 240; // 4 minutes to regenerate all energy
             swingData = CalcEnergyCost(swingData, bpm);
 
@@ -63,7 +63,7 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
             const double predictionsTime = 0.025; // in seconds
             const double predictionsSquared = predictionsTime * predictionsTime;
             const double piSquared = Math.PI * Math.PI;
-            const double pathStrainScaling = 3.75; // how much path strain increases swing energy cost
+            const double pathStrainScaling = 5.0; // how much path strain increases swing energy cost
 
             foreach (SwingData swing in swingData)
             {
@@ -71,7 +71,7 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
                 var spsSquared = swingsPerSecond * swingsPerSecond;
 
                 swing.EnergyCost = spsSquared / (piSquared * spsSquared * predictionsSquared + 1);
-                swing.EnergyCost *= 1 + swing.PathStrain * pathStrainScaling;
+                swing.EnergyCost *= 1 + (swing.PositionComplexity + swing.CurveComplexity + swing.AnglePathStrain * 0.1) * pathStrainScaling;
 
                 if (swing.Reset) swing.EnergyCost *= 2.0; // account for the extra swing on a reset
             }
