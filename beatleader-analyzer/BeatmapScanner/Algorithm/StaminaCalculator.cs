@@ -13,10 +13,11 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
 
     internal class StaminaCalculator
     {
+        const double ratingScale = 1 / 7170.0;
+        const double regenSeconds = 240; // 4 minutes to regenerate all energy
+
         public static double CalcStamina(List<SwingData> swingData, double bpm)
         {
-            const double ratingScale = 1 / 6400.0;
-            const double regenSeconds = 240; // 4 minutes to regenerate all energy
             swingData = CalcEnergyCost(swingData, bpm);
 
             double upperBound = 0;
@@ -64,9 +65,12 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
             const double predictionsSquared = predictionsTime * predictionsTime;
             const double piSquared = Math.PI * Math.PI;
             const double pathStrainScaling = 5.0; // how much path strain increases swing energy cost
+            const double holdEnergyScaling = 50.0; // how much holding arms in position increases energy cost
 
-            foreach (SwingData swing in swingData)
+            SwingData lastSwing = null;
+            for (var i = 0; i < swingData.Count; i++)
             {
+                var swing = swingData[i];
                 var swingsPerSecond = Math.Max(swing.SwingFrequency * bpm / 60, 2); // assume lowest reasonable swing speed equivalent to 2 swings per second
                 var spsSquared = swingsPerSecond * swingsPerSecond;
 
@@ -74,6 +78,15 @@ namespace beatleader_analyzer.BeatmapScanner.Algorithm
                 swing.EnergyCost *= 1 + (swing.PositionComplexity + swing.CurveComplexity + swing.AnglePathStrain * 0.1) * pathStrainScaling;
 
                 if (swing.Reset) swing.EnergyCost *= 2.0; // account for the extra swing on a reset
+
+                if (lastSwing is not null)
+                {
+                    var swingYPos = (lastSwing.EntryPosition.y + lastSwing.ExitPosition.y) / 2;
+                    var holdDuration = Math.Min((swing.Time - lastSwing.Time) * 60 / bpm, 1.0); // maximum 1 second hold
+                    lastSwing.EnergyCost += holdDuration * (1 + swingYPos) * holdEnergyScaling;
+                }
+
+                lastSwing = swing;
             }
 
             return swingData;
