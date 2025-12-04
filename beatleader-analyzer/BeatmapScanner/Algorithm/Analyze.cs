@@ -12,8 +12,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static (List<double>, List<PerSwing>) UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm)
         {
-            double leftDiff = 0;
-            double rightDiff = 0;
             double tech = 0;
             List<double> value = [];
             List<SwingData> redSwingData = [];
@@ -22,7 +20,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             List<List<SwingData>> bluePatternData = [];
             List<PerSwing> redPerSwing = [];
             List<PerSwing> bluePerSwing = [];
-            List<SwingData> data = [];
+            List<SwingData> combinedSwingData = [];
 
             if (red.Count > 2)
             {
@@ -42,7 +40,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
                 if (redSwingData != null)
                 {
-                    data.AddRange(redSwingData);
+                    combinedSwingData.AddRange(redSwingData);
                 }
             }
 
@@ -64,58 +62,50 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
                 if (blueSwingData != null)
                 {
-                    data.AddRange(blueSwingData);
+                    combinedSwingData.AddRange(blueSwingData);
                 }
             }
 
-            if (redSwingData != null)
+            combinedSwingData.Sort((a, b) => a.Time.CompareTo(b.Time));
+            double balanced_pass = 0.0;
+
+            if (combinedSwingData.Count > 0)
             {
-                redSwingData = DiffToPass.CalcSwingDiff(redSwingData, bpm);
-                redPerSwing = DiffToPass.CalcAverage(redSwingData, 8);
-                if (redPerSwing.Count > 0)
+                const double oneSaberNerf = 0.35;
+
+                combinedSwingData = DiffToPass.CalcSwingDiff(combinedSwingData, bpm);
+                redSwingData = combinedSwingData.Where(x => x.Start.Type == 0).ToList();
+                blueSwingData = combinedSwingData.Where(x => x.Start.Type == 1).ToList();
+
+                var windowSizes = new HashSet<int> { 8, 16, 32, 64, 128 };
+                var passDiffRed = 0.0;
+                var passDiffBlue = 0.0;
+                var passDiffCombined = 0.0;
+
+                foreach (var windowSize in windowSizes)
                 {
-                    leftDiff = redPerSwing.Select(x => x.Pass).Max();
-                    var temp = DiffToPass.CalcAverage(redSwingData, 16);
-                    leftDiff += temp.Select(x => x.Pass).Max();
-                    redPerSwing = AddList(redPerSwing, temp);
-                    temp = DiffToPass.CalcAverage(redSwingData, 32);
-                    leftDiff += temp.Select(x => x.Pass).Max();
-                    redPerSwing = AddList(redPerSwing, temp);
-                    temp = DiffToPass.CalcAverage(redSwingData, 48);
-                    leftDiff += temp.Select(x => x.Pass).Max();
-                    redPerSwing = AddList(redPerSwing, temp);
-                    temp = DiffToPass.CalcAverage(redSwingData, 96);
-                    leftDiff += temp.Select(x => x.Pass).Max();
-                    redPerSwing = AddList(redPerSwing, temp);
-                    leftDiff /= 5;
+                    if (redSwingData.Count > 1) passDiffRed += DiffToPass.CalcAverage(redSwingData, windowSize / 2).Select(x => x.Pass).Max();
+                    if (blueSwingData.Count > 1) passDiffBlue += DiffToPass.CalcAverage(blueSwingData, windowSize / 2).Select(x => x.Pass).Max();
+                    passDiffCombined += DiffToPass.CalcAverage(combinedSwingData, windowSize).Select(x => x.Pass).Max();
                 }
-            }
-            if (blueSwingData != null)
-            {
-                blueSwingData = DiffToPass.CalcSwingDiff(blueSwingData, bpm);
-                bluePerSwing = DiffToPass.CalcAverage(blueSwingData, 8);
-                if (bluePerSwing.Count > 0)
-                {
-                    rightDiff = bluePerSwing.Select(x => x.Pass).Max();
-                    var temp = DiffToPass.CalcAverage(blueSwingData, 16);
-                    rightDiff += temp.Select(x => x.Pass).Max();
-                    bluePerSwing = AddList(bluePerSwing, temp);
-                    temp = DiffToPass.CalcAverage(blueSwingData, 32);
-                    rightDiff += temp.Select(x => x.Pass).Max();
-                    bluePerSwing = AddList(bluePerSwing, temp);
-                    temp = DiffToPass.CalcAverage(blueSwingData, 48);
-                    rightDiff += temp.Select(x => x.Pass).Max();
-                    bluePerSwing = AddList(bluePerSwing, temp);
-                    temp = DiffToPass.CalcAverage(blueSwingData, 96);
-                    rightDiff += temp.Select(x => x.Pass).Max();
-                    bluePerSwing = AddList(bluePerSwing, temp);
-                    rightDiff /= 5;
-                }
+                passDiffRed /= windowSizes.Count;
+                passDiffBlue /= windowSizes.Count;
+                passDiffCombined /= windowSizes.Count;
+
+                // a bit pepega, but to explain:
+                // - easiest separate hand divided by the easiest of:
+                // -- hardest separate hand
+                // -- combined hands
+                // - the result of which is then capped to 1
+                var handsRatio = Math.Min(Math.Min(passDiffRed, passDiffBlue) / Math.Min(Math.Max(passDiffRed, passDiffBlue), passDiffCombined), 1.0);
+                var nerfMult = 1 - (1 - handsRatio) * oneSaberNerf;
+
+                balanced_pass = passDiffCombined * nerfMult * 0.752;
             }
 
-            if (data.Count > 2)
+            if (combinedSwingData.Count > 2)
             {
-                foreach (var item in data)
+                foreach (var item in combinedSwingData)
                 {
                     var buff = NjsBuff.CalculateNjsBuff(item.Start.Njs);
                     item.AngleStrain *= buff;
@@ -123,16 +113,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
 
                 // We can sort the original list here, as only count and average is accessed after this line
-                data.Sort(CompareAngleAndPathStrain);
-                tech = AverageAnglePath(CollectionsMarshal.AsSpan(data)[(int)(data.Count * 0.25)..]);
+                combinedSwingData.Sort(CompareAngleAndPathStrain);
+                tech = AverageAnglePath(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
             }
-
-            double balanced_pass = Math.Max(leftDiff, rightDiff) * 0.5 + Math.Min(leftDiff, rightDiff) * 0.5;
 
             value.Add(balanced_pass);
             double balanced_tech = tech * (-(Math.Pow(1.4, -balanced_pass)) + 1);
             value.Add(balanced_tech);
-            double low_note_nerf = 1 / (1 + Math.Pow(Math.E, -1.4 - (data.Count / 50)));
+            double low_note_nerf = 1 / (1 + Math.Pow(Math.E, -1.4 - (combinedSwingData.Count / 50)));
             value.Add(low_note_nerf);
 
             List<PerSwing> perSwing = [];

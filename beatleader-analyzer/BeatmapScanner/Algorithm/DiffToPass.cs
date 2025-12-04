@@ -2,7 +2,6 @@
 using beatleader_analyzer.BeatmapScanner.Data;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
 
 namespace Analyzer.BeatmapScanner.Algorithm
@@ -15,24 +14,41 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 return swingData;
             }
+
+            const double streamBuff = 1.05;
+
             double bps = bpm / 60;
-            var data = new List<SData>();
-            swingData[0].SwingDiff = 0;
-            for (int i = 1; i < swingData.Count; i++)
+            var buffNextRed = false;
+            var buffNextBlue = false;
+
+            foreach (var swing in swingData)
             {
-                double distanceDiff = swingData[i].PreviousDistance / (swingData[i].PreviousDistance + 3) + 1;
-                data.Add(new SData(swingData[i].SwingFrequency * distanceDiff * bps));
-                if (swingData[i].Reset)
+                double distanceDiff = swing.PreviousDistance / (swing.PreviousDistance + 3) + 1;
+                var swingSpeed = swing.SwingFrequency * distanceDiff * bps;
+                if (swing.Reset)
                 {
-                    data[^1].SwingSpeed *= 2;
+                    swingSpeed *= 2;
                 }
-                double xHitDist = swingData[i].EntryPosition.x - swingData[i].ExitPosition.x;
-                double yHitDist = swingData[i].EntryPosition.y - swingData[i].ExitPosition.y;
-                data[^1].HitDistance = Math.Sqrt(Math.Pow(xHitDist, 2) + Math.Pow(yHitDist, 2));
-                data[^1].HitDiff = data[^1].HitDistance / (data[^1].HitDistance + 2) + 1;
-                data[^1].Stress = (swingData[i].AngleStrain / 10 + swingData[i].PathStrain) * data[^1].HitDiff;
-                swingData[i].SwingDiff = data[^1].SwingSpeed * (-Math.Pow(1.4, -data[^1].SwingSpeed) + 1) * (data[^1].Stress / (data[^1].Stress + 2) + 1);
-                swingData[i].SwingDiff *= NjsBuff.CalculateNjsBuff(swingData[i].Start.Njs);
+                double xHitDist = swing.EntryPosition.x - swing.ExitPosition.x;
+                double yHitDist = swing.EntryPosition.y - swing.ExitPosition.y;
+                var hitDistance = Math.Sqrt(Math.Pow(xHitDist, 2) + Math.Pow(yHitDist, 2));
+                var hitDiff = hitDistance / (hitDistance + 2) + 1;
+                var stress = (swing.AngleStrain / 10 + swing.PathStrain) * hitDiff;
+                swing.SwingDiff = swingSpeed * (-Math.Pow(1.4, -swingSpeed) + 1) * (stress / (stress + 2) + 1);
+                swing.SwingDiff *= NjsBuff.CalculateNjsBuff(swing.Start.Njs);
+
+                if (swing.Start.Type == 0)
+                {
+                    if (buffNextRed) swing.SwingDiff *= streamBuff;
+                    buffNextRed = false;
+                    buffNextBlue = true;
+                }
+                else
+                {
+                    if (buffNextBlue) swing.SwingDiff *= streamBuff;
+                    buffNextBlue = false;
+                    buffNextRed = true;
+                }
             }
 
             return swingData;
@@ -48,12 +64,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             var qDiff = new CircularBuffer(stackalloc double[WINDOW]);
             var difficultyIndex = new List<PerSwing>();
-            for (int i = 1; i < swingData.Count; i++)
+            for (int i = 0; i < swingData.Count; i++)
             {
                 qDiff.Enqueue(swingData[i].SwingDiff);
                 if (i >= WINDOW)
                 {
-                    var windowDiff = Average(qDiff.Buffer) * 0.8;
+                    var windowDiff = Average(qDiff.Buffer);
                     difficultyIndex.Add(new(swingData[i].Time, windowDiff, swingData[i].AngleStrain + swingData[i].PathStrain));
                 }
                 else difficultyIndex.Add(new(swingData[i].Time, 0, swingData[i].AngleStrain + swingData[i].PathStrain));
