@@ -2,58 +2,159 @@
 using beatleader_analyzer.BeatmapScanner.Data;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
+using Parser.Map.Difficulty.V3.Grid;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
+    /// <summary>
+    /// Converts swing metrics into pass difficulty ratings.
+    /// </summary>
     internal class DiffToPass
     {
-        public static List<SwingData> CalcSwingDiff(List<SwingData> swingData, double bpm)
+        private const double STREAM_BONUS = 1.05;
+        private const double RESET_MULTIPLIER = 2.0;
+        private const double DISTANCE_FALLOFF = 3.0;
+        private const double HIT_DISTANCE_FALLOFF = 2.0;
+        private const double ANGLE_STRAIN_WEIGHT = 0.1;
+        private const double SPEED_FALLOFF_BASE = 1.4;
+        private const double STRESS_FALLOFF = 2.0;
+        private const double DODGE_WALL_BUFF = 1.01;
+        private const double CROUCH_WALL_INITIAL_BUFF = 1.10;
+        private const double CROUCH_WALL_DURING_BUFF = 1.05;
+
+        public static void CalcSwingDiff(List<SwingData> swingData, double bpm, List<Wall> dodgeWalls = null, List<Wall> crouchWalls = null)
         {
             if (swingData.Count == 0)
             {
-                return swingData;
+                return;
             }
 
-            const double streamBuff = 1.05;
-
-            double bps = bpm / 60;
-            var buffNextRed = false;
-            var buffNextBlue = false;
-
-            foreach (var swing in swingData)
+            for (int i = 0; i < swingData.Count; i++)
             {
-                double distanceDiff = swing.PreviousDistance / (swing.PreviousDistance + 3) + 1;
-                var swingSpeed = swing.SwingFrequency * distanceDiff * bps;
-                if (swing.Reset)
+                if (i > 0 && i + 1 < swingData.Count)
                 {
-                    swingSpeed *= 2;
-                }
-                double xHitDist = swing.EntryPosition.x - swing.ExitPosition.x;
-                double yHitDist = swing.EntryPosition.y - swing.ExitPosition.y;
-                var hitDistance = Math.Sqrt(Math.Pow(xHitDist, 2) + Math.Pow(yHitDist, 2));
-                var hitDiff = hitDistance / (hitDistance + 2) + 1;
-                var stress = (swing.AngleStrain / 10 + swing.PathStrain) * hitDiff;
-                swing.SwingDiff = swingSpeed * (-Math.Pow(1.4, -swingSpeed) + 1) * (stress / (stress + 2) + 1);
-                swing.SwingDiff *= NjsBuff.CalculateNjsBuff(swing.Start.Njs);
-
-                if (swing.Start.Type == 0)
-                {
-                    if (buffNextRed) swing.SwingDiff *= streamBuff;
-                    buffNextRed = false;
-                    buffNextBlue = true;
+                    swingData[i].SwingFrequency = 2 / (swingData[i + 1].Time - swingData[i - 1].Time);
                 }
                 else
                 {
-                    if (buffNextBlue) swing.SwingDiff *= streamBuff;
-                    buffNextBlue = false;
-                    buffNextRed = true;
+                    swingData[i].SwingFrequency = 0;
                 }
             }
 
-            return swingData;
+            double bps = bpm / 60.0;
+            int? previousHand = null;
+
+            var wallBuffs = (dodgeWalls != null || crouchWalls != null) ? AnalyzeWallInfluence(swingData, dodgeWalls, crouchWalls) : new Dictionary<int, double>();
+
+            for (int i = 0; i < swingData.Count; i++)
+            {
+                var swing = swingData[i];
+                double distanceDiff = swing.ExcessDistance / (swing.ExcessDistance + DISTANCE_FALLOFF) + 1.0;
+                
+                double swingSpeed = swing.SwingFrequency * distanceDiff * bps;
+                if (swing.Reset)
+                {
+                    swingSpeed *= RESET_MULTIPLIER;
+                }
+                
+                double xHitDist = swing.EntryPosition.x - swing.ExitPosition.x;
+                double yHitDist = swing.EntryPosition.y - swing.ExitPosition.y;
+                double hitDistance = Math.Sqrt(xHitDist * xHitDist + yHitDist * yHitDist);
+                double hitDiff = hitDistance / (hitDistance + HIT_DISTANCE_FALLOFF) + 1.0;
+                
+                double stress = (swing.AngleStrain * ANGLE_STRAIN_WEIGHT + swing.PathStrain) * hitDiff;
+                
+                double speedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
+                double stressMultiplier = stress / (stress + STRESS_FALLOFF) + 1.0;
+                swing.SwingDiff = swingSpeed * speedFalloff * stressMultiplier;
+                
+                swing.SwingDiff *= NjsBuff.CalculateNjsBuff(swing.Start.Njs);
+
+                int currentHand = swing.Start.Type;
+                if (previousHand.HasValue && previousHand.Value != currentHand)
+                {
+                    swing.SwingDiff *= STREAM_BONUS;
+                }
+                previousHand = currentHand;
+
+                if (wallBuffs.TryGetValue(i, out double wallBuff))
+                {
+                    swing.SwingDiff *= wallBuff;
+                }
+            }
         }
 
+        private static Dictionary<int, double> AnalyzeWallInfluence(List<SwingData> swingData, List<Wall> dodgeWalls, List<Wall> crouchWalls)
+        {
+            var wallBuffs = new Dictionary<int, double>();
+
+            if (swingData.Count == 0)
+            {
+                return wallBuffs;
+            }
+
+            dodgeWalls ??= new List<Wall>();
+            crouchWalls ??= new List<Wall>();
+
+            for (int i = 0; i < swingData.Count; i++)
+            {
+                var swing = swingData[i];
+                double maxBuff = 1.0;
+
+                foreach (var wall in dodgeWalls)
+                {
+                    if (IsSwingDuringWall(swing, wall))
+                    {
+                        maxBuff = Math.Max(maxBuff, DODGE_WALL_BUFF);
+                    }
+                }
+
+                foreach (var wall in crouchWalls)
+                {
+                    float wallStart = wall.Beats;
+                    float wallDuration = wall.DurationInBeats;
+                    float wallEnd = wallStart + wallDuration;
+
+                    if (swing.Time >= wallStart && swing.Time <= wallEnd)
+                    {
+                        bool isInitial = i > 0 && swingData[i - 1].Time < wallStart;
+
+                        if (isInitial)
+                        {
+                            maxBuff = Math.Max(maxBuff, CROUCH_WALL_INITIAL_BUFF);
+                        }
+                        else
+                        {
+                            maxBuff = Math.Max(maxBuff, CROUCH_WALL_DURING_BUFF);
+                        }
+                    }
+                    else if (i < swingData.Count - 1)
+                    {
+                        var nextSwing = swingData[i + 1];
+                        if (swing.Time < wallStart && nextSwing.Time >= wallStart)
+                        {
+                            maxBuff = Math.Max(maxBuff, CROUCH_WALL_INITIAL_BUFF);
+                        }
+                    }
+                }
+
+                if (maxBuff > 1.0)
+                {
+                    wallBuffs[i] = maxBuff;
+                }
+            }
+
+            return wallBuffs;
+        }
+
+        private static bool IsSwingDuringWall(SwingData swing, Wall wall)
+        {
+            float wallDuration = wall.DurationInBeats;
+            float wallEnd = wall.Beats + wallDuration;
+            return swing.Time >= wall.Beats && swing.Time <= wallEnd;
+        }
 
         public static List<PerSwing> CalcAverage(List<SwingData> swingData, int WINDOW)
         {
@@ -64,25 +165,23 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             var qDiff = new CircularBuffer(stackalloc double[WINDOW]);
             var difficultyIndex = new List<PerSwing>();
+            
             for (int i = 0; i < swingData.Count; i++)
             {
                 qDiff.Enqueue(swingData[i].SwingDiff);
+                
                 if (i >= WINDOW)
                 {
                     var windowDiff = Average(qDiff.Buffer);
                     difficultyIndex.Add(new(swingData[i].Time, windowDiff, swingData[i].AngleStrain + swingData[i].PathStrain));
                 }
-                else difficultyIndex.Add(new(swingData[i].Time, 0, swingData[i].AngleStrain + swingData[i].PathStrain));
+                else
+                {
+                    difficultyIndex.Add(new(swingData[i].Time, 0, swingData[i].AngleStrain + swingData[i].PathStrain));
+                }
             }
 
-            if (difficultyIndex.Count > 0)
-            {
-                return difficultyIndex;
-            }
-            else
-            {
-                return [];
-            }
+            return difficultyIndex;
         }
     }
 }

@@ -7,20 +7,22 @@ namespace Analyzer.BeatmapScanner.Helper
 {
     internal class Helper
     {
+        // Maps cut direction indices to angles: 0=Up, 1=Down, 2=Left, 3=Right, 4=UpLeft, 5=UpRight, 6=DownLeft, 7=DownRight, 8=Dot
         public static int[] DirectionToDegree = { 90, 270, 180, 0, 135, 45, 225, 315, 270 };
 
         public static double ConvertDegreesToRadians(double degrees)
         {
-            double radians = degrees * (Math.PI / 180f);
-            return radians;
+            return degrees * (Math.PI / 180f);
         }
 
         public static double ConvertRadiansToDegrees(double radians)
         {
-            double degrees = radians * (180f / Math.PI);
-            return degrees;
+            return radians * (180f / Math.PI);
         }
 
+        /// <summary>
+        /// Modulo operation that always returns positive results (handles negative numbers correctly for angle wrapping).
+        /// </summary>
         public static double Mod(double x, double m)
         {
             return (x % m + m) % m;
@@ -31,37 +33,12 @@ namespace Analyzer.BeatmapScanner.Helper
             (list[indexB], list[indexA]) = (list[indexA], list[indexB]);
         }
 
+        /// <summary>
+        /// Reverses a cut direction by 180 degrees.
+        /// </summary>
         public static double ReverseCutDirection(double direction)
         {
-            if (direction >= 180)
-            {
-                return direction - 180;
-            }
-            else
-            {
-                return direction + 180;
-            }
-        }
-
-        public static string DegreeToName(double direction)
-        {
-            return direction switch
-            {
-                double d when d > 67.5 && d <= 112.5 => "UP",
-                double d when d > 247.5 && d <= 292.5 => "DOWN",
-                double d when d > 157.5 && d <= 202.5 => "LEFT",
-                double d when d <= 22.5 && d >= 0 || d > 337.5 && d < 360 => "RIGHT",
-                double d when d > 112.5 && d <= 157.5 => "UP-LEFT",
-                double d when d > 22.5 && d <= 67.5 => "UP-RIGHT",
-                double d when d > 202.5 && d <= 247.5 => "DOWN-LEFT",
-                double d when d > 292.5 && d <= 337.5 => "DOWN-RIGHT",
-                _ => "ERROR",
-            };
-        }
-
-        public static SwingData Closest(List<SwingData> lst, double K)
-        {
-            return lst.OrderBy(item => Math.Abs(item.Time - K)).First();
+            return direction >= 180 ? direction - 180 : direction + 180;
         }
     }
 }

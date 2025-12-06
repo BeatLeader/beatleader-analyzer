@@ -14,8 +14,7 @@ using System.Threading.Tasks;
 namespace Benchmark
 {
     [MemoryDiagnoser]
-    [SimpleJob(RuntimeMoniker.Net481)]
-    [SimpleJob(RuntimeMoniker.Net80)]
+    [SimpleJob(RuntimeMoniker.Net90)]
     public class Benchmark
     {
         [ParamsAllValues]

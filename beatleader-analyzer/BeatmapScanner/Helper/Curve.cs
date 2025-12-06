@@ -2,56 +2,45 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static Analyzer.BeatmapScanner.Data.SwingData;
 
 namespace Analyzer.BeatmapScanner.Helper
 {
+    /// <summary>
+    /// Cubic Bezier curve calculations for swing path analysis.
+    /// </summary>
     internal class Curve
     {
-        public static double BernsteinPoly(int i, int n, double t)
-        {
-            return BinomialCoefficient(n, i) * Math.Pow(t, n - i) * Math.Pow(1 - t, i);
-        }
-        const int nTimes = 25;
+        private const int nTimes = 25;
         private static readonly double[] tCached = Enumerable.Range(0, nTimes).Select(i => i / (double)(nTimes - 1)).ToArray();
-        public static List<Point> BezierCurve(List<Point> points)
-        {
-            int nPoints = points.Count;
 
-            List<Point> result = new(points.Count);
+        /// <summary>
+        /// Generates interpolated points along a cubic Bezier curve.
+        /// Formula: B(t) = (1-t)³P₀ + 3(1-t)²tP₁ + 3(1-t)t²P₂ + t³P₃
+        /// </summary>
+        public static Point[] BezierCurveDirect(Point p0, Point p1, Point p2, Point p3)
+        {
+            Point[] result = new Point[nTimes];
 
             for (int i = 0; i < nTimes; i++)
             {
-                double currentT = tCached[i];
-                double x = 0;
-                double y = 0;
-                for (int j = 0; j < nPoints; j++)
-                {
-                    double poly = BernsteinPoly(j, nPoints - 1, currentT);
-                    x += points[j].X * poly;
-                    y += points[j].Y * poly;
-                }
-                result.Add(new(x, y));
-            }
+                double t = tCached[i];
+                
+                double oneMinusT = 1 - t;
+                double oneMinusT2 = oneMinusT * oneMinusT;
+                double oneMinusT3 = oneMinusT2 * oneMinusT;
+                double t2 = t * t;
+                double t3 = t2 * t;
 
-            return result;
-        }
+                double b0 = oneMinusT3;
+                double b1 = 3 * oneMinusT2 * t;
+                double b2 = 3 * oneMinusT * t2;
+                double b3 = t3;
 
-        private static long BinomialCoefficient(int n, int k)
-        {
-            if (k < 0 || k > n)
-            {
-                return 0;
-            }
-
-            if (k == 0 || k == n)
-            {
-                return 1;
-            }
-
-            long result = 1;
-            for (int i = 1; i <= k; i++)
-            {
-                result = result * (n - i + 1) / i;
+                double x = b0 * p0.X + b1 * p1.X + b2 * p2.X + b3 * p3.X;
+                double y = b0 * p0.Y + b1 * p1.Y + b2 * p2.Y + b3 * p3.Y;
+                
+                result[i] = new(x, y);
             }
 
             return result;

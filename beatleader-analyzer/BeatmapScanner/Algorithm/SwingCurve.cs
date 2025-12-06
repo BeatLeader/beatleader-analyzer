@@ -9,13 +9,21 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
+using static Analyzer.BeatmapScanner.Data.SwingData;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
+    /// <summary>
+    /// Calculates swing path complexity using Bezier curve analysis.
+    /// </summary>
     public class SwingCurve
     {
         public static bool UseParallel { get; set; } = true;
-        public static void Calc(List<SwingData> swingData, bool leftOrRight)
+
+        private const double MAX_GRID_DISTANCE_SQUARED = 13.0;
+        private const double EXCESS_DISTANCE_NORMALIZATION = 3.0;
+
+        public static void Calc(List<SwingData> swingData, bool isRightHand)
         {
             if (swingData.Count < 2)
             {
@@ -24,77 +32,94 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             swingData[0].PathStrain = 0;
             swingData[0].PositionComplexity = 0;
-            swingData[0].PreviousDistance = 0;
+            swingData[0].ExcessDistance = 0;
             swingData[0].CurveComplexity = 0;
-            swingData[0].AnglePathStrain = 0;
+
+            var cosValues = new double[swingData.Count];
+            var sinValues = new double[swingData.Count];
+            
+            for (int i = 0; i < swingData.Count; i++)
+            {
+                double radians = ConvertDegreesToRadians(swingData[i].Angle);
+                cosValues[i] = Math.Cos(radians);
+                sinValues[i] = Math.Sin(radians);
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             void ForContent(int i)
             {
                 Point point0 = new(swingData[i - 1].ExitPosition.x, swingData[i - 1].ExitPosition.y);
-                Point point1 = new(point0.X + 1 * Math.Cos(ConvertDegreesToRadians(swingData[i - 1].Angle)),
-                    point0.Y + 1 * Math.Sin(ConvertDegreesToRadians(swingData[i - 1].Angle)));
+                Point point1 = new(point0.X + cosValues[i - 1], point0.Y + sinValues[i - 1]);
                 Point point3 = new(swingData[i].EntryPosition.x, swingData[i].EntryPosition.y);
-                Point point2 = new(point3.X - 1 * Math.Cos(ConvertDegreesToRadians(swingData[i].Angle)),
-                    point3.Y - 1 * Math.Sin(ConvertDegreesToRadians(swingData[i].Angle)));
+                Point point2 = new(point3.X - cosValues[i], point3.Y - sinValues[i]);
 
-                List<Point> points =
-                [
-                    point0,
-                    point1,
-                    point2,
-                    point3
-                ];
-
-                var point = BezierCurve(points);
+                Span<Point> controlPoints = stackalloc Point[4] { point0, point1, point2, point3 };
+                var point = BezierCurveDirect(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3]);
                 
                 double positionComplexity = 0;
-                List<double> angleChangeList = new(point.Count);
-                List<double> angleList = new(point.Count);
+                
+                const int maxPoints = 25;
+                Span<double> angleList = stackalloc double[maxPoints];
+                Span<double> angleChangeList = stackalloc double[maxPoints];
+                int angleCount = 0;
+                int angleChangeCount = 0;
+                
                 double distance = 0;
-                for (int f = point.Count - 2; f >= 0; f--)
+
+                double dx = point3.X - point0.X;
+                double dy = point3.Y - point0.Y;
+                double directDistance = Math.Sqrt(dx * dx + dy * dy);
+
+                for (int f = 1; f < point.Length; f++)
                 {
-                    angleList.Add(Mod(ConvertRadiansToDegrees(Math.Atan2(point[f].Y - point[f + 1].Y, point[f].X - point[f + 1].X)), 360));
-                    distance += Math.Sqrt(Math.Pow(point[f].Y - point[f + 1].Y, 2) + Math.Pow(point[f].X - point[f + 1].X, 2));
-                    if (f < point.Count - 2)
+                    double deltaX = point[f].X - point[f - 1].X;
+                    double deltaY = point[f].Y - point[f - 1].Y;
+                    
+                    double angle = Mod(ConvertRadiansToDegrees(Math.Atan2(deltaY, deltaX)), 360);
+                    angleList[angleCount] = angle;
+                    
+                    distance += Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+
+                    if (angleCount > 0)
                     {
-                        angleChangeList.Add(180 - Math.Abs(Math.Abs(angleList[^1] - angleList[^2]) - 180));
+                        double angleDiff = Math.Abs(angleList[angleCount] - angleList[angleCount - 1]);
+                        angleChangeList[angleChangeCount++] = 180 - Math.Abs(angleDiff - 180);
                     }
+                    
+                    angleCount++;
                 }
-                distance -= 0.75;
+
+                double rawExcessDistance = Math.Max(0, distance - directDistance);
+                double excessDistance = Math.Min(rawExcessDistance / EXCESS_DISTANCE_NORMALIZATION, 1.0);
+
                 if (i > 1)
                 {
                     (double x, double y) simHandCurPos = swingData[i].EntryPosition;
                     (double x, double y) simHandPrePos;
+
                     if (!swingData[i].Reset && !swingData[i - 1].Reset)
                     {
                         simHandPrePos = swingData[i - 2].EntryPosition;
                     }
-                    else if (!swingData[i].Reset && swingData[i - 1].Reset)
-                    {
-                        simHandPrePos = swingData[i - 1].EntryPosition;
-
-                    }
-                    else if (swingData[i].Reset)
-                    {
-                        simHandPrePos = swingData[i - 1].EntryPosition;
-                    }
                     else
                     {
-                        simHandPrePos = simHandCurPos;
+                        simHandPrePos = swingData[i - 1].EntryPosition;
                     }
-                    positionComplexity = Math.Pow(Math.Sqrt(Math.Pow(simHandCurPos.y - simHandPrePos.y, 2) + Math.Pow(simHandCurPos.x - simHandPrePos.x, 2)), 2);
-                    if (positionComplexity > 10)
+
+                    double deltaX = simHandCurPos.x - simHandPrePos.x;
+                    double deltaY = simHandCurPos.y - simHandPrePos.y;
+                    double rawPositionComplexity = deltaX * deltaX + deltaY * deltaY;
+
+                    if (rawPositionComplexity > MAX_GRID_DISTANCE_SQUARED)
                     {
-                        positionComplexity = 10;
-                    }
+                        rawPositionComplexity = MAX_GRID_DISTANCE_SQUARED;
+                    }   
+
+                    positionComplexity = rawPositionComplexity / MAX_GRID_DISTANCE_SQUARED;
                 }
 
-                double lengthOfList = angleChangeList.Count * 0.6;
-                double first;
-                double last;
-                
-                double pathLookback;
+                double first, last, pathLookback;
+
                 if (swingData[i].Reset)
                 {
                     pathLookback = 0.9;
@@ -107,18 +132,37 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     first = 0.2;
                     last = 0.8;
                 }
-                int pathLookbackIndex = (int)(angleList.Count * pathLookback);
-                int firstIndex = (int)(angleChangeList.Count * first) - 1;
-                int lastIndex = (int)(angleChangeList.Count * last) - 1;
-                
-                double curveComplexity = Math.Abs((lengthOfList * Average(CollectionsMarshal.AsSpan(angleChangeList).Slice(firstIndex, lastIndex - firstIndex)) - 180) / 180);
-                double pathAngleStrain = BezierAngleStrainCalc(CollectionsMarshal.AsSpan(angleList)[pathLookbackIndex..angleList.Count], swingData[i].Forehand, leftOrRight) / angleList.Count * 2;
+
+                double curveComplexity = 0;
+                double pathAngleStrain = 0;
+
+                if (angleChangeCount >= 2 && angleCount >= 2)
+                {
+                    int firstIndex = Math.Max(0, (int)(angleChangeCount * first));
+                    int lastIndex = Math.Min(angleChangeCount, (int)(angleChangeCount * last));
+                    int pathLookbackIndex = (int)(angleCount * pathLookback);
+
+                    if (lastIndex > firstIndex)
+                    {
+                        var angleSlice = angleChangeList.Slice(firstIndex, lastIndex - firstIndex);
+                        double avgAngleChange = Average(angleSlice);
+                        curveComplexity = avgAngleChange / 180.0;
+
+                        var pathAngleSlice = angleList.Slice(pathLookbackIndex, angleCount - pathLookbackIndex);
+                        pathAngleStrain = BezierAngleTotalStrain(pathAngleSlice, swingData[i].Forehand, isRightHand)
+                                                 / pathAngleSlice.Length;
+                    }
+                }
 
                 swingData[i].PositionComplexity = positionComplexity;
-                swingData[i].PreviousDistance = distance;
+                swingData[i].ExcessDistance = excessDistance;
                 swingData[i].CurveComplexity = curveComplexity;
-                swingData[i].AnglePathStrain = pathAngleStrain;
-                swingData[i].PathStrain = curveComplexity + pathAngleStrain + positionComplexity;
+                
+                swingData[i].PathStrain =
+                    0.25 * curveComplexity +
+                    0.25 * pathAngleStrain +
+                    0.25 * positionComplexity +
+                    0.25 * excessDistance;
             }
 
             if (UseParallel)

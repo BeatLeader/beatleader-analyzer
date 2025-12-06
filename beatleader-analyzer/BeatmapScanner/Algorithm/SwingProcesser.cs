@@ -9,74 +9,89 @@ using static Analyzer.BeatmapScanner.Helper.FindAngleViaPosition;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
+    /// <summary>
+    /// Converts analyzed cubes into swing data with entry/exit positions.
+    /// Multi-note hits are combined into single swings.
+    /// </summary>
     internal class SwingProcesser
     {
+        private const double GRID_CELL_SIZE = 1.0 / 3.0;
+        private const double HALF_GRID_CELL = 1.0 / 6.0;
+
         public static List<SwingData> Process(List<Cube> cubes)
         {
-            int[] headCubes = cubes.Select((val, index) => (val, index)).Where(x => x.val.Head).Select(x => x.index).ToArray();
-            var swingData = new List<SwingData>();
-            (double x, double y) lastSimPos = (0, 0);
             if (cubes.Count == 0)
             {
-                return swingData;
+                return new List<SwingData>();
             }
 
-            swingData.Add(new SwingData(cubes[0].Time, cubes[0].Direction, cubes[0]));
-            (swingData[^1].EntryPosition, swingData[^1].ExitPosition) = CalcBaseEntryExit((cubes[0].Line, cubes[0].Layer), cubes[0].Direction);
-            swingData[^1].Pattern = 0;
+            var headIndices = new List<int>(cubes.Count / 10);
+            for (int i = 0; i < cubes.Count; i++)
+            {
+                if (cubes[i].Head)
+                {
+                    headIndices.Add(i);
+                }
+            }
+            int[] headCubes = headIndices.ToArray();
+            
+            var swingData = new List<SwingData>(cubes.Count);
 
-            for (int i = 1; i < cubes.Count - 1; i++)
+            swingData.Add(new SwingData(cubes[0].Time, cubes[0].Direction, cubes[0]));
+            (swingData[^1].EntryPosition, swingData[^1].ExitPosition) = 
+                CalcBaseEntryExit((cubes[0].Line, cubes[0].Layer), cubes[0].Direction);
+
+            for (int i = 1; i < cubes.Count; i++)
             {
                 var previousAngle = swingData[^1].Angle;
-                (double x, double y) previousPosition = (cubes[i - 1].Line, cubes[i - 1].Layer);
                 var currentBeat = cubes[i].Time;
                 var currentAngle = cubes[i].Direction;
                 (double x, double y) currentPosition = (cubes[i].Line, cubes[i].Layer);
 
                 if (!cubes[i].Pattern || cubes[i].Head)
                 {
-                    // New swing
                     swingData.Add(new SwingData(currentBeat, currentAngle, cubes[i]));
                     (swingData[^1].EntryPosition, swingData[^1].ExitPosition) = CalcBaseEntryExit(currentPosition, currentAngle);
-                    swingData[^1].Pattern = 0;
+                    
                     if (cubes[i].Chain)
                     {
-                        swingData[^1].Pattern += 0.1;
-                        var angleInRadians = ConvertDegreesToRadians(currentAngle);
-                        swingData[^1].ExitPosition = ((cubes[i].TailLine * 0.333333 + Math.Cos(angleInRadians) * 0.166667 + 0.166667) * cubes[i].Squish, (cubes[i].TailLayer * 0.333333 + Math.Sin(angleInRadians) * 0.166667 + 0.166667) * cubes[i].Squish);
+                        double angleInRadians = ConvertDegreesToRadians(currentAngle);
+                        double cosAngle = Math.Cos(angleInRadians);
+                        double sinAngle = Math.Sin(angleInRadians);
+                        
+                        swingData[^1].ExitPosition = (
+                            (cubes[i].TailLine * GRID_CELL_SIZE + cosAngle * HALF_GRID_CELL + HALF_GRID_CELL) * cubes[i].Squish, 
+                            (cubes[i].TailLayer * GRID_CELL_SIZE + sinAngle * HALF_GRID_CELL + HALF_GRID_CELL) * cubes[i].Squish
+                        );
                     }
                 }
-                else // Pattern
+                else
                 {
-                    var nextHeadCubeIndex = headCubes.LastOrDefault(index => index < i);
-                    if (nextHeadCubeIndex is not 0)
+                    int headIndex = -1;
+                    for (int h = headCubes.Length - 1; h >= 0; h--)
                     {
-                        (currentAngle, lastSimPos) = FindAngleViaPos(cubes, i, nextHeadCubeIndex, previousAngle, true);
+                        if (headCubes[h] < i)
+                        {
+                            headIndex = headCubes[h];
+                            break;
+                        }
                     }
-                    if (!IsSameDir(currentAngle, previousAngle))
+
+                    if (headIndex >= 0)
                     {
-                        currentAngle = ReverseCutDirection(currentAngle);
+                        currentAngle = FindAngleViaPos(cubes[i], cubes[headIndex], previousAngle, true);
                     }
+
                     swingData[^1].Angle = currentAngle;
-                    var xtest = (swingData[^1].EntryPosition.x - (currentPosition.x * 0.333333 - Math.Cos(ConvertDegreesToRadians(currentAngle)) * 0.166667 + 0.166667)) * Math.Cos(ConvertDegreesToRadians(currentAngle));
-                    var ytest = (swingData[^1].EntryPosition.y - (currentPosition.y * 0.333333 - Math.Sin(ConvertDegreesToRadians(currentAngle)) * 0.166667 + 0.166667)) * Math.Sin(ConvertDegreesToRadians(currentAngle));
-                    if (xtest <= 0.001 && ytest >= 0.001)
-                    {
-                        swingData[^1].EntryPosition = (currentPosition.x * 0.333333 - Math.Cos(ConvertDegreesToRadians(currentAngle)) * 0.166667 + 0.166667, currentPosition.y * 0.333333 - Math.Sin(ConvertDegreesToRadians(currentAngle)) * 0.166667 + 0.166667);
-                    }
-                    else
-                    {
-                        swingData[^1].ExitPosition = (currentPosition.x * 0.333333 + Math.Cos(ConvertDegreesToRadians(currentAngle)) * 0.166667 + 0.166667, currentPosition.y * 0.333333 + Math.Sin(ConvertDegreesToRadians(currentAngle)) * 0.166667 + 0.166667);
-                    }
-                    var directionAngle = ReverseCutDirection(Mod(ConvertRadiansToDegrees(Math.Atan2(previousPosition.y - currentPosition.y, previousPosition.x - currentPosition.x)), 360));
-                    if (Math.Abs(directionAngle - currentAngle) <= 15)
-                    {
-                        swingData[^1].Pattern += 3;
-                    }
-                    else
-                    {
-                        swingData[^1].Pattern += 1;
-                    }
+                    
+                    double angleInRadians = ConvertDegreesToRadians(currentAngle);
+                    double cosAngle = Math.Cos(angleInRadians);
+                    double sinAngle = Math.Sin(angleInRadians);
+                    
+                    double noteExitX = currentPosition.x * GRID_CELL_SIZE + cosAngle * HALF_GRID_CELL + HALF_GRID_CELL;
+                    double noteExitY = currentPosition.y * GRID_CELL_SIZE + sinAngle * HALF_GRID_CELL + HALF_GRID_CELL;
+
+                    swingData[^1].ExitPosition = (noteExitX, noteExitY);
                 }
             }
 

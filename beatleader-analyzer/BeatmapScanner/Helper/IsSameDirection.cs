@@ -3,6 +3,9 @@ using static Analyzer.BeatmapScanner.Helper.Helper;
 
 namespace Analyzer.BeatmapScanner.Helper
 {
+    /// <summary>
+    /// Checks if two swing directions are similar (handles angle wrapping).
+    /// </summary>
     internal class IsSameDirection
     {
         public static bool IsSameDir(double before, double after, double degree = 67.5)

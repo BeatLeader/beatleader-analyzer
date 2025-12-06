@@ -9,17 +9,16 @@ namespace beatleader_analyzer
 {
     public class Analyze
     {
-        public List<Ratings> GetRating(DifficultyV3 diff, string characteristic, string difficulty, float bpm, float timescale = 1, float njsMult = 1)
+        public Ratings GetRating(DifficultyV3 diff, string characteristic, string difficulty, float bpm, float timescale = 1, float njsMult = 1)
         {
-            List<Ratings> ratings = [];
-
             try
             {
                 if (diff.Notes.Count >= 20)
                 {
-                    (List<double> rating, List<PerSwing> perSwing) = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(diff.Notes, diff.Chains, diff.Bombs, diff.Walls, bpm, timescale, njsMult);
-                    ratings.Add(new(characteristic, difficulty, rating, perSwing));
-                    return ratings;
+                    Ratings rating = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(diff.Notes, diff.Chains, diff.Bombs, diff.Walls, bpm, timescale, njsMult);
+                    rating.Characteristic = characteristic;
+                    rating.Difficulty = difficulty;
+                    return rating;
                 }
                 else
                 {
@@ -44,8 +43,10 @@ namespace beatleader_analyzer
                 {
                     if (difficulty.Data.Notes.Count >= 20)
                     {
-                        (List<double> rating, List<PerSwing> perSwing) = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(difficulty.Data.Notes, difficulty.Data.Chains, difficulty.Data.Bombs, difficulty.Data.Walls, beatmap.Info._beatsPerMinute, timescale, njsMult);
-                        ratings.Add(new(difficulty.Characteristic, difficulty.Difficulty, rating, perSwing));
+                        Ratings rating = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(difficulty.Data.Notes, difficulty.Data.Chains, difficulty.Data.Bombs, difficulty.Data.Walls, beatmap.Info._beatsPerMinute, timescale, njsMult);
+                        rating.Characteristic = difficulty.Characteristic;
+                        rating.Difficulty = difficulty.Difficulty;
+                        ratings.Add(rating);
                     }
                 }
                 return ratings;

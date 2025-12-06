@@ -1,8 +1,12 @@
 ﻿
+
 using Parser.Map.Difficulty.V3.Grid;
 
 namespace Analyzer.BeatmapScanner.Data
 {
+    /// <summary>
+    /// Beat Saber note with analysis metadata.
+    /// </summary>
     public class Cube
     {
         public float Time { get; set; } = 0;
@@ -14,11 +18,14 @@ namespace Analyzer.BeatmapScanner.Data
         public double Direction { get; set; } = 8;
         public float Njs { get; set; } = 0;
         public bool Head { get; set; } = false;
+        public bool Tail { get; set; } = false;
         public bool Pattern { get; set; } = false;
         public bool Chain { get; set; } = false;
         public int TailLine { get; set; } = 0;
         public int TailLayer {  get; set; } = 0;
         public float Squish { get; set; } = 0f;
+        
+        
         
         public Cube()
         {
@@ -26,26 +33,31 @@ namespace Analyzer.BeatmapScanner.Data
 
         public Cube(Cube cube)
         {
-            AngleOffset = cube.AngleOffset;
-            CutDirection = cube.CutDirection;
-            Type = cube.Type;
             Time = cube.Time;
             Line = cube.Line;
             Layer = cube.Layer;
+            Type = cube.Type;
+            CutDirection = cube.CutDirection;
+            AngleOffset = cube.AngleOffset;
             Direction = cube.Direction;
             Njs = cube.Njs;
+            Head = cube.Head;
+            Tail = cube.Tail;
+            Pattern = cube.Pattern;
+            Chain = cube.Chain;
+            TailLine = cube.TailLine;
+            TailLayer = cube.TailLayer;
+            Squish = cube.Squish;
         }
-
 
         public Cube(Note note)
         {
-            AngleOffset = note.AngleOffset;
-            CutDirection = note.CutDirection;
-            Type = note.Color;
             Time = note.BpmTime;
             Line = note.x;
             Layer = note.y;
-            Direction = note.CutDirection;
+            Type = note.Color;
+            CutDirection = note.CutDirection;
+            AngleOffset = note.AngleOffset;
             Njs = note.njs;
         }
     }

@@ -2,7 +2,6 @@
 {
     internal class NjsBuff
     {
-        //NJS buff for >24 njs
         public static double CalculateNjsBuff(float njs)
         {
             double buff = 1f;

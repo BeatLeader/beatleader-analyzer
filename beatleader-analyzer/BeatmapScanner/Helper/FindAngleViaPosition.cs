@@ -1,46 +1,69 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
-using System.Collections.Generic;
 using static Analyzer.BeatmapScanner.Helper.Helper;
 using static Analyzer.BeatmapScanner.Helper.IsSameDirection;
 
 namespace Analyzer.BeatmapScanner.Helper
 {
+    /// <summary>
+    /// Calculates swing directions for dot notes based on spatial relationship.
+    /// </summary>
     internal class FindAngleViaPosition
     {
-        public static (double, (double x, double y)) FindAngleViaPos(List<Cube> cubes, int index, int h, double guideAngle, bool pattern)
+        public static double FindAngleViaPos(Cube current, Cube previous, double guideAngle, bool isSameSwing)
         {
-            (double x, double y) previousPosition;
-            (double x, double y) currentPosition = (cubes[index].Line, cubes[index].Layer);
+            (double x, double y) startPosition;
+            (double x, double y) currentPosition = (current.Line, current.Layer);
 
-            if (pattern)
+            if (isSameSwing)
             {
-                previousPosition = (cubes[h].Line, cubes[h].Layer);
+                startPosition = (previous.Line, previous.Layer);
             }
             else
             {
-                previousPosition = SimSwingPos(cubes[h].Line, cubes[h].Layer, guideAngle);
+                startPosition = SimSwingPos(previous.Line, previous.Layer, guideAngle);
             }
 
-            var currentAngle = ReverseCutDirection(Mod(ConvertRadiansToDegrees(Math.Atan2(previousPosition.y - currentPosition.y, previousPosition.x - currentPosition.x)), 360));
-
-            if (pattern && !IsSameDir(currentAngle, guideAngle))
+            if (Math.Abs(startPosition.x - currentPosition.x) < 0.001 && 
+                Math.Abs(startPosition.y - currentPosition.y) < 0.001)
             {
-                currentAngle = ReverseCutDirection(currentAngle);
+                return isSameSwing ? guideAngle : ReverseCutDirection(guideAngle);
             }
-            else if (!pattern && IsSameDir(currentAngle, guideAngle))
+
+            double deltaX = currentPosition.x - startPosition.x;
+            double deltaY = currentPosition.y - startPosition.y;
+            double spatialAngle = Mod(ConvertRadiansToDegrees(Math.Atan2(deltaY, deltaX)), 360);
+
+            double calculatedAngle = spatialAngle;
+
+            if (isSameSwing)
             {
-                currentAngle = ReverseCutDirection(currentAngle);
+                if (!IsSameDir(spatialAngle, guideAngle))
+                {
+                    calculatedAngle = ReverseCutDirection(spatialAngle);
+                    
+                    if (!IsSameDir(calculatedAngle, guideAngle))
+                    {
+                        calculatedAngle = guideAngle;
+                    }
+                }
+            }
+            else
+            {
+                if (IsSameDir(spatialAngle, guideAngle))
+                {
+                    calculatedAngle = ReverseCutDirection(spatialAngle);
+                }
             }
 
-            var simPos = SimSwingPos(cubes[index].Line, cubes[index].Layer, currentAngle);
-
-            return (currentAngle, simPos);
+            return calculatedAngle;
         }
 
-        public static (double x, double y) SimSwingPos(double x, double y, double direction, double dis = 5)
+        public static (double x, double y) SimSwingPos(double x, double y, double direction, double distance = 1)
         {
-            return (x + dis * Math.Cos(ConvertDegreesToRadians(direction)), y + dis * Math.Sin(ConvertDegreesToRadians(direction)));
+            return (x + distance * Math.Cos(ConvertDegreesToRadians(direction)), 
+                    y + distance * Math.Sin(ConvertDegreesToRadians(direction)));
         }
     }
 }
+

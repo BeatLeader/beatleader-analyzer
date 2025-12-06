@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Analyzer.BeatmapScanner.Data;
+using System.Collections.Generic;
 
 namespace beatleader_analyzer.BeatmapScanner.Data
 {
@@ -9,17 +10,8 @@ namespace beatleader_analyzer.BeatmapScanner.Data
         public double Pass { get; set; }
         public double Tech { get; set; }
         public double Nerf { get; set; }
-        public List<PerSwing> PerSwing { get; set; }
-
-        public Ratings(string characteristic, string difficulty, List<double> ratings, List<PerSwing> perSwing)
-        {
-            Characteristic = characteristic;
-            Difficulty = difficulty;
-            Pass = ratings[0];
-            Tech = ratings[1];
-            Nerf = ratings[2];
-            PerSwing = perSwing;
-        }
+        public Statistics Patterns { get; set; } = new Statistics();
+        public List<SwingData> SwingData { get; set; } = new List<SwingData>();
     }
 
     public class PerSwing

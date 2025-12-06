@@ -1,76 +1,72 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Analyzer.BeatmapScanner.Helper
 {
     internal class SwingAngleStrain
     {
-        public static double SwingAngleStrainCalc(List<SwingData> swingData, bool leftOrRight)
-        {
-            double strainAmount = 0;
+        const double LEFT_FOREHAND_NEUTRAL = 292.5;
+        const double RIGHT_FOREHAND_NEUTRAL = 247.5;
+        const double LEFT_BACKHAND_NEUTRAL = 112.5;
+        const double RIGHT_BACKHAND_NEUTRAL = 67.5;
 
-            for (int i = 0; i < swingData.Count; i++)
+        public static double SwingAngleStrainCalc(List<SwingData> swingData, bool isRightHand)
+        {
+            if (swingData.Count == 0)
             {
-                if (swingData[i].Forehand)
+                return 0;
+            }
+
+            double totalStrain = 0;
+
+            foreach (var swing in swingData)
+            {
+                double neutralAngle;
+                if (swing.Forehand)
                 {
-                    if (leftOrRight)
-                    {
-                        strainAmount += 2 * Math.Pow((180 - Math.Abs(Math.Abs(247.5 - swingData[i].Angle) - 180)) / 180, 2);
-                    }
-                    else
-                    {
-                        strainAmount += 2 * Math.Pow((180 - Math.Abs(Math.Abs(292.5 - swingData[i].Angle) - 180)) / 180, 2);
-                    }
+                    neutralAngle = isRightHand ? RIGHT_FOREHAND_NEUTRAL : LEFT_FOREHAND_NEUTRAL;
                 }
                 else
                 {
-                    if (leftOrRight)
-                    {
-                        strainAmount += 2 * Math.Pow((180 - Math.Abs(Math.Abs(247.5 - 180 - swingData[i].Angle) - 180)) / 180, 2);
-                    }
-                    else
-                    {
-                        strainAmount += 2 * Math.Pow((180 - Math.Abs(Math.Abs(292.5 - 180 - swingData[i].Angle) - 180)) / 180, 2);
-                    }
+                    neutralAngle = isRightHand ? RIGHT_BACKHAND_NEUTRAL : LEFT_BACKHAND_NEUTRAL;
                 }
+
+                double deviation = AngleDeviation(neutralAngle, swing.Angle);
+                double normalizedStrain = deviation / 180.0;
+                totalStrain += normalizedStrain * normalizedStrain;
             }
 
-            return strainAmount;
+            return totalStrain / swingData.Count;
         }
 
-        public static double BezierAngleStrainCalc(Span<double> angleData, bool forehand, bool leftOrRight)
+        public static double BezierAngleTotalStrain(Span<double> angleData, bool forehand, bool isRightHand)
         {
-            var strainAmount = 0d;
-
-            for (int i = 0; i < angleData.Length; i++)
+            double neutralAngle;
+            if (forehand)
             {
-                if (forehand)
-                {
-                    if (leftOrRight)
-                    {
-                        strainAmount += 2 * Math.Pow((180 - Math.Abs(Math.Abs(247.5 - angleData[i]) - 180)) / 180, 2);
-                    }
-                    else
-                    {
-                        strainAmount += 2 * Math.Pow((180 - Math.Abs(Math.Abs(292.5 - angleData[i]) - 180)) / 180, 2);
-                    }
-                }
-                else
-                {
-                    if (leftOrRight)
-                    {
-                        strainAmount += 2 * Math.Pow((180 - Math.Abs(Math.Abs(247.5 - 180 - angleData[i]) - 180)) / 180, 2);
-                    }
-                    else
-                    {
-                        strainAmount += 2 * Math.Pow((180 - Math.Abs(Math.Abs(292.5 - 180 - angleData[i]) - 180)) / 180, 2);
-                    }
-                }
+                neutralAngle = isRightHand ? RIGHT_FOREHAND_NEUTRAL : LEFT_FOREHAND_NEUTRAL;
+            }
+            else
+            {
+                neutralAngle = isRightHand ? RIGHT_BACKHAND_NEUTRAL : LEFT_BACKHAND_NEUTRAL;
             }
 
-            return strainAmount;
+            double totalStrain = 0;
+            foreach (double angle in angleData)
+            {
+                double deviation = AngleDeviation(neutralAngle, angle);
+                double normalizedStrain = deviation / 180.0;
+                totalStrain += normalizedStrain * normalizedStrain;
+            }
+
+            return totalStrain;
+        }
+
+        private static double AngleDeviation(double angle1, double angle2)
+        {
+            double diff = Math.Abs(angle1 - angle2);
+            return 180 - Math.Abs(diff - 180);
         }
     }
 }
