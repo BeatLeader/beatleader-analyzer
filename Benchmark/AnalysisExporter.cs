@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
+using BenchmarkDotNet.Helpers;
 
 namespace Benchmark
 {
@@ -69,9 +70,121 @@ namespace Benchmark
 
         public void ExportFromFile(string zipPath, string outputPath = null)
         {
-            Console.WriteLine($"Note: Local file loading not supported by parser library.");
-            Console.WriteLine($"Please use a BeatSaver URL instead.");
-            Console.WriteLine($"Example: export url https://r2cdn.beatsaver.com/[hash].zip");
+            Console.WriteLine($"Loading map from file: {zipPath}");
+            
+            if (!File.Exists(zipPath) && !Directory.Exists(zipPath))
+            {
+                Console.WriteLine($"Error: File/Directory not found: {zipPath}");
+                return;
+            }
+
+            try
+            {
+                var parser = new Parse();
+                BeatmapV3 map = null;
+
+                // Check if it's a zip file or a folder
+                if (zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Load zip file into memory and use TryLoadZip
+                    using (var fileStream = File.OpenRead(zipPath))
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        fileStream.CopyTo(memoryStream);
+                        memoryStream.Position = 0;
+                        
+                        var maps = parser.TryLoadZip(memoryStream);
+                        map = maps?.LastOrDefault();
+                    }
+                }
+                else
+                {
+                    // Load from extracted folder using TryLoadPath
+                    map = parser.TryLoadPath(zipPath);
+                }
+
+                if (map == null)
+                {
+                    Console.WriteLine("Failed to load map from file!");
+                    return;
+                }
+
+                ExportBeatmap(map, outputPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading map: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+        }
+
+        public void ExportDetailedSwingDataFromFile(string zipPath, string characteristic, string difficulty, string outputPath = null)
+        {
+            outputPath ??= "detailed_swings.html";
+
+            Console.WriteLine($"Loading map from file: {zipPath}");
+            
+            if (!File.Exists(zipPath) && !Directory.Exists(zipPath))
+            {
+                Console.WriteLine($"Error: Path not found: {zipPath}");
+                return;
+            }
+
+            try
+            {
+                var parser = new Parse();
+                BeatmapV3 map = null;
+
+                // Check if it's a zip file or a folder
+                if (zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Load zip file into memory and use TryLoadZip
+                    using (var fileStream = File.OpenRead(zipPath))
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        fileStream.CopyTo(memoryStream);
+                        memoryStream.Position = 0;
+                        
+                        var maps = parser.TryLoadZip(memoryStream);
+                        map = maps?.LastOrDefault();
+                    }
+                }
+                else
+                {
+                    // Load from extracted folder using TryLoadPath
+                    map = parser.TryLoadPath(zipPath);
+                }
+
+                if (map == null)
+                {
+                    Console.WriteLine("Failed to load map from file!");
+                    return;
+                }
+
+                var ratings = analyzer.GetRating(map, characteristic);
+                var rating = ratings?.FirstOrDefault(r => r.Difficulty == difficulty);
+
+                if (rating == null)
+                {
+                    Console.WriteLine($"Could not find difficulty: {characteristic} - {difficulty}");
+                    return;
+                }
+
+                Console.WriteLine($"\nExporting detailed swing data for: {characteristic} - {difficulty}");
+                Console.WriteLine($"Total swings: {rating.SwingData.Count}");
+
+                var html = GenerateDetailedSwingHtml(map, characteristic, difficulty, rating);
+
+                File.WriteAllText(outputPath, html);
+                Console.WriteLine($"✓ Detailed swing data exported to: {outputPath}");
+                
+                OpenInBrowser(outputPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading map: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
         }
 
         private void ExportBeatmap(BeatmapV3 map, string outputPath)

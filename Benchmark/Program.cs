@@ -81,12 +81,30 @@ namespace Benchmark
             Console.WriteLine("╚════════════════════════════════════════════════╝");
             Console.WriteLine();
 
-            Console.Write("Enter BeatSaver URL: ");
-            string url = Console.ReadLine()?.Trim();
+            Console.WriteLine("Enter map source:");
+            Console.WriteLine("  [1] BeatSaver URL");
+            Console.WriteLine("  [2] Local file path");
+            Console.Write("Select option (1-2): ");
+            string sourceChoice = Console.ReadLine()?.Trim();
 
-            if (string.IsNullOrEmpty(url))
+            string input;
+            bool isFile = false;
+
+            if (sourceChoice == "2")
             {
-                Console.WriteLine("Error: URL cannot be empty.");
+                Console.Write("Enter path (zip file or extracted folder): ");
+                input = Console.ReadLine()?.Trim();
+                isFile = true;
+            }
+            else
+            {
+                Console.Write("Enter BeatSaver URL: ");
+                input = Console.ReadLine()?.Trim();
+            }
+
+            if (string.IsNullOrEmpty(input))
+            {
+                Console.WriteLine("Error: Input cannot be empty.");
                 Console.WriteLine("Press any key to return to menu...");
                 Console.ReadKey();
                 return;
@@ -100,7 +118,14 @@ namespace Benchmark
             Console.WriteLine();
 
             var exporter = new AnalysisExporter();
-            exporter.ExportFromUrl(url, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+            if (isFile)
+            {
+                exporter.ExportFromFile(input, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+            }
+            else
+            {
+                exporter.ExportFromUrl(input, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+            }
 
             Console.WriteLine();
             Console.WriteLine("Press any key to return to menu...");
@@ -115,12 +140,30 @@ namespace Benchmark
             Console.WriteLine("╚════════════════════════════════════════════════╝");
             Console.WriteLine();
 
-            Console.Write("Enter BeatSaver URL: ");
-            string url = Console.ReadLine()?.Trim();
+            Console.WriteLine("Enter map source:");
+            Console.WriteLine("  [1] BeatSaver URL");
+            Console.WriteLine("  [2] Local file path");
+            Console.Write("Select option (1-2): ");
+            string sourceChoice = Console.ReadLine()?.Trim();
 
-            if (string.IsNullOrEmpty(url))
+            string input;
+            bool isFile = false;
+
+            if (sourceChoice == "2")
             {
-                Console.WriteLine("Error: URL cannot be empty.");
+                Console.Write("Enter path (zip file or extracted folder): ");
+                input = Console.ReadLine()?.Trim();
+                isFile = true;
+            }
+            else
+            {
+                Console.Write("Enter BeatSaver URL: ");
+                input = Console.ReadLine()?.Trim();
+            }
+
+            if (string.IsNullOrEmpty(input))
+            {
+                Console.WriteLine("Error: Input cannot be empty.");
                 Console.WriteLine("Press any key to return to menu...");
                 Console.ReadKey();
                 return;
@@ -173,7 +216,14 @@ namespace Benchmark
             Console.WriteLine();
 
             var exporter = new AnalysisExporter();
-            exporter.ExportDetailedSwingData(url, characteristic, difficulty, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+            if (isFile)
+            {
+                exporter.ExportDetailedSwingDataFromFile(input, characteristic, difficulty, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+            }
+            else
+            {
+                exporter.ExportDetailedSwingData(input, characteristic, difficulty, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+            }
 
             Console.WriteLine();
             Console.WriteLine("Press any key to return to menu...");
@@ -290,8 +340,15 @@ namespace Benchmark
                     break;
 
                 case "file":
-                    Console.WriteLine("Local file loading not supported.");
-                    Console.WriteLine("Please use: export url <beatsaver-url>");
+                    if (args.Length < 2)
+                    {
+                        Console.WriteLine("Error: File path required");
+                        Console.WriteLine("Usage: export file <zip-path> [output-path]");
+                        return;
+                    }
+                    string filePath = args[1];
+                    string fileOutputPath = args.Length > 2 ? args[2] : null;
+                    exporter.ExportFromFile(filePath, fileOutputPath);
                     break;
 
                 case "detailed":
@@ -322,15 +379,18 @@ namespace Benchmark
             Console.WriteLine("Usage:");
             Console.WriteLine("  export url <beatsaver-url> [output-path]");
             Console.WriteLine("    Export analysis for all difficulties from a BeatSaver URL");
-            Console.WriteLine("    Example: export url https://r2cdn.beatsaver.com/417f22a92dc4efb0750a4ea538e45eaf50ce628b.zip analysis.json");
+            Console.WriteLine("    Example: export url https://r2cdn.beatsaver.com/417f22a92dc4efb0750a4ea538e45eaf50ce628b.zip analysis.html");
             Console.WriteLine();
-            Console.WriteLine("  export file <zip-path> [output-path]");
-            Console.WriteLine("    Export analysis for all difficulties from a local zip file");
-            Console.WriteLine("    Example: export file C:\\maps\\mymap.zip analysis.json");
+            Console.WriteLine("  export file <path> [output-path]");
+            Console.WriteLine("    Export analysis for all difficulties from a local zip file or folder");
+            Console.WriteLine("    Example: export file C:\\\\maps\\\\mymap.zip analysis.html");
+            Console.WriteLine("    Example: export file C:\\\\maps\\\\extracted_map analysis.html");
             Console.WriteLine();
             Console.WriteLine("  export detailed <beatsaver-url> <characteristic> <difficulty> [output-path]");
-            Console.WriteLine("    Export detailed per-swing data for a specific difficulty");
-            Console.WriteLine("    Example: export detailed https://r2cdn.beatsaver.com/...zip Standard ExpertPlus detailed.json");
+            Console.WriteLine("    Export detailed per-swing data for a specific difficulty from URL");
+            Console.WriteLine("    Example: export detailed https://r2cdn.beatsaver.com/...zip Standard ExpertPlus detailed.html");
+            Console.WriteLine();
+            Console.WriteLine("Note: Supports both .zip files and extracted map folders.");
             Console.WriteLine();
         }
     }
