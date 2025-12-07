@@ -672,19 +672,19 @@ namespace Benchmark
                 <div class=""stats-grid"">
                     <div class=""stat-card"">
                         <h3>Pass Difficulty</h3>
-                        <div class=""value"">${{data.Ratings.Pass.toFixed(2)}}</div>
+                        <div class=""value"">${{(typeof data.Ratings.Pass === 'number' ? data.Ratings.Pass.toFixed(2) : 'N/A')}}</div>
                     </div>
                     <div class=""stat-card"">
                         <h3>Tech Difficulty</h3>
-                        <div class=""value"">${{data.Ratings.Tech.toFixed(2)}}</div>
+                        <div class=""value"">${{(typeof data.Ratings.Tech === 'number' ? data.Ratings.Tech.toFixed(2) : 'N/A')}}</div>
                     </div>
                     <div class=""stat-card"">
                         <h3>Total Swings</h3>
-                        <div class=""value"">${{data.SwingCount}}</div>
+                        <div class=""value"">${{data.SwingCount || 0}}</div>
                     </div>
                     <div class=""stat-card"">
                         <h3>Note Count Nerf</h3>
-                        <div class=""value"">${{data.Ratings.Nerf.toFixed(3)}}</div>
+                        <div class=""value"">${{(typeof data.Ratings.Nerf === 'number' ? data.Ratings.Nerf.toFixed(3) : 'N/A')}}</div>
                     </div>
                 </div>
                 

@@ -55,11 +55,15 @@ namespace Analyzer.BeatmapScanner.Algorithm
             double balancedPass = 0.0;
             double balancedTech = 0.0;
 
-            var (dodgeWallsList, crouchWallsList) = walls != null ? ClassifyWalls(walls) : (new List<Wall>(), new List<Wall>());
+            // Classify all walls (for difficulty calculation) and count unique dodge actions (for statistics)
+            var (dodgeWallsAll, crouchWallsAll, dodgeWallsCount, crouchWallsCount) = walls != null 
+                ? ClassifyWalls(walls, bpm) 
+                : (new List<Wall>(), new List<Wall>(), 0, 0);
 
             if (combinedSwingData.Count > 0)
             {
-                DiffToPass.CalcSwingDiff(combinedSwingData, bpm, dodgeWallsList, crouchWallsList);
+                // Use all classified walls for difficulty calculation
+                DiffToPass.CalcSwingDiff(combinedSwingData, bpm, dodgeWallsAll, crouchWallsAll);
                 
                 redSwingData = combinedSwingData.Where(x => x.Start.Type == 0).ToList();
                 blueSwingData = combinedSwingData.Where(x => x.Start.Type == 1).ToList();
@@ -126,8 +130,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 ClassifySwingPatterns(blue, blueSwingData, bpm);
             }
 
-            int dodgeWallCount = dodgeWallsList.Count;
-            int crouchWallCount = crouchWallsList.Count;
+            // Use the counted walls (respecting cooldown) for statistics
+            int dodgeWallCount = dodgeWallsCount;
+            int crouchWallCount = crouchWallsCount;
 
             int resetCount = combinedSwingData.Count(s => s.Reset);
             int bombResetCount = combinedSwingData.Count(s => s.BombReset);
@@ -155,8 +160,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 Nerf = CalculateLowNoteNerf(combinedSwingData.Count),
                 Patterns = combinedPatterns,
                 SwingData = combinedSwingData,
-                DodgeWalls = dodgeWallsList,
-                CrouchWalls = crouchWallsList
+                DodgeWalls = dodgeWallsAll,
+                CrouchWalls = crouchWallsAll
             };
 
             return ratings;
