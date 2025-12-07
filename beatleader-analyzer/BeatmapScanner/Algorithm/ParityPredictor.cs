@@ -118,10 +118,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             var prevSwing = swings[currentIndex - 1];
             var currentSwing = swings[currentIndex];
-            
-            // Get bombs between previous and current swing, sorted by time
-            var relevantBombs = bombs.Where(b => 
-                b.Beats > prevSwing.Beat && 
+
+            // Get bombs between previous and current swing
+            var relevantBombs = bombs.Where(b =>
+                b.Beats > prevSwing.Beat &&
                 b.Beats < currentSwing.Beat
             ).OrderBy(b => b.Beats).ToList();
 
@@ -130,139 +130,64 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return (false, 0, 0);
             }
 
-            // Simulate player hand position over time
-            // Player continues swinging in the cut direction until reaching grid boundary
+            // Calculate where hand is after previous swing
             var handX = prevSwing.Start.Line;
             var handY = prevSwing.Start.Layer;
-            
-            // Calculate swing direction vector
-            double angleRadians = prevSwing.Angle * Math.PI / 180.0;
-            double dirX = Math.Cos(angleRadians);
-            double dirY = Math.Sin(angleRadians);
-            
-            // Project hand position to grid boundary in swing direction
-            // Move hand as far as possible in the swing direction
-            const double swingExtent = 3.0; // Maximum swing distance
-            double finalX = handX + dirX * swingExtent;
-            double finalY = handY + dirY * swingExtent;
-            
-            // Clamp to grid boundaries
-            handX = Math.Clamp((int)Math.Round(finalX), 0, 3);
-            handY = Math.Clamp((int)Math.Round(finalY), 0, 2);
 
-            bool hadToReposition = false;
-            Bomb firstBlockingBomb = default;
+            double prevAngleRadians = prevSwing.Angle * Math.PI / 180.0;
+            double prevDirX = Math.Cos(prevAngleRadians);
+            double prevDirY = Math.Sin(prevAngleRadians);
 
-            // Simulate each bomb encounter
-            foreach (var bomb in relevantBombs)
+            const double swingExtent = 3.0;
+            double prevFinalX = handX + prevDirX * swingExtent;
+            double prevFinalY = handY + prevDirY * swingExtent;
+
+            handX = Math.Clamp((int)Math.Round(prevFinalX), 0, 3);
+            handY = Math.Clamp((int)Math.Round(prevFinalY), 0, 2);
+
+            // Calculate where hand NEEDS to be for CURRENT swing
+            // To swing in a direction, you need to start from the opposite side
+            double currAngleRadians = currentSwing.Angle * Math.PI / 180.0;
+            double currDirX = Math.Cos(currAngleRadians);
+            double currDirY = Math.Sin(currAngleRadians);
+
+            // Ideal preparation position is opposite to swing direction from note
+            int prepX = currentSwing.Start.Line;
+            int prepY = currentSwing.Start.Layer;
+
+            double idealPrepX = prepX - currDirX * swingExtent;
+            double idealPrepY = prepY - currDirY * swingExtent;
+
+            int targetPrepX = Math.Clamp((int)Math.Round(idealPrepX), 0, 3);
+            int targetPrepY = Math.Clamp((int)Math.Round(idealPrepY), 0, 2);
+
+            // Check if we need significant movement to prepare for next swing
+            int movementRequired = Math.Abs(handX - targetPrepX) + Math.Abs(handY - targetPrepY);
+
+            // If no movement needed, bombs don't matter
+            if (movementRequired <= 1)
             {
-                // Check if bomb is at current hand position
-                if (bomb.x == handX && bomb.y == handY)
-                {
-                    // Bomb forces repositioning - move to opposite side of grid
-                    // Move to the position furthest from the bomb
-                    handX = 3 - bomb.x;  // Flip horizontally
-                    handY = 2 - bomb.y;  // Flip vertically
-                    
-                    if (!hadToReposition)
-                    {
-                        firstBlockingBomb = bomb;
-                    }
-                    hadToReposition = true;
-                }
-                // No repositioning needed if bomb is not at hand position
+                return (false, 0, 0);
             }
 
-            if (hadToReposition)
+            // Check if any bombs are adjacent to current position or prep position
+            foreach (var bomb in relevantBombs)
             {
-                return (true, firstBlockingBomb.y, firstBlockingBomb.x);
+                // Check if bomb is adjacent to current hand position
+                int distFromHand = Math.Abs(bomb.x - handX) + Math.Abs(bomb.y - handY);
+
+                // Check if bomb is adjacent to target prep position  
+                // int distFromPrep = Math.Abs(bomb.x - targetPrepX) + Math.Abs(bomb.y - targetPrepY);
+
+                // If bomb is adjacent (distance <= 1) to either position
+                // and we need to move, it's a bomb reset
+                if (distFromHand <= 1) // || distFromPrep <= 1)
+                {
+                    return (true, bomb.y, bomb.x);
+                }
             }
 
             return (false, 0, 0);
-        }
-
-        private static bool IsBombBlockingPath(Bomb bomb, int prevX, int prevY, int currX, int currY)
-        {
-            // Check if bomb is BETWEEN the previous exit and current entry positions
-            // A bomb along the travel path IS blocking - you must deviate around it
-            
-            // Bomb at starting position - blocks leaving that position
-            if (bomb.x == prevX && bomb.y == prevY)
-            {
-                return true;
-            }
-
-            int deltaX = currX - prevX;
-            int deltaY = currY - prevY;
-            
-            if (deltaX == 0 && deltaY == 0)
-            {
-                return false;
-            }
-
-            int bombDeltaX = bomb.x - prevX;
-            int bombDeltaY = bomb.y - prevY;
-
-            // Vertical movement
-            if (deltaX == 0)
-            {
-                if (bomb.x == prevX)
-                {
-                    int minY = Math.Min(prevY, currY);
-                    int maxY = Math.Max(prevY, currY);
-                    // Bomb must be BETWEEN start and end (exclusive of destination)
-                    return bomb.y > minY && bomb.y < maxY;
-                }
-            }
-            // Horizontal movement
-            else if (deltaY == 0)
-            {
-                if (bomb.y == prevY)
-                {
-                    int minX = Math.Min(prevX, currX);
-                    int maxX = Math.Max(prevX, currX);
-                    // Bomb must be BETWEEN start and end (exclusive of destination)
-                    return bomb.x > minX && bomb.x < maxX;
-                }
-            }
-            // Diagonal or complex movement
-            else
-            {
-                if (Math.Abs(deltaX) == Math.Abs(deltaY))
-                {
-                    // Perfect diagonal
-                    if (Math.Abs(bombDeltaX) == Math.Abs(bombDeltaY))
-                    {
-                        double ratio = (double)bombDeltaX / deltaX;
-                        // Bomb is on the path BETWEEN start and end (not at destination)
-                        if (ratio > 0 && ratio < 1.0 && bombDeltaY == (int)(deltaY * ratio))
-                        {
-                            return true;
-                        }
-                    }
-                }
-                else
-                {
-                    // Non-diagonal movement - check proximity to path
-                    double crossProduct = deltaX * bombDeltaY - deltaY * bombDeltaX;
-                    double distance = Math.Abs(crossProduct) / Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
-                    
-                    if (distance < 0.7)
-                    {
-                        double dotProduct = bombDeltaX * deltaX + bombDeltaY * deltaY;
-                        double lengthSquared = deltaX * deltaX + deltaY * deltaY;
-                        double t = dotProduct / lengthSquared;
-                        
-                        // Bomb is on/near the path BETWEEN start and end (not at destination)
-                        if (t > 0 && t < 1.0)
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            return false;
         }
 
         private static double CalculateTransitionCost(int fromParity, int toParity, bool sameDirection, (bool hasBombs, int blockingLayer, int blockingLine) bombInfluence)
@@ -289,11 +214,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 if (fromParity != toParity)
                 {
-                    baseCost += BOMB_REPOSITIONING_COST * 0.5;
+                    baseCost = RESET_PENALTY + BOMB_REPOSITIONING_COST;
                 }
                 else
                 {
-                    baseCost -= BOMB_REPOSITIONING_COST;
+                    baseCost = BOMB_REPOSITIONING_COST;
                 }
             }
 
