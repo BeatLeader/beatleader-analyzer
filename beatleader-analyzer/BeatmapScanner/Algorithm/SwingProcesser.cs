@@ -6,6 +6,7 @@ using static Analyzer.BeatmapScanner.Helper.CalculateBaseEntryExit;
 using static Analyzer.BeatmapScanner.Helper.IsSameDirection;
 using static Analyzer.BeatmapScanner.Helper.Helper;
 using static Analyzer.BeatmapScanner.Helper.FindAngleViaPosition;
+using static Analyzer.BeatmapScanner.Helper.GridPositionHelper;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -15,9 +16,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class SwingProcesser
     {
-        private const double GRID_CELL_SIZE = 1.0 / 3.0;
-        private const double HALF_GRID_CELL = 1.0 / 6.0;
-
         public static List<SwingData> Process(List<Cube> cubes)
         {
             if (cubes.Count == 0)
@@ -59,9 +57,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         double cosAngle = Math.Cos(angleInRadians);
                         double sinAngle = Math.Sin(angleInRadians);
                         
+                        // Chain tail position in meters using centered grid
+                        (double tailX, double tailY) = GridToMeters(cubes[i].TailLine, cubes[i].TailLayer);
                         swingData[^1].ExitPosition = (
-                            (cubes[i].TailLine * GRID_CELL_SIZE + cosAngle * HALF_GRID_CELL + HALF_GRID_CELL) * cubes[i].Squish, 
-                            (cubes[i].TailLayer * GRID_CELL_SIZE + sinAngle * HALF_GRID_CELL + HALF_GRID_CELL) * cubes[i].Squish
+                            (tailX + cosAngle * NOTE_SIZE) * cubes[i].Squish, 
+                            (tailY + sinAngle * NOTE_SIZE) * cubes[i].Squish
                         );
                     }
                 }
@@ -88,8 +88,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     double cosAngle = Math.Cos(angleInRadians);
                     double sinAngle = Math.Sin(angleInRadians);
                     
-                    double noteExitX = currentPosition.x * GRID_CELL_SIZE + cosAngle * HALF_GRID_CELL + HALF_GRID_CELL;
-                    double noteExitY = currentPosition.y * GRID_CELL_SIZE + sinAngle * HALF_GRID_CELL + HALF_GRID_CELL;
+                    // Multi-note exit position in meters using centered grid
+                    (double noteX, double noteY) = GridToMeters(currentPosition.x, currentPosition.y);
+                    double noteExitX = noteX + cosAngle * NOTE_SIZE;
+                    double noteExitY = noteY + sinAngle * NOTE_SIZE;
 
                     swingData[^1].ExitPosition = (noteExitX, noteExitY);
                 }

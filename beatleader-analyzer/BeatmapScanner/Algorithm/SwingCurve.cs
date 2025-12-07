@@ -20,8 +20,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static bool UseParallel { get; set; } = true;
 
-        private const double MAX_GRID_DISTANCE_SQUARED = 13.0;
-        private const double EXCESS_DISTANCE_NORMALIZATION = 3.0;
+        // Maximum reasonable distance in meters squared (full grid diagonal ~3m, squared = 9m²)
+        // Using 4.68m² (sqrt(4.68) ≈ 2.16m) as practical maximum for position complexity
+        private const double MAX_GRID_DISTANCE_SQUARED = 4.68;
+        
+        // Distance normalization factor in meters for excess distance calculation
+        // Adjusted for meter scale (previously 3.0 in normalized units)
+        private const double EXCESS_DISTANCE_NORMALIZATION = 1.8;
 
         public static void Calc(List<SwingData> swingData, bool isRightHand)
         {

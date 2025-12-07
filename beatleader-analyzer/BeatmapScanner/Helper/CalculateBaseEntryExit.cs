@@ -1,30 +1,30 @@
 ﻿using System;
 using static Analyzer.BeatmapScanner.Helper.Helper;
+using static Analyzer.BeatmapScanner.Helper.GridPositionHelper;
 
 namespace Analyzer.BeatmapScanner.Helper
 {
     internal class CalculateBaseEntryExit
     {
-        private const double GRID_CELL_SIZE = 1.0 / 3.0;
-        private const double HALF_GRID_CELL = 1.0 / 6.0;
-
         public static ((double x, double y) entry, (double x, double y) exit) CalcBaseEntryExit((double x, double y) position, double angle)
         {
             double angleInRadians = ConvertDegreesToRadians(angle);
             double cosAngle = Math.Cos(angleInRadians);
             double sinAngle = Math.Sin(angleInRadians);
 
-            double normalizedX = position.x * GRID_CELL_SIZE;
-            double normalizedY = position.y * GRID_CELL_SIZE;
+            // Convert grid position to meters using centered grid (0,0) system
+            (double posX, double posY) = GridToMeters(position.x, position.y);
 
+            // Entry point: position minus half note size in swing direction
             (double, double) entry = (
-                normalizedX - cosAngle * HALF_GRID_CELL + HALF_GRID_CELL,
-                normalizedY - sinAngle * HALF_GRID_CELL + HALF_GRID_CELL
+                posX - cosAngle * NOTE_SIZE,
+                posY - sinAngle * NOTE_SIZE
             );
 
+            // Exit point: position plus half note size in swing direction
             (double, double) exit = (
-                normalizedX + cosAngle * HALF_GRID_CELL + HALF_GRID_CELL,
-                normalizedY + sinAngle * HALF_GRID_CELL + HALF_GRID_CELL
+                posX + cosAngle * NOTE_SIZE,
+                posY + sinAngle * NOTE_SIZE
             );
 
             return (entry, exit);

@@ -61,8 +61,11 @@ namespace Analyzer.BeatmapScanner.Helper
 
         public static (double x, double y) SimSwingPos(double x, double y, double direction, double distance = 1)
         {
-            return (x + distance * Math.Cos(ConvertDegreesToRadians(direction)), 
-                    y + distance * Math.Sin(ConvertDegreesToRadians(direction)));
+            // Distance is in grid units along the X axis (0.6m spacing)
+            // This simulates where the hand would be after swinging in the given direction
+            double distanceInMeters = distance * 0.6;
+            return (x + distanceInMeters * Math.Cos(ConvertDegreesToRadians(direction)), 
+                    y + distanceInMeters * Math.Sin(ConvertDegreesToRadians(direction)));
         }
     }
 }
