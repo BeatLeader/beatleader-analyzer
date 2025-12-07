@@ -85,21 +85,29 @@ namespace Analyzer.BeatmapScanner.Helper
                     
                     if (timeSinceLastCrouch >= cooldownBeats)
                     {
-                        // This is a new crouch action - add it as a separate wall
-                        crouchWallsList.AddRange(simultaneousWalls);
-                        crouchWallsCount++;
-                        
-                        // Track this wall for potential duration extension
-                        lastCrouchWall = currentWall;
-                        lastCrouchEndTime = currentWall.Beats + currentWall.DurationInBeats;
+                        // This is a new crouch action - add only the walls at y=2 that force crouching
+                        var crouchWalls = simultaneousWalls.Where(w => w.y == 2).ToList();
+                        if (crouchWalls.Count > 0)
+                        {
+                            crouchWallsList.AddRange(crouchWalls);
+                            crouchWallsCount++;
+                            
+                            // Track the wall with longest duration for potential extension
+                            lastCrouchWall = crouchWalls.OrderByDescending(w => w.DurationInBeats).First();
+                            lastCrouchEndTime = lastCrouchWall.Beats + lastCrouchWall.DurationInBeats;
+                        }
                     }
                     else if (lastCrouchWall != null)
                     {
                         // Player is still crouched - extend the duration of the previous wall
-                        float currentWallEnd = currentWall.Beats + currentWall.DurationInBeats;
-                        float newDuration = currentWallEnd - lastCrouchWall.Beats;
-                        lastCrouchWall.DurationInBeats = newDuration;
-                        lastCrouchEndTime = currentWallEnd;
+                        var crouchWalls = simultaneousWalls.Where(w => w.y == 2).ToList();
+                        if (crouchWalls.Count > 0)
+                        {
+                            float currentWallEnd = crouchWalls.Max(w => w.Beats + w.DurationInBeats);
+                            float newDuration = currentWallEnd - lastCrouchWall.Beats;
+                            lastCrouchWall.DurationInBeats = newDuration;
+                            lastCrouchEndTime = currentWallEnd;
+                        }
                         
                         // Don't add this wall separately - it's merged with the previous one
                     }
@@ -201,73 +209,70 @@ namespace Analyzer.BeatmapScanner.Helper
 
         private static bool IsCrouchWall(List<Wall> walls)
         {
-            bool hasX1Covered = false;
-            bool hasX2Covered = false;
-            bool hasCrouchHeight = false;
+            // A crouch wall must have a wall at y=2 that covers both center positions (x=1 and x=2)
+            // Either a single wall covers both, or multiple walls combine to cover both
+            bool hasTopWallCoveringBothCenters = false;
 
             foreach (var wall in walls)
             {
-                bool coversX1 = wall.x <= 1 && wall.x + wall.Width >= 2;
-                bool coversX2 = wall.x <= 2 && wall.x + wall.Width >= 3;
-
                 if (wall.y == 2)
                 {
-                    hasCrouchHeight = true;
+                    // Check if this top wall covers both center positions x=1 and x=2
+                    bool coversX1 = wall.x <= 1 && wall.x + wall.Width > 1;
+                    bool coversX2 = wall.x <= 2 && wall.x + wall.Width > 2;
 
-                    if (coversX1)
+                    if (coversX1 && coversX2)
                     {
-                        hasX1Covered = true;
-                    }
-                    if (coversX2)
-                    {
-                        hasX2Covered = true;
+                        hasTopWallCoveringBothCenters = true;
+                        break;
                     }
                 }
             }
 
-            if (!hasCrouchHeight)
+            // If there's no top wall covering both centers, it's not a crouch wall
+            if (!hasTopWallCoveringBothCenters)
             {
                 return false;
             }
 
-            if (hasX1Covered && hasX2Covered)
+            // Now check if there are any lower walls that would make dodging impossible
+            // (i.e., walls that block the side positions where player could dodge instead of crouch)
+            bool hasBlockingWallAtX1 = false;
+            bool hasBlockingWallAtX2 = false;
+
+            foreach (var wall in walls)
+            {
+                // Only walls from ground level (y=0 or y=1) that are tall enough block dodging
+                bool isTallEnough = (wall.y <= 0 && wall.Height >= 3) || (wall.y == 1 && wall.Height >= 2);
+                
+                if (isTallEnough)
+                {
+                    bool blocksX1 = wall.x <= 1 && wall.x + wall.Width > 1;
+                    bool blocksX2 = wall.x <= 2 && wall.x + wall.Width > 2;
+
+                    if (blocksX1) hasBlockingWallAtX1 = true;
+                    if (blocksX2) hasBlockingWallAtX2 = true;
+                }
+            }
+
+            // If both center positions have blocking walls from below, it's definitely a crouch
+            if (hasBlockingWallAtX1 && hasBlockingWallAtX2)
             {
                 return true;
             }
 
-            if (hasX1Covered)
+            // If only the top wall exists (no blocking walls below), it's still a crouch
+            // because the player must crouch to avoid it
+            if (!hasBlockingWallAtX1 && !hasBlockingWallAtX2)
             {
-                foreach (var wall in walls)
-                {
-                    bool coversX2 = wall.x <= 2 && wall.x + wall.Width >=3 ;
-                    if (coversX2)
-                    {
-                        bool validHeight = (wall.y <= 0 && wall.Height >= 3) || (wall.y == 1 && wall.Height >= 2);
-                        if (validHeight)
-                        {
-                            return true;
-                        }
-                    }
-                }
+                return true;
             }
 
-            if (hasX2Covered)
-            {
-                foreach (var wall in walls)
-                {
-                    bool coversX1 = wall.x <= 1 && wall.x + wall.Width >= 2;
-                    if (coversX1)
-                    {
-                        bool validHeight = (wall.y <= 0 && wall.Height >= 3) || (wall.y == 1 && wall.Height >= 2);
-                        if (validHeight)
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            return false;
+            // If there's only one blocking wall below and one side is free,
+            // the player could potentially dodge instead of crouch
+            // However, if the top wall is present, crouching is still the primary action
+            // so we consider it a crouch wall
+            return true;
         }
     }
 }
