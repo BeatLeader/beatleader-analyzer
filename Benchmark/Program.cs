@@ -171,19 +171,30 @@ namespace Benchmark
 
             Console.WriteLine();
             Console.WriteLine("Available Characteristics:");
-            Console.WriteLine("  - Standard");
-            Console.WriteLine("  - OneSaber");
-            Console.WriteLine("  - NoArrows");
-            Console.WriteLine("  - 90Degree");
-            Console.WriteLine("  - 360Degree");
-            Console.WriteLine("  - Lawless");
+            Console.WriteLine("  [1] Standard");
+            Console.WriteLine("  [2] OneSaber");
+            Console.WriteLine("  [3] NoArrows");
+            Console.WriteLine("  [4] 90Degree");
+            Console.WriteLine("  [5] 360Degree");
+            Console.WriteLine("  [6] Lawless");
             Console.WriteLine();
-            Console.Write("Enter Characteristic: ");
-            string characteristic = Console.ReadLine()?.Trim();
+            Console.Write("Select Characteristic (1-6): ");
+            string charChoice = Console.ReadLine()?.Trim();
 
-            if (string.IsNullOrEmpty(characteristic))
+            string characteristic = charChoice switch
             {
-                Console.WriteLine("Error: Characteristic cannot be empty.");
+                "1" => "Standard",
+                "2" => "OneSaber",
+                "3" => "NoArrows",
+                "4" => "90Degree",
+                "5" => "360Degree",
+                "6" => "Lawless",
+                _ => null
+            };
+
+            if (characteristic == null)
+            {
+                Console.WriteLine("Error: Invalid characteristic selection.");
                 Console.WriteLine("Press any key to return to menu...");
                 Console.ReadKey();
                 return;
@@ -191,18 +202,28 @@ namespace Benchmark
 
             Console.WriteLine();
             Console.WriteLine("Available Difficulties:");
-            Console.WriteLine("  - Easy");
-            Console.WriteLine("  - Normal");
-            Console.WriteLine("  - Hard");
-            Console.WriteLine("  - Expert");
-            Console.WriteLine("  - ExpertPlus");
+            Console.WriteLine("  [1] Easy");
+            Console.WriteLine("  [2] Normal");
+            Console.WriteLine("  [3] Hard");
+            Console.WriteLine("  [4] Expert");
+            Console.WriteLine("  [5] ExpertPlus");
             Console.WriteLine();
-            Console.Write("Enter Difficulty: ");
-            string difficulty = Console.ReadLine()?.Trim();
+            Console.Write("Select Difficulty (1-5): ");
+            string diffChoice = Console.ReadLine()?.Trim();
 
-            if (string.IsNullOrEmpty(difficulty))
+            string difficulty = diffChoice switch
             {
-                Console.WriteLine("Error: Difficulty cannot be empty.");
+                "1" => "Easy",
+                "2" => "Normal",
+                "3" => "Hard",
+                "4" => "Expert",
+                "5" => "ExpertPlus",
+                _ => null
+            };
+
+            if (difficulty == null)
+            {
+                Console.WriteLine("Error: Invalid difficulty selection.");
                 Console.WriteLine("Press any key to return to menu...");
                 Console.ReadKey();
                 return;
