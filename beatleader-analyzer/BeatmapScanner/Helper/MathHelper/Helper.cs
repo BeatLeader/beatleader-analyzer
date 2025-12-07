@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Analyzer.BeatmapScanner.Helper
+namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
 {
     internal class Helper
     {

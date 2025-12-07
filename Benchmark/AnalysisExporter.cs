@@ -247,6 +247,7 @@ namespace Benchmark
                     Stacks = rating.Patterns.Stacks,
                     Towers = rating.Patterns.Towers,
                     Windows = rating.Patterns.Windows,
+                    SlantedWindows = rating.Patterns.SlantedWindows,
                     Sliders = rating.Patterns.Sliders,
                     CurvedSliders = rating.Patterns.CurvedSliders,
                     Loloppes = rating.Patterns.Loloppes,
@@ -701,6 +702,10 @@ namespace Benchmark
                     <div class=""pattern-badge"">
                         <div class=""count"">${{data.Patterns.Windows}}</div>
                         <div class=""label"">Windows</div>
+                    </div>
+                    <div class=""pattern-badge"">
+                        <div class=""count"">${{data.Patterns.SlantedWindows}}</div>
+                        <div class=""label"">Slanted Windows</div>
                     </div>
                     <div class=""pattern-badge"">
                         <div class=""count"">${{data.Patterns.Sliders}}</div>
@@ -1320,6 +1325,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <option value=""Stack"">Stack</option>
                     <option value=""Tower"">Tower</option>
                     <option value=""Window"">Window</option>
+                    <option value=""Slanted Window"">Slanted Window</option>
                     <option value=""Loloppe"">Loloppe</option>
                     <option value=""Slider"">Slider</option>
                     <option value=""Curved Slider"">Curved Slider</option>
@@ -1862,6 +1868,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <option value=""Stack"">Stack</option>
                     <option value=""Tower"">Tower</option>
                     <option value=""Window"">Window</option>
+                    <option value=""Slanted Window"">Slanted Window</option>
                     <option value=""Loloppe"">Loloppe</option>
                     <option value=""Slider"">Slider</option>
                     <option value=""Curved Slider"">Curved Slider</option>

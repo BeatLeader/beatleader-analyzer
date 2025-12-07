@@ -1,8 +1,8 @@
 ﻿using System;
-using static Analyzer.BeatmapScanner.Helper.Helper;
-using static Analyzer.BeatmapScanner.Helper.GridPositionHelper;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.Grid.GridPositionHelper;
 
-namespace Analyzer.BeatmapScanner.Helper
+namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
 {
     internal class CalculateBaseEntryExit
     {

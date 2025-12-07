@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Analyzer.BeatmapScanner.Helper
+namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
 {
     internal class SwingAngleStrain
     {

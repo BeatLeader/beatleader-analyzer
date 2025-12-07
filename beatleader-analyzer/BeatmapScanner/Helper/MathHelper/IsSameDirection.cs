@@ -1,7 +1,7 @@
 ﻿using System;
-using static Analyzer.BeatmapScanner.Helper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
 
-namespace Analyzer.BeatmapScanner.Helper
+namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
 {
     /// <summary>
     /// Checks if two swing directions are similar (handles angle wrapping).

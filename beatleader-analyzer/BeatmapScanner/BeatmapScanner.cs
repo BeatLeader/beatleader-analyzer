@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using Parser.Map.Difficulty.V3.Grid;
 using System.Linq;
 using beatleader_analyzer.BeatmapScanner.Data;
-using Analyzer.BeatmapScanner.Helper;
 
 namespace Analyzer.BeatmapScanner
 {

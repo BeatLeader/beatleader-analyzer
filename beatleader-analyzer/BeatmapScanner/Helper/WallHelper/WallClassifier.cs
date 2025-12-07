@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Analyzer.BeatmapScanner.Helper
+namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
 {
     internal class WallClassifier
     {
@@ -193,9 +193,9 @@ namespace Analyzer.BeatmapScanner.Helper
                     // Walls at y=0 or y=1 with sufficient height are dodge walls
                     // Walls at y=2 (crouch height) are also dodge walls if they don't fully cover both center columns
                     // (partial width high walls are dodged, not crouched)
-                    bool validHeight = (wall.y <= 0 && wall.Height >= 3) || 
-                                      (wall.y == 1 && wall.Height >= 2) ||
-                                      (wall.y == 2 && wall.Height >= 3);
+                    bool validHeight = wall.y <= 0 && wall.Height >= 3 || 
+                                      wall.y == 1 && wall.Height >= 2 ||
+                                      wall.y == 2 && wall.Height >= 3;
 
                     if (validHeight)
                     {
@@ -243,7 +243,7 @@ namespace Analyzer.BeatmapScanner.Helper
             foreach (var wall in walls)
             {
                 // Only walls from ground level (y=0 or y=1) that are tall enough block dodging
-                bool isTallEnough = (wall.y <= 0 && wall.Height >= 3) || (wall.y == 1 && wall.Height >= 2);
+                bool isTallEnough = wall.y <= 0 && wall.Height >= 3 || wall.y == 1 && wall.Height >= 2;
                 
                 if (isTallEnough)
                 {

@@ -1,6 +1,6 @@
-﻿using static Analyzer.BeatmapScanner.Helper.Helper;
-using static Analyzer.BeatmapScanner.Helper.Curve;
-using static Analyzer.BeatmapScanner.Helper.SwingAngleStrain;
+﻿using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Curve;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.SwingAngleStrain;
 using Analyzer.BeatmapScanner.Data;
 using System.Collections.Generic;
 using System;

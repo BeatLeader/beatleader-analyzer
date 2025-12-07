@@ -1,9 +1,13 @@
-﻿using static Analyzer.BeatmapScanner.Helper.HandleMultiOrdering;
-using static Analyzer.BeatmapScanner.Helper.Helper;
-using static Analyzer.BeatmapScanner.Helper.FindAngleViaPosition;
-using static Analyzer.BeatmapScanner.Helper.IsSameDirection;
-using static Analyzer.BeatmapScanner.Helper.MultiNoteHitDetector;
+﻿using static beatleader_analyzer.BeatmapScanner.Helper.MultiNote.HandleMultiOrdering;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.Grid.FindAngleViaPosition;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
+using static beatleader_analyzer.BeatmapScanner.Helper.MultiNote.MultiNoteHitDetector;
+using static beatleader_analyzer.BeatmapScanner.Helper.MultiNote.MultiNotePatternDetector;
+using static beatleader_analyzer.BeatmapScanner.Helper.Grid.BombPathSimulator;
 using Analyzer.BeatmapScanner.Data;
+using Parser.Map.Difficulty.V3.Grid;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,6 +19,48 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class FlowDetector
     {
+        /// <summary>
+        /// Adjusts dot note direction based on bomb-forced relocations.
+        /// Bombs at player's standing position force them to relocate, changing where they end up.
+        /// The final swing direction is calculated from the final position to the target note.
+        /// </summary>
+        private static double AdjustDirectionForBombs(Cube prevNote, Cube currentNote, double expectedDirection, List<Bomb> bombs)
+        {
+            // Calculate player position after previous swing
+            var (startX, startY) = CalculatePlayerPositionAfterSwing(
+                prevNote.Line, prevNote.Layer, prevNote.Direction);
+
+            // Check if bombs force player to relocate (also returns relocation count)
+            var (finalX, finalY, lastDirection, encounteredBombs, relocationCount) = SimulateBombForcedRelocations(
+                startX, startY,
+                prevNote.Direction,
+                bombs,
+                prevNote.Time, currentNote.Time);
+
+            // Special case: If player ends up at the same position as the note
+            if (finalX == currentNote.Line && finalY == currentNote.Layer)
+            {
+                // Each bomb relocation reverses direction by 180°
+                // Apply the reversals to the expected direction
+                double adjustedDirection = expectedDirection;
+                for (int i = 0; i < relocationCount; i++)
+                {
+                    adjustedDirection = (adjustedDirection + 180.0) % 360.0;
+                }
+                return adjustedDirection;
+            }
+
+            // Calculate angle from player's final position to the note
+            double dx = currentNote.Line - finalX;
+            double dy = currentNote.Layer - finalY;
+            double angle = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+            
+            // Normalize to [0, 360)
+            if (angle < 0) angle += 360;
+
+            return angle;
+        }
+
         /// <summary>
         /// Infers direction for a dot note by finding the next arrow and working backwards.
         /// </summary>
@@ -150,29 +196,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
         }
 
         /// <summary>
-        /// Updates pattern flags for multi-note hit continuation.
-        /// </summary>
-        private static void ProcessMultiNoteHitContinuation(List<Cube> cubes, int currentIndex, int prevIndex)
-        {
-            cubes[currentIndex].Pattern = true;
-            
-            if (!cubes[prevIndex].Pattern)
-            {
-                cubes[prevIndex].Pattern = true;
-                cubes[prevIndex].Head = true;
-            }
-            else
-            {
-                cubes[prevIndex].Tail = false;
-            }
-            
-            cubes[currentIndex].Tail = true;
-        }
-
-        /// <summary>
         /// Analyzes a sequence of notes and determines their swing directions and pattern relationships.
         /// </summary>
-        public static void Detect(List<Cube> cubes, float bpm, bool isRightHand)
+        public static void Detect(List<Cube> cubes, float bpm, bool isRightHand, List<Bomb> bombs = null)
         {
             if (cubes.Count < 2)
             {
@@ -203,8 +229,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
             
             if (cubes[1].CutDirection == 8)
             {
-                bool isMultiHit = IsMultiNoteHit(cubes[0], cubes[1], bpm);
-                cubes[1].Direction = FindAngleViaPos(cubes[1], cubes[0], cubes[0].Direction, isMultiHit);
+                bool isMultiHit = DetectAndOrderMultiNoteHit(cubes, 0, 1, bpm, out bool needsReorder);
+                double inferredDirection = FindAngleViaPos(cubes[1], cubes[0], cubes[0].Direction, isMultiHit);
+                
+                // Adjust direction based on bombs between previous and current note
+                cubes[1].Direction = AdjustDirectionForBombs(cubes[0], cubes[1], inferredDirection, bombs);
                 
                 if (isMultiHit)
                 {
@@ -212,16 +241,16 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     {
                         cubes[0].Direction = cubes[1].Direction;
                     }
-                    ProcessMultiNoteHitContinuation(cubes, 1, 0);
+                    MarkAsMultiNotePattern(cubes, 1, 0);
                 }
             }
             else
             {
                 cubes[1].Direction = Mod(DirectionToDegree[cubes[1].CutDirection] + cubes[1].AngleOffset, 360);
                 
-                if (IsMultiNoteHit(cubes[0], cubes[1], bpm))
+                if (DetectAndOrderMultiNoteHit(cubes, 0, 1, bpm, out bool needsReorder))
                 {
-                    ProcessMultiNoteHitContinuation(cubes, 1, 0);
+                    MarkAsMultiNotePattern(cubes, 1, 0);
                 }
             }
             
@@ -231,16 +260,24 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 if (cubes[i].CutDirection == 8)
                 {
-                    bool isMultiHit = IsMultiNoteHit(cubes[i - 1], cubes[i], bpm);
-                    cubes[i].Direction = FindAngleViaPos(cubes[i], cubes[i - 1], cubes[i - 1].Direction, isMultiHit);
+                    bool isMultiHit = DetectAndOrderMultiNoteHit(cubes, i - 1, i, bpm, out bool needsReorder);
+                    
+                    // After potential reordering, indices might have swapped
+                    int prevIdx = needsReorder ? i : i - 1;
+                    int currIdx = needsReorder ? i - 1 : i;
+                    
+                    double inferredDirection = FindAngleViaPos(cubes[currIdx], cubes[prevIdx], cubes[prevIdx].Direction, isMultiHit);
+                    
+                    // Adjust direction based on bombs between previous and current note
+                    cubes[currIdx].Direction = AdjustDirectionForBombs(cubes[prevIdx], cubes[currIdx], inferredDirection, bombs);
                     
                     if (isMultiHit)
                     {
-                        if (cubes[i - 1].CutDirection == 8)
+                        if (cubes[prevIdx].CutDirection == 8)
                         {
-                            cubes[i - 1].Direction = cubes[i].Direction;
+                            cubes[prevIdx].Direction = cubes[currIdx].Direction;
                         }
-                        ProcessMultiNoteHitContinuation(cubes, i, i - 1);
+                        MarkAsMultiNotePattern(cubes, currIdx, prevIdx);
                         continue;
                     }
                     
@@ -260,9 +297,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     cubes[i].Direction = Mod(DirectionToDegree[cubes[i].CutDirection] + cubes[i].AngleOffset, 360);
                     
-                    if (IsMultiNoteHit(cubes[i - 1], cubes[i], bpm))
+                    if (DetectAndOrderMultiNoteHit(cubes, i - 1, i, bpm, out bool needsReorder))
                     {
-                        ProcessMultiNoteHitContinuation(cubes, i, i - 1);
+                        int prevIdx = needsReorder ? i : i - 1;
+                        int currIdx = needsReorder ? i - 1 : i;
+                        MarkAsMultiNotePattern(cubes, currIdx, prevIdx);
                     }
                 }
             }
@@ -300,8 +339,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
             
             if (cubes[lastIndex].CutDirection == 8)
             {
-                bool isMultiHit = IsMultiNoteHit(cubes[lastIndex - 1], cubes[lastIndex], bpm);
-                cubes[lastIndex].Direction = FindAngleViaPos(cubes[lastIndex], cubes[lastIndex - 1], cubes[lastIndex - 1].Direction, isMultiHit);
+                bool isMultiHit = DetectAndOrderMultiNoteHit(cubes, lastIndex - 1, lastIndex, bpm, out bool needsReorder);
+                double inferredDirection = FindAngleViaPos(cubes[lastIndex], cubes[lastIndex - 1], cubes[lastIndex - 1].Direction, isMultiHit);
+                
+                // Adjust direction based on bombs between previous and current note
+                cubes[lastIndex].Direction = AdjustDirectionForBombs(cubes[lastIndex - 1], cubes[lastIndex], inferredDirection, bombs);
                 
                 if (isMultiHit)
                 {
@@ -309,18 +351,22 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     {
                         cubes[lastIndex - 1].Direction = cubes[lastIndex].Direction;
                     }
-                    ProcessMultiNoteHitContinuation(cubes, lastIndex, lastIndex - 1);
+                    MarkAsMultiNotePattern(cubes, lastIndex, lastIndex - 1);
                 }
             }
             else
             {
                 cubes[lastIndex].Direction = Mod(DirectionToDegree[cubes[lastIndex].CutDirection] + cubes[lastIndex].AngleOffset, 360);
                 
-                if (IsMultiNoteHit(cubes[lastIndex - 1], cubes[lastIndex], bpm))
+                if (DetectAndOrderMultiNoteHit(cubes, lastIndex - 1, lastIndex, bpm, out bool needsReorder))
                 {
-                    ProcessMultiNoteHitContinuation(cubes, lastIndex, lastIndex - 1);
+                    MarkAsMultiNotePattern(cubes, lastIndex, lastIndex - 1);
                 }
             }
+            
+            // After all direction assignments, apply snap angles for slanted windows
+            // (simultaneous notes with same CutDirection)
+            ApplySnapAnglesForSlantedWindows(cubes);
         }
     }
 }

@@ -1,6 +1,6 @@
 using System;
 
-namespace Analyzer.BeatmapScanner.Helper
+namespace beatleader_analyzer.BeatmapScanner.Helper.Grid
 {
     /// <summary>
     /// Converts Beat Saber grid positions to meter-based world coordinates.

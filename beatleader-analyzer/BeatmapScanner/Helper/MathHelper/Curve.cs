@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using static Analyzer.BeatmapScanner.Data.SwingData;
 
-namespace Analyzer.BeatmapScanner.Helper
+namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
 {
     /// <summary>
     /// Cubic Bezier curve calculations for swing path analysis.

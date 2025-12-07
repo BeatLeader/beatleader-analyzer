@@ -1,9 +1,9 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
-using static Analyzer.BeatmapScanner.Helper.Helper;
-using static Analyzer.BeatmapScanner.Helper.IsSameDirection;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
 
-namespace Analyzer.BeatmapScanner.Helper
+namespace beatleader_analyzer.BeatmapScanner.Helper.Grid
 {
     /// <summary>
     /// Calculates swing directions for dot notes based on spatial relationship.

@@ -2,8 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static Analyzer.BeatmapScanner.Helper.IsSameDirection;
-using static Analyzer.BeatmapScanner.Helper.SwingAngleStrain;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.SwingAngleStrain;
 using Parser.Map.Difficulty.V3.Grid;
 
 namespace Analyzer.BeatmapScanner.Algorithm
@@ -119,75 +119,89 @@ namespace Analyzer.BeatmapScanner.Algorithm
             var prevSwing = swings[currentIndex - 1];
             var currentSwing = swings[currentIndex];
 
-            // Get bombs between previous and current swing
-            var relevantBombs = bombs.Where(b =>
-                b.Beats > prevSwing.Beat &&
-                b.Beats < currentSwing.Beat
-            ).OrderBy(b => b.Beats).ToList();
+            // Get bombs between previous and current swing (strictly between)
+            var bombsBetween = bombs
+                .Where(b => b.Beats > prevSwing.Beat && b.Beats < currentSwing.Beat)
+                .OrderBy(b => b.Beats)
+                .ToList();
 
-            if (relevantBombs.Count == 0)
+            if (bombsBetween.Count == 0)
             {
                 return (false, 0, 0);
             }
 
-            // Calculate where hand is after previous swing
-            var handX = prevSwing.Start.Line;
-            var handY = prevSwing.Start.Layer;
-
+            // Calculate player's position after previous swing using same logic as FlowDetector
+            // Player swings to maximum extent in that direction, clamped to grid bounds
             double prevAngleRadians = prevSwing.Angle * Math.PI / 180.0;
             double prevDirX = Math.Cos(prevAngleRadians);
             double prevDirY = Math.Sin(prevAngleRadians);
 
-            const double swingExtent = 3.0;
-            double prevFinalX = handX + prevDirX * swingExtent;
-            double prevFinalY = handY + prevDirY * swingExtent;
+            // Calculate target position in swing direction (large distance to ensure grid edge)
+            double targetX = prevSwing.Start.Line + prevDirX * 10.0;
+            double targetY = prevSwing.Start.Layer + prevDirY * 10.0;
 
-            handX = Math.Clamp((int)Math.Round(prevFinalX), 0, 3);
-            handY = Math.Clamp((int)Math.Round(prevFinalY), 0, 2);
+            // Clamp to grid bounds: X [0, 3], Y [0, 2]
+            double playerX = Math.Clamp(targetX, 0, 3);
+            double playerY = Math.Clamp(targetY, 0, 2);
 
-            // Calculate where hand NEEDS to be for CURRENT swing
-            // To swing in a direction, you need to start from the opposite side
-            double currAngleRadians = currentSwing.Angle * Math.PI / 180.0;
-            double currDirX = Math.Cos(currAngleRadians);
-            double currDirY = Math.Sin(currAngleRadians);
+            // Calculate direction needed to reach current swing note
+            double toNoteX = currentSwing.Start.Line - playerX;
+            double toNoteY = currentSwing.Start.Layer - playerY;
+            double angleToNote = Math.Atan2(toNoteY, toNoteX) * 180.0 / Math.PI;
+            if (angleToNote < 0) angleToNote += 360;
 
-            // Ideal preparation position is opposite to swing direction from note
-            int prepX = currentSwing.Start.Line;
-            int prepY = currentSwing.Start.Layer;
+            double currentDirection = angleToNote;
+            bool encounteredBomb = false;
+            int lastBombX = 0;
+            int lastBombY = 0;
 
-            double idealPrepX = prepX - currDirX * swingExtent;
-            double idealPrepY = prepY - currDirY * swingExtent;
-
-            int targetPrepX = Math.Clamp((int)Math.Round(idealPrepX), 0, 3);
-            int targetPrepY = Math.Clamp((int)Math.Round(idealPrepY), 0, 2);
-
-            // Check if we need significant movement to prepare for next swing
-            int movementRequired = Math.Abs(handX - targetPrepX) + Math.Abs(handY - targetPrepY);
-
-            // If no movement needed, bombs don't matter
-            if (movementRequired <= 1)
+            // Simulate player movement through bomb field (same logic as FlowDetector)
+            foreach (var bomb in bombsBetween)
             {
-                return (false, 0, 0);
-            }
+                // Calculate vector from player position to bomb
+                double toBombX = bomb.x - playerX;
+                double toBombY = bomb.y - playerY;
+                double distanceToBomb = Math.Sqrt(toBombX * toBombX + toBombY * toBombY);
 
-            // Check if any bombs are adjacent to current position or prep position
-            foreach (var bomb in relevantBombs)
-            {
-                // Check if bomb is adjacent to current hand position
-                int distFromHand = Math.Abs(bomb.x - handX) + Math.Abs(bomb.y - handY);
+                // Calculate if bomb is in the current movement direction
+                double currentRadians = currentDirection * Math.PI / 180.0;
+                double currentDirX = Math.Cos(currentRadians);
+                double currentDirY = Math.Sin(currentRadians);
 
-                // Check if bomb is adjacent to target prep position  
-                // int distFromPrep = Math.Abs(bomb.x - targetPrepX) + Math.Abs(bomb.y - targetPrepY);
+                // Project bomb position onto current direction
+                double projection = toBombX * currentDirX + toBombY * currentDirY;
 
-                // If bomb is adjacent (distance <= 1) to either position
-                // and we need to move, it's a bomb reset
-                if (distFromHand <= 1) // || distFromPrep <= 1)
+                // Check perpendicular distance (how far off the line the bomb is)
+                double perpDistance = Math.Abs(toBombX * currentDirY - toBombY * currentDirX);
+
+                // Bomb blocks the path if it matches FlowDetector criteria
+                if (projection > 0.2 && perpDistance < 1.2 && distanceToBomb < 2.5)
                 {
-                    return (true, bomb.y, bomb.x);
+                    // Bomb blocks the path! Player must reverse direction
+                    encounteredBomb = true;
+                    lastBombX = bomb.x;
+                    lastBombY = bomb.y;
+
+                    // Reverse direction (simplified - just flip 180°)
+                    currentDirection = (currentDirection + 180.0) % 360.0;
+
+                    // Update player's virtual position - they moved back in the new direction
+                    currentRadians = currentDirection * Math.PI / 180.0;
+                    currentDirX = Math.Cos(currentRadians);
+                    currentDirY = Math.Sin(currentRadians);
+                    playerX += currentDirX * 0.5;
+                    playerY += currentDirY * 0.5;
+                }
+                else
+                {
+                    // Bomb doesn't block - player continues in current direction
+                    playerX += currentDirX * 0.3;
+                    playerY += currentDirY * 0.3;
                 }
             }
 
-            return (false, 0, 0);
+            // Return whether any bombs were encountered during navigation
+            return (encounteredBomb, lastBombY, lastBombX);
         }
 
         private static double CalculateTransitionCost(int fromParity, int toParity, bool sameDirection, (bool hasBombs, int blockingLayer, int blockingLine) bombInfluence)

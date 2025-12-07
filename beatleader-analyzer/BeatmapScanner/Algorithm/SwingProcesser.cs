@@ -2,11 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static Analyzer.BeatmapScanner.Helper.CalculateBaseEntryExit;
-using static Analyzer.BeatmapScanner.Helper.IsSameDirection;
-using static Analyzer.BeatmapScanner.Helper.Helper;
-using static Analyzer.BeatmapScanner.Helper.FindAngleViaPosition;
-using static Analyzer.BeatmapScanner.Helper.GridPositionHelper;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.CalculateBaseEntryExit;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.Grid.FindAngleViaPosition;
+using static beatleader_analyzer.BeatmapScanner.Helper.Grid.GridPositionHelper;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
