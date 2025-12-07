@@ -4,16 +4,19 @@ namespace Analyzer.BeatmapScanner.Helper
 {
     /// <summary>
     /// Converts Beat Saber grid positions to meter-based world coordinates.
-    /// Grid center is at (0, 0) meters with standard lane spacing.
+    /// Grid Y=0 starts at the bottom of the play space.
     /// </summary>
     internal class GridPositionHelper
     {
         // X-axis spacing: 0.6m between adjacent columns
         private const double X_SPACING = 0.6;
         
-        // Y-axis spacing differs between rows
-        private const double Y_BOTTOM_TO_MIDDLE = 0.55; // Distance from row 0 to row 1
-        private const double Y_MIDDLE_TO_TOP = 0.5;     // Distance from row 1 to row 2
+        // Y-axis: Grid Y=0 is at -0.275m (bottom of bottom row)
+        private const double Y_NOTE_HALF_HEIGHT = 0.275;
+        
+        // Y-axis spacing between row centers
+        private const double Y_BOTTOM_TO_MIDDLE = 0.55; // Distance from row 0 center to row 1 center
+        private const double Y_MIDDLE_TO_TOP = 0.5;     // Distance from row 1 center to row 2 center
         
         /// <summary>
         /// Converts a grid X coordinate to meters.
@@ -38,15 +41,19 @@ namespace Analyzer.BeatmapScanner.Helper
 
         /// <summary>
         /// Converts a grid Y coordinate to meters.
-        /// Y values outside [0, 2] range return 0.
-        /// Row spacing: 0->1 is 0.55m, 1->2 is 0.5m.
+        /// Grid Y=0 starts at bottom (-0.275m), row centers at 0, 0.55, 1.05m.
+        /// Y values outside [0, 2] range return the edge values.
         /// </summary>
         public static double GridYToMeters(int gridY)
         {
-            // Y values below 0 or above 2 become 0
-            if (gridY < 0 || gridY > 2)
+            // Clamp to valid range
+            if (gridY < 0)
             {
-                return 0.0;
+                return -Y_NOTE_HALF_HEIGHT;
+            }
+            if (gridY > 2)
+            {
+                return Y_BOTTOM_TO_MIDDLE + Y_MIDDLE_TO_TOP + Y_NOTE_HALF_HEIGHT;
             }
             
             return gridY switch
@@ -60,15 +67,20 @@ namespace Analyzer.BeatmapScanner.Helper
 
         /// <summary>
         /// Converts a grid Y coordinate (with decimal precision) to meters.
-        /// Y values outside [0, 2] range return 0.
+        /// Grid Y=0 is at center of bottom row (0m).
+        /// Y values outside [0, 2] range are clamped.
         /// Linear interpolation between rows.
         /// </summary>
         public static double GridYToMeters(double gridY)
         {
-            // Y values below 0 or above 2 become 0
-            if (gridY < 0.0 || gridY > 2.0)
+            // Clamp to valid range
+            if (gridY < 0.0)
             {
-                return 0.0;
+                return -Y_NOTE_HALF_HEIGHT;
+            }
+            if (gridY > 2.0)
+            {
+                return Y_BOTTOM_TO_MIDDLE + Y_MIDDLE_TO_TOP + Y_NOTE_HALF_HEIGHT;
             }
             
             if (gridY <= 1.0)

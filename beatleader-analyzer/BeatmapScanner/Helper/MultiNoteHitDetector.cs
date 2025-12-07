@@ -66,11 +66,27 @@ namespace Analyzer.BeatmapScanner.Helper
 
         public static bool IsMultiNoteHit(Cube prev, Cube next, float bpm)
         {
-            double distance3D = Calculate3DDistance(prev, next, bpm);
-
-            if (distance3D > MAX_Z_DISTANCE)
+            // Check if notes are simultaneous (same time)
+            bool isSimultaneous = Math.Abs(prev.Time - next.Time) < 0.001f;
+            
+            if (isSimultaneous)
             {
-                return false;
+                // For simultaneous notes (stacks, windows, towers, etc.),
+                // there's no X/Y distance limit - they can be anywhere on the grid
+                // No distance check needed for simultaneous multi-note patterns
+            }
+            else
+            {
+                // For sequential notes (sliders, curved sliders),
+                // only check Z-distance (depth/time) to ensure they're close enough in time
+                double prevZ = CalculateZPosition(prev.Time, prev.Njs, bpm);
+                double nextZ = CalculateZPosition(next.Time, next.Njs, bpm);
+                double zDistance = Math.Abs(nextZ - prevZ);
+                
+                if (zDistance > MAX_Z_DISTANCE)
+                {
+                    return false;
+                }
             }
 
             if (next.CutDirection != 8)

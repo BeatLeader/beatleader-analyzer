@@ -1315,6 +1315,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 </select>
                 <select id=""filterPattern"">
                     <option value="""">All Pattern Types</option>
+                    <option value=""Multi-Notes"">Multi-Notes Only</option>
                     <option value=""Single"">Single</option>
                     <option value=""Stack"">Stack</option>
                     <option value=""Tower"">Tower</option>
@@ -1424,6 +1425,35 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             document.getElementById('filterReset').checked = false;
             document.getElementById('filterBombReset').checked = false;
             applyFilters();
+        }}
+        
+        function applyFilters() {{
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const handFilter = document.getElementById('filterHand').value;
+            const parityFilter = document.getElementById('filterParity').value;
+            const patternFilter = document.getElementById('filterPattern').value;
+            const resetOnly = document.getElementById('filterReset').checked;
+            const bombResetOnly = document.getElementById('filterBombReset').checked;
+            
+            filteredData = swingData.filter(swing => {{
+                if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
+                if (handFilter && swing.Hand !== handFilter) return false;
+                if (parityFilter && swing.Parity !== parityFilter) return false;
+                if (patternFilter) {{
+                    if (patternFilter === 'Multi-Notes') {{
+                        // Filter to show only multi-note patterns (everything except Single)
+                        if (swing.PatternType === 'Single') return false;
+                    }} else {{
+                        // Filter by specific pattern type
+                        if (swing.PatternType !== patternFilter) return false;
+                    }}
+                }}
+                if (resetOnly && !swing.Reset) return false;
+                if (bombResetOnly && !swing.BombReset) return false;
+                return true;
+            }});
+            
+            renderTable();
         }}
         
         document.getElementById('searchBox').addEventListener('input', applyFilters);
@@ -1827,6 +1857,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 </select>
                 <select id=""filterPattern"">
                     <option value="""">All Pattern Types</option>
+                    <option value=""Multi-Notes"">Multi-Notes Only</option>
                     <option value=""Single"">Single</option>
                     <option value=""Stack"">Stack</option>
                     <option value=""Tower"">Tower</option>
@@ -1982,7 +2013,15 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
                 if (handFilter && swing.Hand !== handFilter) return false;
                 if (parityFilter && swing.Parity !== parityFilter) return false;
-                if (patternFilter && swing.PatternType !== patternFilter) return false;
+                if (patternFilter) {{
+                    if (patternFilter === 'Multi-Notes') {{
+                        // Filter to show only multi-note patterns (everything except Single)
+                        if (swing.PatternType === 'Single') return false;
+                    }} else {{
+                        // Filter by specific pattern type
+                        if (swing.PatternType !== patternFilter) return false;
+                    }}
+                }}
                 if (resetOnly && !swing.Reset) return false;
                 if (bombResetOnly && !swing.BombReset) return false;
                 return true;

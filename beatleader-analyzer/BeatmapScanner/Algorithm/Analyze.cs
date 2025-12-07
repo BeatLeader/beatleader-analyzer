@@ -409,7 +409,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
             int lineDiff = Math.Abs(note1.Line - note2.Line);
             int layerDiff = Math.Abs(note1.Layer - note2.Layer);
 
-            bool hasGap = (lineDiff >= 2 && layerDiff == 0) || (lineDiff == 0 && layerDiff >= 2);
+            // Check for gaps: horizontal, vertical, OR diagonal windows
+            // Horizontal: 2+ columns apart, same row
+            // Vertical: same column, 2+ rows apart  
+            // Diagonal: both line and layer differ, and Manhattan distance >= 3
+            bool hasGap = (lineDiff >= 2 && layerDiff == 0) || 
+                         (lineDiff == 0 && layerDiff >= 2) ||
+                         (lineDiff >= 1 && layerDiff >= 1 && (lineDiff + layerDiff) >= 3);
             if (!hasGap) return false;
 
             double direction = note1.Direction != 8 ? note1.Direction : note2.Direction;
