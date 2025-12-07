@@ -142,6 +142,27 @@ namespace Benchmark
                     Resets = rating.Patterns.Resets,
                     BombResets = rating.Patterns.BombResets
                 },
+                Walls = new
+                {
+                    DodgeWalls = rating.DodgeWalls.Select(w => new
+                    {
+                        Time = Math.Round(w.Beats, 2),
+                        Duration = Math.Round(w.DurationInBeats, 2),
+                        X = w.x,
+                        Y = w.y,
+                        Width = w.Width,
+                        Height = w.Height
+                    }).ToList(),
+                    CrouchWalls = rating.CrouchWalls.Select(w => new
+                    {
+                        Time = Math.Round(w.Beats, 2),
+                        Duration = Math.Round(w.DurationInBeats, 2),
+                        X = w.x,
+                        Y = w.y,
+                        Width = w.Width,
+                        Height = w.Height
+                    }).ToList()
+                },
                 SwingCount = rating.SwingData.Count,
                 TopDifficultSwings = rating.SwingData
                     .OrderByDescending(s => s.SwingDiff)
@@ -149,7 +170,7 @@ namespace Benchmark
                     .Select((s, index) => new
                     {
                         Rank = index + 1,
-                        Time = Math.Round(s.Time, 2),
+                        Time = Math.Round(s.Beat, 2),
                         Difficulty = Math.Round(s.SwingDiff, 3),
                         Hand = s.Start.Type == 0 ? "Red" : "Blue",
                         Angle = Math.Round(s.Angle, 1),
@@ -391,6 +412,81 @@ namespace Benchmark
             padding-bottom: 10px;
             border-bottom: 3px solid #667eea;
         }}
+        
+        .walls-section {{
+            margin: 20px 0;
+        }}
+        
+        .wall-category {{
+            background: white;
+            border-radius: 8px;
+            margin: 15px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }}
+        
+        .wall-category-header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }}
+        
+        .wall-category-header:hover {{
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }}
+        
+        .wall-category-header .title {{
+            font-weight: bold;
+            font-size: 1.1em;
+        }}
+        
+        .wall-category-header .count {{
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }}
+        
+        .wall-list {{
+            display: none;
+            padding: 0;
+        }}
+        
+        .wall-list.expanded {{
+            display: block;
+        }}
+        
+        .wall-item {{
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }}
+        
+        .wall-item:last-child {{
+            border-bottom: none;
+        }}
+        
+        .wall-item .property {{
+            display: flex;
+            flex-direction: column;
+        }}
+        
+        .wall-item .property .label {{
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 3px;
+        }}
+        
+        .wall-item .property .value {{
+            font-weight: bold;
+            color: #333;
+        }}
     </style>
 </head>
 <body>
@@ -409,6 +505,11 @@ namespace Benchmark
     
     <script>
         const analysisData = {jsonData};
+        
+        function toggleWallList(id) {{
+            const element = document.getElementById(id);
+            element.classList.toggle('expanded');
+        }}
         
         function createDifficultyButtons() {{
             const selector = document.getElementById('difficultySelector');
@@ -518,6 +619,75 @@ namespace Benchmark
                     </div>
                 </div>
                 
+                <h2>🧱 Walls</h2>
+                <div class=""walls-section"">
+                    <div class=""wall-category"">
+                        <div class=""wall-category-header"" onclick=""toggleWallList('dodge-walls')"">
+                            <span class=""title"">🏃 Dodge Walls</span>
+                            <span class=""count"">${{data.Walls.DodgeWalls.length}} walls</span>
+                        </div>
+                        <div id=""dodge-walls"" class=""wall-list"">
+                            ${{data.Walls.DodgeWalls.length === 0 ? '<div class=""wall-item"">No dodge walls in this difficulty</div>' : data.Walls.DodgeWalls.map((wall, idx) => `
+                                <div class=""wall-item"">
+                                    <div class=""property"">
+                                        <span class=""label"">#</span>
+                                        <span class=""value"">${{idx + 1}}</span>
+                                    </div>
+                                    <div class=""property"">
+                                        <span class=""label"">Time (beats)</span>
+                                        <span class=""value"">${{wall.Time}}</span>
+                                    </div>
+                                    <div class=""property"">
+                                        <span class=""label"">Duration (beats)</span>
+                                        <span class=""value"">${{wall.Duration}}</span>
+                                    </div>
+                                    <div class=""property"">
+                                        <span class=""label"">Position (X, Y)</span>
+                                        <span class=""value"">(${{wall.X}}, ${{wall.Y}})</span>
+                                    </div>
+                                    <div class=""property"">
+                                        <span class=""label"">Size (W × H)</span>
+                                        <span class=""value"">${{wall.Width}} × ${{wall.Height}}</span>
+                                    </div>
+                                </div>
+                            `).join('')}}
+                        </div>
+                    </div>
+                    
+                    <div class=""wall-category"">
+                        <div class=""wall-category-header"" onclick=""toggleWallList('crouch-walls')"">
+                            <span class=""title"">🦆 Crouch Walls</span>
+                            <span class=""count"">${{data.Walls.CrouchWalls.length}} walls</span>
+                        </div>
+                        <div id=""crouch-walls"" class=""wall-list"">
+                            ${{data.Walls.CrouchWalls.length === 0 ? '<div class=""wall-item"">No crouch walls in this difficulty</div>' : data.Walls.CrouchWalls.map((wall, idx) => `
+                                <div class=""wall-item"">
+                                    <div class=""property"">
+                                        <span class=""label"">#</span>
+                                        <span class=""value"">${{idx + 1}}</span>
+                                    </div>
+                                    <div class=""property"">
+                                        <span class=""label"">Time (beats)</span>
+                                        <span class=""value"">${{wall.Time}}</span>
+                                    </div>
+                                    <div class=""property"">
+                                        <span class=""label"">Duration (beats)</span>
+                                        <span class=""value"">${{wall.Duration}}</span>
+                                    </div>
+                                    <div class=""property"">
+                                        <span class=""label"">Position (X, Y)</span>
+                                        <span class=""value"">(${{wall.X}}, ${{wall.Y}})</span>
+                                    </div>
+                                    <div class=""property"">
+                                        <span class=""label"">Size (W × H)</span>
+                                        <span class=""value"">${{wall.Width}} × ${{wall.Height}}</span>
+                                    </div>
+                                </div>
+                            `).join('')}}
+                        </div>
+                    </div>
+                </div>
+                
                 <h2>📈 Statistics</h2>
                 <div class=""chart-container"">
                     <canvas id=""statsChart""></canvas>
@@ -530,7 +700,7 @@ namespace Benchmark
                             <div class=""rank"">#${{swing.Rank}}</div>
                             <div class=""info"">
                                 <div>
-                                    <strong>Time:</strong> ${{swing.Time}}s | 
+                                    <strong>Beat:</strong> ${{swing.Time}} | 
                                     <strong>Difficulty:</strong> ${{swing.Difficulty}} | 
                                     <strong>Angle:</strong> ${{swing.Angle}}° | 
                                     <strong>Parity:</strong> ${{swing.Parity}}
@@ -636,7 +806,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 Swings = rating.SwingData.Select((s, index) => new
                 {
                     Index = index,
-                    Time = Math.Round(s.Time, 2),
+                    Time = Math.Round(s.Beat, 2),
                     Hand = s.Start.Type == 0 ? "Red" : "Blue",
                     Position = new
                     {
@@ -683,7 +853,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             var swingDataJson = JsonConvert.SerializeObject(rating.SwingData.Select((s, index) => new
             {
                 Index = index,
-                Time = Math.Round(s.Time, 2),
+                Time = Math.Round(s.Beat, 2),
                 Hand = s.Start.Type == 0 ? "Red" : "Blue",
                 Line = s.Start.Line,
                 Layer = s.Start.Layer,
@@ -693,6 +863,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 ExitY = Math.Round(s.ExitPosition.y, 3),
                 Angle = Math.Round(s.Angle, 1),
                 Parity = s.Forehand ? "Forehand" : "Backhand",
+                PatternType = s.PatternType,
                 Reset = s.Reset,
                 BombReset = s.BombReset,
                 Difficulty = Math.Round(s.SwingDiff, 3),
@@ -820,6 +991,35 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             position: sticky;
             top: 0;
             z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+        }}
+        
+        th:hover {{
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }}
+        
+        th.sortable {{
+            position: relative;
+            padding-right: 30px;
+        }}
+        
+        th.sortable::after {{
+            content: '⇅';
+            position: absolute;
+            right: 10px;
+            opacity: 0.5;
+        }}
+        
+        th.sorted-asc::after {{
+            content: '▲';
+            opacity: 1;
+        }}
+        
+        th.sorted-desc::after {{
+            content: '▼';
+            opacity: 1;
         }}
         
         td {{
@@ -877,6 +1077,16 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <option value=""Forehand"">Forehand</option>
                     <option value=""Backhand"">Backhand</option>
                 </select>
+                <select id=""filterPattern"">
+                    <option value="""">All Pattern Types</option>
+                    <option value=""Single"">Single</option>
+                    <option value=""Stack"">Stack</option>
+                    <option value=""Tower"">Tower</option>
+                    <option value=""Window"">Window</option>
+                    <option value=""Loloppe"">Loloppe</option>
+                    <option value=""Slider"">Slider</option>
+                    <option value=""Curved Slider"">Curved Slider</option>
+                </select>
                 <label>
                     <input type=""checkbox"" id=""filterReset""> Show Resets Only
                 </label>
@@ -896,19 +1106,20 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 <table id=""swingTable"">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>Time</th>
-                            <th>Hand</th>
-                            <th>Position</th>
-                            <th>Entry</th>
-                            <th>Exit</th>
-                            <th>Angle</th>
-                            <th>Parity</th>
+                            <th class=""sortable"" data-column=""Index"" data-type=""number"">#</th>
+                            <th class=""sortable"" data-column=""Time"" data-type=""number"">Beat</th>
+                            <th class=""sortable"" data-column=""Hand"" data-type=""string"">Hand</th>
+                            <th class=""sortable"" data-column=""Position"" data-type=""string"">Position</th>
+                            <th class=""sortable"" data-column=""Entry"" data-type=""string"">Entry</th>
+                            <th class=""sortable"" data-column=""Exit"" data-type=""string"">Exit</th>
+                            <th class=""sortable"" data-column=""Angle"" data-type=""number"">Angle</th>
+                            <th class=""sortable"" data-column=""Parity"" data-type=""string"">Parity</th>
+                            <th class=""sortable"" data-column=""PatternType"" data-type=""string"">Pattern Type</th>
                             <th>Flags</th>
-                            <th>Difficulty</th>
-                            <th>Angle Strain</th>
-                            <th>Path Strain</th>
-                            <th>Frequency</th>
+                            <th class=""sortable"" data-column=""Difficulty"" data-type=""number"">Difficulty</th>
+                            <th class=""sortable"" data-column=""AngleStrain"" data-type=""number"">Angle Strain</th>
+                            <th class=""sortable"" data-column=""PathStrain"" data-type=""number"">Path Strain</th>
+                            <th class=""sortable"" data-column=""SwingFrequency"" data-type=""number"">Frequency</th>
                         </tr>
                     </thead>
                     <tbody id=""swingTableBody""></tbody>
@@ -920,19 +1131,22 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
     <script>
         const swingData = {swingDataJson};
         let filteredData = [...swingData];
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
         
         function renderTable() {{
             const tbody = document.getElementById('swingTableBody');
             tbody.innerHTML = filteredData.map(swing => `
                 <tr>
                     <td>${{swing.Index + 1}}</td>
-                    <td>${{swing.Time}}s</td>
+                    <td>${{swing.Time}}</td>
                     <td><span class=""badge badge-${{swing.Hand.toLowerCase()}}"">${{swing.Hand}}</span></td>
                     <td>(${{swing.Line}}, ${{swing.Layer}})</td>
                     <td>(${{swing.EntryX}}, ${{swing.EntryY}})</td>
                     <td>(${{swing.ExitX}}, ${{swing.ExitY}})</td>
                     <td>${{swing.Angle}}°</td>
                     <td><span class=""badge badge-${{swing.Parity.toLowerCase()}}"">${{swing.Parity}}</span></td>
+                    <td>${{swing.PatternType}}</td>
                     <td>
                         ${{swing.Reset ? '<span class=""badge badge-reset"">R</span>' : ''}}
                         ${{swing.BombReset ? '<span class=""badge badge-reset"">B</span>' : ''}}
@@ -949,6 +1163,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             const search = document.getElementById('searchBox').value.toLowerCase();
             const handFilter = document.getElementById('filterHand').value;
             const parityFilter = document.getElementById('filterParity').value;
+            const patternFilter = document.getElementById('filterPattern').value;
             const resetOnly = document.getElementById('filterReset').checked;
             const bombResetOnly = document.getElementById('filterBombReset').checked;
             
@@ -956,6 +1171,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
                 if (handFilter && swing.Hand !== handFilter) return false;
                 if (parityFilter && swing.Parity !== parityFilter) return false;
+                if (patternFilter && swing.PatternType !== patternFilter) return false;
                 if (resetOnly && !swing.Reset) return false;
                 if (bombResetOnly && !swing.BombReset) return false;
                 return true;
@@ -968,6 +1184,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             document.getElementById('searchBox').value = '';
             document.getElementById('filterHand').value = '';
             document.getElementById('filterParity').value = '';
+            document.getElementById('filterPattern').value = '';
             document.getElementById('filterReset').checked = false;
             document.getElementById('filterBombReset').checked = false;
             applyFilters();
@@ -976,8 +1193,60 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         document.getElementById('searchBox').addEventListener('input', applyFilters);
         document.getElementById('filterHand').addEventListener('change', applyFilters);
         document.getElementById('filterParity').addEventListener('change', applyFilters);
+        document.getElementById('filterPattern').addEventListener('change', applyFilters);
         document.getElementById('filterReset').addEventListener('change', applyFilters);
         document.getElementById('filterBombReset').addEventListener('change', applyFilters);
+        
+        // Add sort functionality
+        function sortTable(column, type) {{
+            // Toggle sort direction if clicking the same column
+            if (currentSortColumn === column) {{
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            }} else {{
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }}
+            
+            // Sort the data
+            filteredData.sort((a, b) => {{
+                let aVal, bVal;
+                
+                if (type === 'number') {{
+                    aVal = a[column];
+                    bVal = b[column];
+                }} else {{
+                    aVal = String(a[column]).toLowerCase();
+                    bVal = String(b[column]).toLowerCase();
+                }}
+                
+                let comparison = 0;
+                if (aVal < bVal) comparison = -1;
+                if (aVal > bVal) comparison = 1;
+                
+                return currentSortDirection === 'asc' ? comparison : -comparison;
+            }});
+            
+            // Update header classes
+            document.querySelectorAll('th.sortable').forEach(th => {{
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            }});
+            
+            const activeHeader = document.querySelector('th[data-column=""' + column + '""]');
+            if (activeHeader) {{
+                activeHeader.classList.add('sorted-' + currentSortDirection);
+            }}
+            
+            renderTable();
+        }}
+        
+        // Attach click handlers to sortable headers
+        document.querySelectorAll('th.sortable').forEach(th => {{
+            th.addEventListener('click', () => {{
+                const column = th.getAttribute('data-column');
+                const type = th.getAttribute('data-type');
+                sortTable(column, type);
+            }});
+        }});
         
         // Create difficulty chart
         const ctx = document.getElementById('difficultyChart').getContext('2d');

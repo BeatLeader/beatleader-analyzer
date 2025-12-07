@@ -125,8 +125,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
             var currentEntryX = currentSwing.Start.Line;
 
             var relevantBombs = bombs.Where(b => 
-                b.BpmTime >= prevSwing.Time && 
-                b.BpmTime <= currentSwing.Time
+                b.Beats >= prevSwing.Beat && 
+                b.Beats <= currentSwing.Beat
             ).ToList();
 
             if (relevantBombs.Count == 0)

@@ -119,8 +119,8 @@ namespace Analyzer.BeatmapScanner.Helper
 
             foreach (var wall in walls)
             {
-                bool coversX1 = wall.x <= 1 && wall.x + wall.Width > 1;
-                bool coversX2 = wall.x <= 2 && wall.x + wall.Width > 2;
+                bool coversX1 = wall.x <= 1 && wall.x + wall.Width >= 2;
+                bool coversX2 = wall.x <= 2 && wall.x + wall.Width >= 3;
 
                 if (wall.y == 2)
                 {
@@ -151,7 +151,7 @@ namespace Analyzer.BeatmapScanner.Helper
             {
                 foreach (var wall in walls)
                 {
-                    bool coversX2 = wall.x <= 2 && wall.x + wall.Width > 2;
+                    bool coversX2 = wall.x <= 2 && wall.x + wall.Width >=3 ;
                     if (coversX2)
                     {
                         bool validHeight = (wall.y <= 0 && wall.Height >= 3) || (wall.y == 1 && wall.Height >= 2);
@@ -167,7 +167,7 @@ namespace Analyzer.BeatmapScanner.Helper
             {
                 foreach (var wall in walls)
                 {
-                    bool coversX1 = wall.x <= 1 && wall.x + wall.Width > 1;
+                    bool coversX1 = wall.x <= 1 && wall.x + wall.Width >= 2;
                     if (coversX1)
                     {
                         bool validHeight = (wall.y <= 0 && wall.Height >= 3) || (wall.y == 1 && wall.Height >= 2);

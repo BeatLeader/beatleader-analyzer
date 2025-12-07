@@ -8,7 +8,7 @@ namespace Analyzer.BeatmapScanner.Data
     public class SwingData
     {
         public Cube Start { get; set; } = null!;
-        public double Time { get; set; } = 0;
+        public double Beat { get; set; } = 0;
         public double Angle { get; set; } = 0;
         public (double x, double y) EntryPosition { get; set; } = (0, 0);
         public (double x, double y) ExitPosition { get; set; } = (0, 0);
@@ -22,10 +22,11 @@ namespace Analyzer.BeatmapScanner.Data
         public double CurveComplexity { get; set; } = 0;
         public double SwingFrequency { get; set; } = 0;
         public double SwingDiff { get; set; } = 0;
+        public string PatternType { get; set; } = "Single";
 
         public SwingData(double beat, double angle, Cube start)
         {
-            Time = beat;
+            Beat = beat;
             Angle = angle;
             Start = start;
         }

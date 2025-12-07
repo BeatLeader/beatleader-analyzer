@@ -1,4 +1,5 @@
 ﻿using Analyzer.BeatmapScanner.Data;
+using Parser.Map.Difficulty.V3.Grid;
 using System.Collections.Generic;
 
 namespace beatleader_analyzer.BeatmapScanner.Data
@@ -12,6 +13,8 @@ namespace beatleader_analyzer.BeatmapScanner.Data
         public double Nerf { get; set; }
         public Statistics Patterns { get; set; } = new Statistics();
         public List<SwingData> SwingData { get; set; } = new List<SwingData>();
+        public List<Wall> DodgeWalls { get; set; } = new List<Wall>();
+        public List<Wall> CrouchWalls { get; set; } = new List<Wall>();
     }
 
     public class PerSwing

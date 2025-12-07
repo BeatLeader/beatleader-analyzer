@@ -35,7 +35,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 if (i > 0 && i + 1 < swingData.Count)
                 {
-                    swingData[i].SwingFrequency = 2 / (swingData[i + 1].Time - swingData[i - 1].Time);
+                    swingData[i].SwingFrequency = 2 / (swingData[i + 1].Beat - swingData[i - 1].Beat);
                 }
                 else
                 {
@@ -117,9 +117,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     float wallDuration = wall.DurationInBeats;
                     float wallEnd = wallStart + wallDuration;
 
-                    if (swing.Time >= wallStart && swing.Time <= wallEnd)
+                    if (swing.Beat >= wallStart && swing.Beat <= wallEnd)
                     {
-                        bool isInitial = i > 0 && swingData[i - 1].Time < wallStart;
+                        bool isInitial = i > 0 && swingData[i - 1].Beat < wallStart;
 
                         if (isInitial)
                         {
@@ -133,7 +133,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     else if (i < swingData.Count - 1)
                     {
                         var nextSwing = swingData[i + 1];
-                        if (swing.Time < wallStart && nextSwing.Time >= wallStart)
+                        if (swing.Beat < wallStart && nextSwing.Beat >= wallStart)
                         {
                             maxBuff = Math.Max(maxBuff, CROUCH_WALL_INITIAL_BUFF);
                         }
@@ -153,7 +153,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         {
             float wallDuration = wall.DurationInBeats;
             float wallEnd = wall.Beats + wallDuration;
-            return swing.Time >= wall.Beats && swing.Time <= wallEnd;
+            return swing.Beat >= wall.Beats && swing.Beat <= wallEnd;
         }
 
         public static List<PerSwing> CalcAverage(List<SwingData> swingData, int WINDOW)
@@ -173,11 +173,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (i >= WINDOW)
                 {
                     var windowDiff = Average(qDiff.Buffer);
-                    difficultyIndex.Add(new(swingData[i].Time, windowDiff, swingData[i].AngleStrain + swingData[i].PathStrain));
+                    difficultyIndex.Add(new(swingData[i].Beat, windowDiff, swingData[i].AngleStrain + swingData[i].PathStrain));
                 }
                 else
                 {
-                    difficultyIndex.Add(new(swingData[i].Time, 0, swingData[i].AngleStrain + swingData[i].PathStrain));
+                    difficultyIndex.Add(new(swingData[i].Beat, 0, swingData[i].AngleStrain + swingData[i].PathStrain));
                 }
             }
 
