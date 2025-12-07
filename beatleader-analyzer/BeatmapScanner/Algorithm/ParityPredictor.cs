@@ -119,32 +119,63 @@ namespace Analyzer.BeatmapScanner.Algorithm
             var prevSwing = swings[currentIndex - 1];
             var currentSwing = swings[currentIndex];
             
-            var prevExitY = (int)Math.Round(prevSwing.ExitPosition.y * 3);
-            var prevExitX = (int)Math.Round(prevSwing.ExitPosition.x * 3);
-            var currentEntryY = currentSwing.Start.Layer;
-            var currentEntryX = currentSwing.Start.Line;
-
+            // Get bombs between previous and current swing, sorted by time
             var relevantBombs = bombs.Where(b => 
-                b.Beats >= prevSwing.Beat && 
-                b.Beats <= currentSwing.Beat
-            ).ToList();
+                b.Beats > prevSwing.Beat && 
+                b.Beats < currentSwing.Beat
+            ).OrderBy(b => b.Beats).ToList();
 
             if (relevantBombs.Count == 0)
             {
                 return (false, 0, 0);
             }
 
-            // A bomb reset occurs when a bomb forces you to reposition your hand
-            // to avoid it, preventing a natural direct path to the next note
+            // Simulate player hand position over time
+            // Player continues swinging in the cut direction until reaching grid boundary
+            var handX = prevSwing.Start.Line;
+            var handY = prevSwing.Start.Layer;
+            
+            // Calculate swing direction vector
+            double angleRadians = prevSwing.Angle * Math.PI / 180.0;
+            double dirX = Math.Cos(angleRadians);
+            double dirY = Math.Sin(angleRadians);
+            
+            // Project hand position to grid boundary in swing direction
+            // Move hand as far as possible in the swing direction
+            const double swingExtent = 3.0; // Maximum swing distance
+            double finalX = handX + dirX * swingExtent;
+            double finalY = handY + dirY * swingExtent;
+            
+            // Clamp to grid boundaries
+            handX = Math.Clamp((int)Math.Round(finalX), 0, 3);
+            handY = Math.Clamp((int)Math.Round(finalY), 0, 2);
+
+            bool hadToReposition = false;
+            Bomb firstBlockingBomb = default;
+
+            // Simulate each bomb encounter
             foreach (var bomb in relevantBombs)
             {
-                bool blocksNaturalPath = IsBombBlockingPath(bomb, prevExitX, prevExitY, currentEntryX, currentEntryY);
-                
-                if (blocksNaturalPath)
+                // Check if bomb is at current hand position
+                if (bomb.x == handX && bomb.y == handY)
                 {
-                    // Bomb is in the natural path - this forces a repositioning
-                    return (true, bomb.y, bomb.x);
+                    // Bomb forces repositioning - move to opposite side of grid
+                    // Move to the position furthest from the bomb
+                    handX = 3 - bomb.x;  // Flip horizontally
+                    handY = 2 - bomb.y;  // Flip vertically
+                    
+                    if (!hadToReposition)
+                    {
+                        firstBlockingBomb = bomb;
+                    }
+                    hadToReposition = true;
                 }
+                // No repositioning needed if bomb is not at hand position
+            }
+
+            if (hadToReposition)
+            {
+                return (true, firstBlockingBomb.y, firstBlockingBomb.x);
             }
 
             return (false, 0, 0);
