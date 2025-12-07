@@ -170,80 +170,111 @@ namespace Benchmark
             }
 
             Console.WriteLine();
-            Console.WriteLine("Available Characteristics:");
-            Console.WriteLine("  [1] Standard");
-            Console.WriteLine("  [2] OneSaber");
-            Console.WriteLine("  [3] NoArrows");
-            Console.WriteLine("  [4] 90Degree");
-            Console.WriteLine("  [5] 360Degree");
-            Console.WriteLine("  [6] Lawless");
-            Console.WriteLine();
-            Console.Write("Select Characteristic (1-6): ");
-            string charChoice = Console.ReadLine()?.Trim();
+            Console.WriteLine("Export options:");
+            Console.WriteLine("  [1] All difficulties (with selector in HTML)");
+            Console.WriteLine("  [2] Single difficulty");
+            Console.Write("Select option (1-2): ");
+            string exportChoice = Console.ReadLine()?.Trim();
 
-            string characteristic = charChoice switch
+            if (exportChoice == "1")
             {
-                "1" => "Standard",
-                "2" => "OneSaber",
-                "3" => "NoArrows",
-                "4" => "90Degree",
-                "5" => "360Degree",
-                "6" => "Lawless",
-                _ => null
-            };
+                // Export all difficulties
+                Console.Write("Enter output path (or press Enter for 'detailed_swings_all.html'): ");
+                string outputPath = Console.ReadLine()?.Trim();
 
-            if (characteristic == null)
-            {
-                Console.WriteLine("Error: Invalid characteristic selection.");
-                Console.WriteLine("Press any key to return to menu...");
-                Console.ReadKey();
-                return;
-            }
+                Console.WriteLine();
+                Console.WriteLine("Starting detailed analysis for all difficulties...");
+                Console.WriteLine();
 
-            Console.WriteLine();
-            Console.WriteLine("Available Difficulties:");
-            Console.WriteLine("  [1] Easy");
-            Console.WriteLine("  [2] Normal");
-            Console.WriteLine("  [3] Hard");
-            Console.WriteLine("  [4] Expert");
-            Console.WriteLine("  [5] ExpertPlus");
-            Console.WriteLine();
-            Console.Write("Select Difficulty (1-5): ");
-            string diffChoice = Console.ReadLine()?.Trim();
-
-            string difficulty = diffChoice switch
-            {
-                "1" => "Easy",
-                "2" => "Normal",
-                "3" => "Hard",
-                "4" => "Expert",
-                "5" => "ExpertPlus",
-                _ => null
-            };
-
-            if (difficulty == null)
-            {
-                Console.WriteLine("Error: Invalid difficulty selection.");
-                Console.WriteLine("Press any key to return to menu...");
-                Console.ReadKey();
-                return;
-            }
-
-            Console.Write("Enter output path (or press Enter for 'detailed_swings.html'): ");
-            string outputPath = Console.ReadLine()?.Trim();
-
-            Console.WriteLine();
-            Console.WriteLine("Starting detailed analysis...");
-            Console.WriteLine();
-
-            var exporter = new AnalysisExporter();
-            if (isFile)
-            {
-                exporter.ExportDetailedSwingDataFromFile(input, characteristic, difficulty, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+                var exporter = new AnalysisExporter();
+                if (isFile)
+                {
+                    exporter.ExportAllDetailedSwingDataFromFile(input, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+                }
+                else
+                {
+                    exporter.ExportAllDetailedSwingData(input, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+                }
             }
             else
             {
-                exporter.ExportDetailedSwingData(input, characteristic, difficulty, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+                // Export single difficulty
+                Console.WriteLine();
+                Console.WriteLine("Available Characteristics:");
+                Console.WriteLine("  [1] Standard");
+                Console.WriteLine("  [2] OneSaber");
+                Console.WriteLine("  [3] NoArrows");
+                Console.WriteLine("  [4] 90Degree");
+                Console.WriteLine("  [5] 360Degree");
+                Console.WriteLine("  [6] Lawless");
+                Console.WriteLine();
+                Console.Write("Select Characteristic (1-6): ");
+                string charChoice = Console.ReadLine()?.Trim();
+
+                string characteristic = charChoice switch
+                {
+                    "1" => "Standard",
+                    "2" => "OneSaber",
+                    "3" => "NoArrows",
+                    "4" => "90Degree",
+                    "5" => "360Degree",
+                    "6" => "Lawless",
+                    _ => null
+                };
+
+                if (characteristic == null)
+                {
+                    Console.WriteLine("Error: Invalid characteristic selection.");
+                    Console.WriteLine("Press any key to return to menu...");
+                    Console.ReadKey();
+                    return;
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("Available Difficulties:");
+                Console.WriteLine("  [1] Easy");
+                Console.WriteLine("  [2] Normal");
+                Console.WriteLine("  [3] Hard");
+                Console.WriteLine("  [4] Expert");
+                Console.WriteLine("  [5] ExpertPlus");
+                Console.WriteLine();
+                Console.Write("Select Difficulty (1-5): ");
+                string diffChoice = Console.ReadLine()?.Trim();
+
+                string difficulty = diffChoice switch
+                {
+                    "1" => "Easy",
+                    "2" => "Normal",
+                    "3" => "Hard",
+                    "4" => "Expert",
+                    "5" => "ExpertPlus",
+                    _ => null
+                };
+
+                if (difficulty == null)
+                {
+                    Console.WriteLine("Error: Invalid difficulty selection.");
+                    Console.WriteLine("Press any key to return to menu...");
+                    Console.ReadKey();
+                    return;
+                }
+
+                Console.Write("Enter output path (or press Enter for 'detailed_swings.html'): ");
+                string outputPath = Console.ReadLine()?.Trim();
+
+                Console.WriteLine();
+                Console.WriteLine("Starting detailed analysis...");
+                Console.WriteLine();
+
+                var exporter = new AnalysisExporter();
+                if (isFile)
+                {
+                    exporter.ExportDetailedSwingDataFromFile(input, characteristic, difficulty, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+                }
+                else
+                {
+                    exporter.ExportDetailedSwingData(input, characteristic, difficulty, string.IsNullOrEmpty(outputPath) ? null : outputPath);
+                }
             }
 
             Console.WriteLine();

@@ -19,34 +19,7 @@ namespace Analyzer.BeatmapScanner.Helper
                 return (dodgeWallsList, crouchWallsList);
             }
 
-            foreach (var wall in walls)
-            {
-                bool coversX1 = wall.x <= 1 && wall.x + wall.Width > 1;
-                bool coversX2 = wall.x <= 2 && wall.x + wall.Width > 2;
-
-                if (wall.y == 2 && (coversX1 || coversX2))
-                {
-                    crouchWallsList.Add(wall);
-                }
-                else if ((coversX1 || coversX2) && ((wall.y <= 0 && wall.Height >= 3) || (wall.y == 1 && wall.Height >= 2)))
-                {
-                    dodgeWallsList.Add(wall);
-                }
-            }
-
-            return (dodgeWallsList, crouchWallsList);
-        }
-
-        public static (int dodgeWallCount, int crouchWallCount) AnalyzeWalls(List<Wall> walls)
-        {
-            if (walls == null || walls.Count == 0)
-            {
-                return (0, 0);
-            }
-
-            int dodgeCount = 0;
-            int crouchCount = 0;
-
+            // Sort walls by time to group simultaneous walls
             var wallsByTime = walls
                 .OrderBy(w => w.Beats)
                 .ToList();
@@ -64,6 +37,7 @@ namespace Analyzer.BeatmapScanner.Helper
                 var simultaneousWalls = new List<Wall> { currentWall };
                 processed.Add(i);
 
+                // Group walls that occur at the same time (within tolerance)
                 for (int j = i + 1; j < wallsByTime.Count; j++)
                 {
                     if (Math.Abs(wallsByTime[j].Beats - currentWall.Beats) <= TIME_TOLERANCE)
@@ -77,17 +51,18 @@ namespace Analyzer.BeatmapScanner.Helper
                     }
                 }
 
+                // Classify the simultaneous wall group
                 if (IsCrouchWall(simultaneousWalls))
                 {
-                    crouchCount++;
+                    crouchWallsList.AddRange(simultaneousWalls);
                 }
                 else if (IsDodgeWall(simultaneousWalls))
                 {
-                    dodgeCount++;
+                    dodgeWallsList.AddRange(simultaneousWalls);
                 }
             }
 
-            return (dodgeCount, crouchCount);
+            return (dodgeWallsList, crouchWallsList);
         }
 
         private static bool IsDodgeWall(List<Wall> walls)

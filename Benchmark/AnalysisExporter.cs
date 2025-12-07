@@ -259,8 +259,8 @@ namespace Benchmark
                 {
                     DodgeWalls = rating.DodgeWalls.Select(w => new
                     {
-                        Time = Math.Round(w.Beats, 2),
-                        Duration = Math.Round(w.DurationInBeats, 2),
+                        Time = Math.Round(w.Beats, 3),
+                        Duration = Math.Round(w.DurationInBeats, 3),
                         X = w.x,
                         Y = w.y,
                         Width = w.Width,
@@ -268,8 +268,8 @@ namespace Benchmark
                     }).ToList(),
                     CrouchWalls = rating.CrouchWalls.Select(w => new
                     {
-                        Time = Math.Round(w.Beats, 2),
-                        Duration = Math.Round(w.DurationInBeats, 2),
+                        Time = Math.Round(w.Beats, 3),
+                        Duration = Math.Round(w.DurationInBeats, 3),
                         X = w.x,
                         Y = w.y,
                         Width = w.Width,
@@ -283,7 +283,7 @@ namespace Benchmark
                     .Select((s, index) => new
                     {
                         Rank = index + 1,
-                        Time = Math.Round(s.Beat, 2),
+                        Time = Math.Round(s.Beat, 3),
                         Difficulty = Math.Round(s.SwingDiff, 3),
                         Hand = s.Start.Type == 0 ? "Red" : "Blue",
                         Angle = Math.Round(s.Angle, 1),
@@ -298,8 +298,8 @@ namespace Benchmark
                 {
                     AverageDifficulty = Math.Round(rating.SwingData.Average(s => s.SwingDiff), 3),
                     MaxDifficulty = Math.Round(rating.SwingData.Max(s => s.SwingDiff), 3),
-                    ResetPercentage = Math.Round((double)rating.Patterns.Resets / rating.SwingData.Count * 100, 2),
-                    BombResetPercentage = Math.Round((double)rating.Patterns.BombResets / rating.SwingData.Count * 100, 2),
+                    ResetPercentage = Math.Round((double)rating.Patterns.Resets / rating.SwingData.Count * 100, 3),
+                    BombResetPercentage = Math.Round((double)rating.Patterns.BombResets / rating.SwingData.Count * 100, 3),
                     RedHandSwings = rating.SwingData.Count(s => s.Start.Type == 0),
                     BlueHandSwings = rating.SwingData.Count(s => s.Start.Type == 1)
                 }
@@ -919,7 +919,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 Swings = rating.SwingData.Select((s, index) => new
                 {
                     Index = index,
-                    Time = Math.Round(s.Beat, 2),
+                    Time = Math.Round(s.Beat, 3),
                     Hand = s.Start.Type == 0 ? "Red" : "Blue",
                     Position = new
                     {
@@ -961,12 +961,135 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             OpenInBrowser(outputPath);
         }
 
+        public void ExportAllDetailedSwingData(string beatSaverUrl, string outputPath = null)
+        {
+            outputPath ??= "detailed_swings_all.html";
+
+            Console.WriteLine($"Downloading map from: {beatSaverUrl}");
+            var map = new Parse().TryDownloadLink(beatSaverUrl).LastOrDefault();
+
+            if (map == null)
+            {
+                Console.WriteLine("Failed to download map!");
+                return;
+            }
+
+            var allDifficulties = new List<(string characteristic, string difficulty, Ratings rating)>();
+
+            foreach (var characteristic in map.Info._difficultyBeatmapSets)
+            {
+                Console.WriteLine($"\nAnalyzing characteristic: {characteristic._beatmapCharacteristicName}");
+                
+                var ratings = analyzer.GetRating(map, characteristic._beatmapCharacteristicName);
+
+                if (ratings != null)
+                {
+                    foreach (var rating in ratings)
+                    {
+                        Console.WriteLine($"  {rating.Difficulty}: {rating.SwingData.Count} swings");
+                        allDifficulties.Add((characteristic._beatmapCharacteristicName, rating.Difficulty, rating));
+                    }
+                }
+            }
+
+            if (allDifficulties.Count == 0)
+            {
+                Console.WriteLine("No difficulties found!");
+                return;
+            }
+
+            var html = GenerateMultiDifficultySwingHtml(map, allDifficulties);
+
+            File.WriteAllText(outputPath, html);
+            Console.WriteLine($"\n✓ Detailed swing data for all difficulties exported to: {outputPath}");
+            
+            OpenInBrowser(outputPath);
+        }
+
+        public void ExportAllDetailedSwingDataFromFile(string zipPath, string outputPath = null)
+        {
+            outputPath ??= "detailed_swings_all.html";
+
+            Console.WriteLine($"Loading map from file: {zipPath}");
+            
+            if (!File.Exists(zipPath) && !Directory.Exists(zipPath))
+            {
+                Console.WriteLine($"Error: Path not found: {zipPath}");
+                return;
+            }
+
+            try
+            {
+                var parser = new Parse();
+                BeatmapV3 map = null;
+
+                if (zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    using (var fileStream = File.OpenRead(zipPath))
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        fileStream.CopyTo(memoryStream);
+                        memoryStream.Position = 0;
+                        
+                        var maps = parser.TryLoadZip(memoryStream);
+                        map = maps?.LastOrDefault();
+                    }
+                }
+                else
+                {
+                    map = parser.TryLoadPath(zipPath);
+                }
+
+                if (map == null)
+                {
+                    Console.WriteLine("Failed to load map from file!");
+                    return;
+                }
+
+                var allDifficulties = new List<(string characteristic, string difficulty, Ratings rating)>();
+
+                foreach (var characteristic in map.Info._difficultyBeatmapSets)
+                {
+                    Console.WriteLine($"\nAnalyzing characteristic: {characteristic._beatmapCharacteristicName}");
+                    
+                    var ratings = analyzer.GetRating(map, characteristic._beatmapCharacteristicName);
+
+                    if (ratings != null)
+                    {
+                        foreach (var rating in ratings)
+                        {
+                            Console.WriteLine($"  {rating.Difficulty}: {rating.SwingData.Count} swings");
+                            allDifficulties.Add((characteristic._beatmapCharacteristicName, rating.Difficulty, rating));
+                        }
+                    }
+                }
+
+                if (allDifficulties.Count == 0)
+                {
+                    Console.WriteLine("No difficulties found!");
+                    return;
+                }
+
+                var html = GenerateMultiDifficultySwingHtml(map, allDifficulties);
+
+                File.WriteAllText(outputPath, html);
+                Console.WriteLine($"\n✓ Detailed swing data for all difficulties exported to: {outputPath}");
+                
+                OpenInBrowser(outputPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading map: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+        }
+
         private string GenerateDetailedSwingHtml(BeatmapV3 map, string characteristic, string difficulty, Ratings rating)
         {
             var swingDataJson = JsonConvert.SerializeObject(rating.SwingData.Select((s, index) => new
             {
                 Index = index,
-                Time = Math.Round(s.Beat, 2),
+                Time = Math.Round(s.Beat, 3),
                 Hand = s.Start.Type == 0 ? "Red" : "Blue",
                 Line = s.Start.Line,
                 Layer = s.Start.Layer,
@@ -1412,6 +1535,582 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         }});
         
         renderTable();
+    </script>
+</body>
+</html>";
+        }
+
+        private string GenerateMultiDifficultySwingHtml(BeatmapV3 map, List<(string characteristic, string difficulty, Ratings rating)> difficulties)
+        {
+            // Create a comprehensive data structure for all difficulties
+            var allDifficultiesData = difficulties.Select((diff, idx) => new
+            {
+                Index = idx,
+                Characteristic = diff.characteristic,
+                Difficulty = diff.difficulty,
+                TotalSwings = diff.rating.SwingData.Count,
+                Swings = diff.rating.SwingData.Select((s, index) => new
+                {
+                    Index = index,
+                    Time = Math.Round(s.Beat, 3),
+                    Hand = s.Start.Type == 0 ? "Red" : "Blue",
+                    Line = s.Start.Line,
+                    Layer = s.Start.Layer,
+                    EntryX = Math.Round(s.EntryPosition.x, 3),
+                    EntryY = Math.Round(s.EntryPosition.y, 3),
+                    ExitX = Math.Round(s.ExitPosition.x, 3),
+                    ExitY = Math.Round(s.ExitPosition.y, 3),
+                    Angle = Math.Round(s.Angle, 1),
+                    Parity = s.Forehand ? "Forehand" : "Backhand",
+                    PatternType = s.PatternType,
+                    Reset = s.Reset,
+                    BombReset = s.BombReset,
+                    Difficulty = Math.Round(s.SwingDiff, 3),
+                    AngleStrain = Math.Round(s.AngleStrain, 3),
+                    PathStrain = Math.Round(s.PathStrain, 3),
+                    ExcessDistance = Math.Round(s.ExcessDistance, 3),
+                    PositionComplexity = Math.Round(s.PositionComplexity, 3),
+                    CurveComplexity = Math.Round(s.CurveComplexity, 3),
+                    SwingFrequency = Math.Round(s.SwingFrequency, 3)
+                }).ToList()
+            }).ToList();
+
+            var jsonData = JsonConvert.SerializeObject(allDifficultiesData);
+
+            return $@"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Detailed Swing Analysis - All Difficulties - {map.Info._songName}</title>
+    <script src=""https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js""></script>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }}
+        
+        .container {{
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }}
+        
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }}
+        
+        .header h1 {{
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }}
+        
+        .header .subtitle {{
+            font-size: 1.2em;
+            opacity: 0.9;
+        }}
+        
+        .content {{
+            padding: 40px;
+        }}
+        
+        .difficulty-selector {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }}
+        
+        .diff-group {{
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }}
+        
+        .diff-group-label {{
+            font-weight: bold;
+            margin-right: 5px;
+        }}
+        
+        .diff-btn {{
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }}
+        
+        .diff-btn:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }}
+        
+        .diff-btn.active {{
+            transform: scale(1.05);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }}
+        
+        .diff-Easy {{ background: #4CAF50; color: white; }}
+        .diff-Normal {{ background: #2196F3; color: white; }}
+        .diff-Hard {{ background: #FF9800; color: white; }}
+        .diff-Expert {{ background: #F44336; color: white; }}
+        .diff-ExpertPlus {{ background: #9C27B0; color: white; }}
+        
+        .controls {{
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }}
+        
+        .controls input, .controls select {{
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }}
+        
+        .controls button {{
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }}
+        
+        .controls button:hover {{
+            background: #764ba2;
+            transform: translateY(-2px);
+        }}
+        
+        .chart-section {{
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }}
+        
+        .table-container {{
+            overflow-x: auto;
+            margin-top: 20px;
+        }}
+        
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }}
+        
+        th {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+        }}
+        
+        th:hover {{
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }}
+        
+        th.sortable {{
+            position: relative;
+            padding-right: 30px;
+        }}
+        
+        th.sortable::after {{
+            content: '⇅';
+            position: absolute;
+            right: 10px;
+            opacity: 0.5;
+        }}
+        
+        th.sorted-asc::after {{
+            content: '▲';
+            opacity: 1;
+        }}
+        
+        th.sorted-desc::after {{
+            content: '▼';
+            opacity: 1;
+        }}
+        
+        td {{
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }}
+        
+        tr:hover {{
+            background: #f8f9fa;
+        }}
+        
+        .badge {{
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }}
+        
+        .badge-red {{ background: #ffcdd2; color: #c62828; }}
+        .badge-blue {{ background: #bbdefb; color: #1565c0; }}
+        .badge-forehand {{ background: #c8e6c9; color: #2e7d32; }}
+        .badge-backhand {{ background: #fff9c4; color: #f57f17; }}
+        .badge-reset {{ background: #ffccbc; color: #bf360c; }}
+        
+        h2 {{
+            color: #333;
+            margin: 30px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>Detailed Swing Analysis - All Difficulties</h1>
+            <div class=""subtitle"">{map.Info._songName}</div>
+            <div id=""currentDiffInfo"" style=""margin-top: 10px;""></div>
+        </div>
+        
+        <div class=""content"">
+            <div class=""difficulty-selector"" id=""difficultySelector""></div>
+            
+            <div class=""controls"">
+                <input type=""text"" id=""searchBox"" placeholder=""Search by time, hand, angle..."">
+                <select id=""filterHand"">
+                    <option value="""">All Hands</option>
+                    <option value=""Red"">Red Hand</option>
+                    <option value=""Blue"">Blue Hand</option>
+                </select>
+                <select id=""filterParity"">
+                    <option value="""">All Parities</option>
+                    <option value=""Forehand"">Forehand</option>
+                    <option value=""Backhand"">Backhand</option>
+                </select>
+                <select id=""filterPattern"">
+                    <option value="""">All Pattern Types</option>
+                    <option value=""Single"">Single</option>
+                    <option value=""Stack"">Stack</option>
+                    <option value=""Tower"">Tower</option>
+                    <option value=""Window"">Window</option>
+                    <option value=""Loloppe"">Loloppe</option>
+                    <option value=""Slider"">Slider</option>
+                    <option value=""Curved Slider"">Curved Slider</option>
+                </select>
+                <label>
+                    <input type=""checkbox"" id=""filterReset""> Show Resets Only
+                </label>
+                <label>
+                    <input type=""checkbox"" id=""filterBombReset""> Show Bomb Resets Only
+                </label>
+                <button onclick=""resetFilters()"">Reset Filters</button>
+            </div>
+            
+            <div class=""chart-section"">
+                <h2>📊 Difficulty Distribution</h2>
+                <canvas id=""difficultyChart""></canvas>
+            </div>
+            
+            <h2>🎯 Swing Details</h2>
+            <div class=""table-container"">
+                <table id=""swingTable"">
+                    <thead>
+                        <tr>
+                            <th class=""sortable"" data-column=""Index"" data-type=""number"">#</th>
+                            <th class=""sortable"" data-column=""Time"" data-type=""number"">Beat</th>
+                            <th class=""sortable"" data-column=""Hand"" data-type=""string"">Hand</th>
+                            <th class=""sortable"" data-column=""Position"" data-type=""string"">Position</th>
+                            <th class=""sortable"" data-column=""Entry"" data-type=""string"">Entry</th>
+                            <th class=""sortable"" data-column=""Exit"" data-type=""string"">Exit</th>
+                            <th class=""sortable"" data-column=""Angle"" data-type=""number"">Angle</th>
+                            <th class=""sortable"" data-column=""Parity"" data-type=""string"">Parity</th>
+                            <th class=""sortable"" data-column=""PatternType"" data-type=""string"">Pattern Type</th>
+                            <th>Flags</th>
+                            <th class=""sortable"" data-column=""Difficulty"" data-type=""number"">Difficulty</th>
+                            <th class=""sortable"" data-column=""AngleStrain"" data-type=""number"">Angle Strain</th>
+                            <th class=""sortable"" data-column=""PathStrain"" data-type=""number"">Path Strain</th>
+                            <th class=""sortable"" data-column=""SwingFrequency"" data-type=""number"">Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody id=""swingTableBody""></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const allDifficulties = {jsonData};
+        let currentDifficultyIndex = 0;
+        let swingData = [];
+        let filteredData = [];
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+        let currentChart = null;
+        
+        function createDifficultyButtons() {{
+            const selector = document.getElementById('difficultySelector');
+            const grouped = {{}};
+            
+            allDifficulties.forEach((data, index) => {{
+                const char = data.Characteristic;
+                if (!grouped[char]) grouped[char] = [];
+                grouped[char].push({{ data, index }});
+            }});
+            
+            Object.keys(grouped).forEach(char => {{
+                const group = document.createElement('div');
+                group.className = 'diff-group';
+                
+                const label = document.createElement('span');
+                label.className = 'diff-group-label';
+                label.textContent = char + ': ';
+                group.appendChild(label);
+                
+                grouped[char].forEach(({{ data, index }}) => {{
+                    const btn = document.createElement('button');
+                    btn.className = `diff-btn diff-${{data.Difficulty}}`;
+                    btn.textContent = data.Difficulty;
+                    btn.onclick = () => switchDifficulty(index);
+                    btn.id = `diff-btn-${{index}}`;
+                    group.appendChild(btn);
+                }});
+                
+                selector.appendChild(group);
+            }});
+            
+            if (allDifficulties.length > 0) switchDifficulty(0);
+        }}
+        
+        function switchDifficulty(index) {{
+            currentDifficultyIndex = index;
+            const data = allDifficulties[index];
+            swingData = data.Swings;
+            filteredData = [...swingData];
+            
+            // Update active button
+            document.querySelectorAll('.diff-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`diff-btn-${{index}}`).classList.add('active');
+            
+            // Update header info
+            document.getElementById('currentDiffInfo').textContent = 
+                `${{data.Characteristic}} - ${{data.Difficulty}} • Total Swings: ${{data.TotalSwings}}`;
+            
+            // Reset filters
+            currentSortColumn = null;
+            currentSortDirection = 'asc';
+            resetFilters();
+            
+            // Update chart
+            updateChart();
+            
+            // Render table
+            renderTable();
+        }}
+        
+        function renderTable() {{
+            const tbody = document.getElementById('swingTableBody');
+            tbody.innerHTML = filteredData.map(swing => `
+                <tr>
+                    <td>${{swing.Index + 1}}</td>
+                    <td>${{swing.Time}}</td>
+                    <td><span class=""badge badge-${{swing.Hand.toLowerCase()}}"">${{swing.Hand}}</span></td>
+                    <td>(${{swing.Line}}, ${{swing.Layer}})</td>
+                    <td>(${{swing.EntryX}}, ${{swing.EntryY}})</td>
+                    <td>(${{swing.ExitX}}, ${{swing.ExitY}})</td>
+                    <td>${{swing.Angle}}°</td>
+                    <td><span class=""badge badge-${{swing.Parity.toLowerCase()}}"">${{swing.Parity}}</span></td>
+                    <td>${{swing.PatternType}}</td>
+                    <td>
+                        ${{swing.Reset ? '<span class=""badge badge-reset"">R</span>' : ''}}
+                        ${{swing.BombReset ? '<span class=""badge badge-reset"">B</span>' : ''}}
+                    </td>
+                    <td><strong>${{swing.Difficulty}}</strong></td>
+                    <td>${{swing.AngleStrain}}</td>
+                    <td>${{swing.PathStrain}}</td>
+                    <td>${{swing.SwingFrequency}}</td>
+                </tr>
+            `).join('');
+        }}
+        
+        function applyFilters() {{
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const handFilter = document.getElementById('filterHand').value;
+            const parityFilter = document.getElementById('filterParity').value;
+            const patternFilter = document.getElementById('filterPattern').value;
+            const resetOnly = document.getElementById('filterReset').checked;
+            const bombResetOnly = document.getElementById('filterBombReset').checked;
+            
+            filteredData = swingData.filter(swing => {{
+                if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
+                if (handFilter && swing.Hand !== handFilter) return false;
+                if (parityFilter && swing.Parity !== parityFilter) return false;
+                if (patternFilter && swing.PatternType !== patternFilter) return false;
+                if (resetOnly && !swing.Reset) return false;
+                if (bombResetOnly && !swing.BombReset) return false;
+                return true;
+            }});
+            
+            renderTable();
+        }}
+        
+        function resetFilters() {{
+            document.getElementById('searchBox').value = '';
+            document.getElementById('filterHand').value = '';
+            document.getElementById('filterParity').value = '';
+            document.getElementById('filterPattern').value = '';
+            document.getElementById('filterReset').checked = false;
+            document.getElementById('filterBombReset').checked = false;
+            applyFilters();
+        }}
+        
+        document.getElementById('searchBox').addEventListener('input', applyFilters);
+        document.getElementById('filterHand').addEventListener('change', applyFilters);
+        document.getElementById('filterParity').addEventListener('change', applyFilters);
+        document.getElementById('filterPattern').addEventListener('change', applyFilters);
+        document.getElementById('filterReset').addEventListener('change', applyFilters);
+        document.getElementById('filterBombReset').addEventListener('change', applyFilters);
+        
+        function sortTable(column, type) {{
+            if (currentSortColumn === column) {{
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            }} else {{
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }}
+            
+            filteredData.sort((a, b) => {{
+                let aVal, bVal;
+                
+                if (type === 'number') {{
+                    aVal = a[column];
+                    bVal = b[column];
+                }} else {{
+                    aVal = String(a[column]).toLowerCase();
+                    bVal = String(b[column]).toLowerCase();
+                }}
+                
+                let comparison = 0;
+                if (aVal < bVal) comparison = -1;
+                if (aVal > bVal) comparison = 1;
+                
+                return currentSortDirection === 'asc' ? comparison : -comparison;
+            }});
+            
+            document.querySelectorAll('th.sortable').forEach(th => {{
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            }});
+            
+            const activeHeader = document.querySelector('th[data-column=""' + column + '""]');
+            if (activeHeader) {{
+                activeHeader.classList.add('sorted-' + currentSortDirection);
+            }}
+            
+            renderTable();
+        }}
+        
+        document.querySelectorAll('th.sortable').forEach(th => {{
+            th.addEventListener('click', () => {{
+                const column = th.getAttribute('data-column');
+                const type = th.getAttribute('data-type');
+                sortTable(column, type);
+            }});
+        }});
+        
+        function updateChart() {{
+            const ctx = document.getElementById('difficultyChart').getContext('2d');
+            
+            if (currentChart) {{
+                currentChart.destroy();
+            }}
+            
+            const buckets = 20;
+            const maxDiff = Math.max(...swingData.map(s => s.Difficulty));
+            const bucketSize = maxDiff / buckets;
+            const histogram = new Array(buckets).fill(0);
+            
+            swingData.forEach(swing => {{
+                const bucket = Math.min(Math.floor(swing.Difficulty / bucketSize), buckets - 1);
+                histogram[bucket]++;
+            }});
+            
+            currentChart = new Chart(ctx, {{
+                type: 'line',
+                data: {{
+                    labels: Array.from({{ length: buckets }}, (_, i) => (i * bucketSize).toFixed(1)),
+                    datasets: [{{
+                        label: 'Number of Swings',
+                        data: histogram,
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }}]
+                }},
+                options: {{
+                    responsive: true,
+                    plugins: {{
+                        legend: {{
+                            display: true
+                        }}
+                    }},
+                    scales: {{
+                        x: {{
+                            title: {{
+                                display: true,
+                                text: 'Difficulty Range'
+                            }}
+                        }},
+                        y: {{
+                            title: {{
+                                display: true,
+                                text: 'Count'
+                            }},
+                            beginAtZero: true
+                        }}
+                    }}
+                }}
+            }});
+        }}
+        
+        createDifficultyButtons();
     </script>
 </body>
 </html>";

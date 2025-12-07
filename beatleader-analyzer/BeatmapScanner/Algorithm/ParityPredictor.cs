@@ -134,11 +134,15 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return (false, 0, 0);
             }
 
+            // A bomb reset occurs when a bomb forces you to reposition your hand
+            // to avoid it, preventing a natural direct path to the next note
             foreach (var bomb in relevantBombs)
             {
-                bool blocksPath = IsBombBlockingPath(bomb, prevExitX, prevExitY, currentEntryX, currentEntryY);
-                if (blocksPath)
+                bool blocksNaturalPath = IsBombBlockingPath(bomb, prevExitX, prevExitY, currentEntryX, currentEntryY);
+                
+                if (blocksNaturalPath)
                 {
+                    // Bomb is in the natural path - this forces a repositioning
                     return (true, bomb.y, bomb.x);
                 }
             }
@@ -148,11 +152,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
         private static bool IsBombBlockingPath(Bomb bomb, int prevX, int prevY, int currX, int currY)
         {
-            if (bomb.x == currX && bomb.y == currY)
-            {
-                return true;
-            }
-
+            // Check if bomb is BETWEEN the previous exit and current entry positions
+            // A bomb along the travel path IS blocking - you must deviate around it
+            
+            // Bomb at starting position - blocks leaving that position
             if (bomb.x == prevX && bomb.y == prevY)
             {
                 return true;
@@ -166,35 +169,42 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return false;
             }
 
+            int bombDeltaX = bomb.x - prevX;
+            int bombDeltaY = bomb.y - prevY;
+
+            // Vertical movement
             if (deltaX == 0)
             {
                 if (bomb.x == prevX)
                 {
                     int minY = Math.Min(prevY, currY);
                     int maxY = Math.Max(prevY, currY);
-                    return bomb.y >= minY && bomb.y <= maxY;
+                    // Bomb must be BETWEEN start and end (exclusive of destination)
+                    return bomb.y > minY && bomb.y < maxY;
                 }
             }
+            // Horizontal movement
             else if (deltaY == 0)
             {
                 if (bomb.y == prevY)
                 {
                     int minX = Math.Min(prevX, currX);
                     int maxX = Math.Max(prevX, currX);
-                    return bomb.x >= minX && bomb.x <= maxX;
+                    // Bomb must be BETWEEN start and end (exclusive of destination)
+                    return bomb.x > minX && bomb.x < maxX;
                 }
             }
+            // Diagonal or complex movement
             else
             {
-                int bombDeltaX = bomb.x - prevX;
-                int bombDeltaY = bomb.y - prevY;
-                
                 if (Math.Abs(deltaX) == Math.Abs(deltaY))
                 {
+                    // Perfect diagonal
                     if (Math.Abs(bombDeltaX) == Math.Abs(bombDeltaY))
                     {
                         double ratio = (double)bombDeltaX / deltaX;
-                        if (ratio >= 0 && ratio <= 1 && bombDeltaY == (int)(deltaY * ratio))
+                        // Bomb is on the path BETWEEN start and end (not at destination)
+                        if (ratio > 0 && ratio < 1.0 && bombDeltaY == (int)(deltaY * ratio))
                         {
                             return true;
                         }
@@ -202,6 +212,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
                 else
                 {
+                    // Non-diagonal movement - check proximity to path
                     double crossProduct = deltaX * bombDeltaY - deltaY * bombDeltaX;
                     double distance = Math.Abs(crossProduct) / Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
                     
@@ -211,7 +222,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         double lengthSquared = deltaX * deltaX + deltaY * deltaY;
                         double t = dotProduct / lengthSquared;
                         
-                        if (t >= 0 && t <= 1)
+                        // Bomb is on/near the path BETWEEN start and end (not at destination)
+                        if (t > 0 && t < 1.0)
                         {
                             return true;
                         }
