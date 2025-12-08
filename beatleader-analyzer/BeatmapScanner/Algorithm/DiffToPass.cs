@@ -74,21 +74,35 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 
                 double speedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
                 double stressMultiplier = stress / (stress + STRESS_FALLOFF) + 1.0;
+                // Store intermediate values on the swing for debugging/export
+                swing.DistanceDiff = distanceDiff;
+                swing.SwingSpeed = swingSpeed;
+                swing.HitDistance = hitDistance;
+                swing.HitDiff = hitDiff;
+                swing.Stress = stress;
+                swing.SpeedFalloff = speedFalloff;
+                swing.StressMultiplier = stressMultiplier;
+
                 swing.SwingDiff = swingSpeed * speedFalloff * stressMultiplier;
-                
-                swing.SwingDiff *= NjsBuff.CalculateNjsBuff(swing.Start.Njs);
+
+                double njsBuff = NjsBuff.CalculateNjsBuff(swing.Start.Njs);
+                swing.NjsBuff = njsBuff;
+                swing.SwingDiff *= njsBuff;
 
                 int currentHand = swing.Start.Type;
                 if (previousHand.HasValue && previousHand.Value != currentHand)
                 {
                     swing.SwingDiff *= STREAM_BONUS;
+                    swing.StreamBonusApplied = true;
                 }
                 previousHand = currentHand;
-
+                double wallBuffUsed = 1.0;
                 if (wallBuffs.TryGetValue(i, out double wallBuff))
                 {
-                    swing.SwingDiff *= wallBuff;
+                    wallBuffUsed = wallBuff;
+                    swing.SwingDiff *= wallBuffUsed;
                 }
+                swing.WallBuff = wallBuffUsed;
             }
         }
 

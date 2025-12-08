@@ -193,24 +193,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         }
 
         /// <summary>
-        /// Calculates a sort value for ordering notes in swing direction.
-        /// Lower values mean the note is earlier in the swing path.
-        /// </summary>
-        private static double GetSwingOrderValue(Cube cube, double swingDirection)
-        {
-            double radians = swingDirection * Math.PI / 180.0;
-            double swingX = Math.Cos(radians);
-            double swingY = Math.Sin(radians);
-            
-            // Project the note position onto the swing direction vector
-            // This gives us how far along the swing path the note is
-            double projection = cube.Line * swingX + cube.Layer * swingY;
-            
-            // Negate because we want notes "before" in the swing to sort first
-            return -projection;
-        }
-
-        /// <summary>
         /// For simultaneous notes with the same CutDirection, calculates and applies the geometric snap angle.
         /// In Beat Saber, when notes have the same CutDirection, they snap to align so a smooth linear swing
         /// can pass through both notes. The actual swing angle is determined by the position vector between them.

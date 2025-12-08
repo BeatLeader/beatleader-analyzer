@@ -291,8 +291,6 @@ namespace Benchmark
                         Parity = s.Forehand ? "Forehand" : "Backhand",
                         ParityError = s.ParityErrors,
                         BombAvoidance = s.BombAvoidance,
-                        AngleStrain = Math.Round(s.AngleStrain, 3),
-                        PathStrain = Math.Round(s.PathStrain, 3)
                     })
                     .ToList(),
                 Statistics = new
@@ -945,16 +943,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     Parity = s.Forehand ? "Forehand" : "Backhand",
                     ParityError = s.ParityErrors,
                     BombAvoidance = s.BombAvoidance,
-                    Difficulty = Math.Round(s.SwingDiff, 3),
-                    Metrics = new
-                    {
-                        AngleStrain = Math.Round(s.AngleStrain, 3),
-                        PathStrain = Math.Round(s.PathStrain, 3),
-                        ExcessDistance = Math.Round(s.ExcessDistance, 3),
-                        PositionComplexity = Math.Round(s.PositionComplexity, 3),
-                        CurveComplexity = Math.Round(s.CurveComplexity, 3),
-                        SwingFrequency = Math.Round(s.SwingFrequency, 3)
-                    }
+                    Difficulty = Math.Round(s.SwingDiff, 3)
                 }).ToList()
             };
 
@@ -1107,13 +1096,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 PatternType = s.PatternType,
                 ParityError = s.ParityErrors,
                 BombAvoidance = s.BombAvoidance,
-                Difficulty = Math.Round(s.SwingDiff, 3),
-                AngleStrain = Math.Round(s.AngleStrain, 3),
-                PathStrain = Math.Round(s.PathStrain, 3),
-                ExcessDistance = Math.Round(s.ExcessDistance, 3),
-                PositionComplexity = Math.Round(s.PositionComplexity, 3),
-                CurveComplexity = Math.Round(s.CurveComplexity, 3),
-                SwingFrequency = Math.Round(s.SwingFrequency, 3)
+                Difficulty = Math.Round(s.SwingDiff, 3)
             }).ToList());
 
             return $@"<!DOCTYPE html>
@@ -1360,9 +1343,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                             <th class=""sortable"" data-column=""PatternType"" data-type=""string"">Pattern Type</th>
                             <th>Flags</th>
                             <th class=""sortable"" data-column=""Difficulty"" data-type=""number"">Difficulty</th>
-                            <th class=""sortable"" data-column=""AngleStrain"" data-type=""number"">Angle Strain</th>
-                            <th class=""sortable"" data-column=""PathStrain"" data-type=""number"">Path Strain</th>
-                            <th class=""sortable"" data-column=""SwingFrequency"" data-type=""number"">Frequency</th>
                         </tr>
                     </thead>
                     <tbody id=""swingTableBody""></tbody>
@@ -1395,9 +1375,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                         ${{swing.BombAvoidance ? '<span class=""badge badge-reset"">BA</span>' : ''}}
                     </td>
                     <td><strong>${{swing.Difficulty}}</strong></td>
-                    <td>${{swing.AngleStrain}}</td>
-                    <td>${{swing.PathStrain}}</td>
-                    <td>${{swing.SwingFrequency}}</td>
                 </tr>
             `).join('');
         }}
@@ -1601,13 +1578,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     PatternType = s.PatternType,
                     ParityError = s.ParityErrors,
                     BombAvoidance = s.BombAvoidance,
-                    Difficulty = Math.Round(s.SwingDiff, 3),
-                    AngleStrain = Math.Round(s.AngleStrain, 3),
-                    PathStrain = Math.Round(s.PathStrain, 3),
-                    ExcessDistance = Math.Round(s.ExcessDistance, 3),
-                    PositionComplexity = Math.Round(s.PositionComplexity, 3),
-                    CurveComplexity = Math.Round(s.CurveComplexity, 3),
-                    SwingFrequency = Math.Round(s.SwingFrequency, 3)
+                    Difficulty = Math.Round(s.SwingDiff, 3)
                 }).ToList()
             }).ToList();
 
@@ -1903,9 +1874,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                             <th class=""sortable"" data-column=""PatternType"" data-type=""string"">Pattern Type</th>
                             <th>Flags</th>
                             <th class=""sortable"" data-column=""Difficulty"" data-type=""number"">Difficulty</th>
-                            <th class=""sortable"" data-column=""AngleStrain"" data-type=""number"">Angle Strain</th>
-                            <th class=""sortable"" data-column=""PathStrain"" data-type=""number"">Path Strain</th>
-                            <th class=""sortable"" data-column=""SwingFrequency"" data-type=""number"">Frequency</th>
                         </tr>
                     </thead>
                     <tbody id=""swingTableBody""></tbody>
@@ -2001,9 +1969,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                         ${{swing.BombAvoidance ? '<span class=""badge badge-reset"">BA</span>' : ''}}
                     </td>
                     <td><strong>${{swing.Difficulty}}</strong></td>
-                    <td>${{swing.AngleStrain}}</td>
-                    <td>${{swing.PathStrain}}</td>
-                    <td>${{swing.SwingFrequency}}</td>
                 </tr>
             `).join('');
         }}
