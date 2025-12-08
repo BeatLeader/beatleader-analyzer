@@ -37,11 +37,37 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return;
             }
 
+            // Calculate swing frequency per hand (red and blue separately)
             for (int i = 0; i < swingData.Count; i++)
             {
-                if (i > 0 && i + 1 < swingData.Count)
+                int currentHand = swingData[i].Start.Type;
+                
+                // Find previous swing of the same hand
+                int prevSameHandIndex = -1;
+                for (int j = i - 1; j >= 0; j--)
                 {
-                    swingData[i].SwingFrequency = 2 / (swingData[i + 1].Beat - swingData[i - 1].Beat);
+                    if (swingData[j].Start.Type == currentHand)
+                    {
+                        prevSameHandIndex = j;
+                        break;
+                    }
+                }
+                
+                // Find next swing of the same hand
+                int nextSameHandIndex = -1;
+                for (int j = i + 1; j < swingData.Count; j++)
+                {
+                    if (swingData[j].Start.Type == currentHand)
+                    {
+                        nextSameHandIndex = j;
+                        break;
+                    }
+                }
+                
+                // Calculate frequency using only same-hand swings
+                if (prevSameHandIndex >= 0 && nextSameHandIndex >= 0)
+                {
+                    swingData[i].SwingFrequency = 2 / (swingData[nextSameHandIndex].Beat - swingData[prevSameHandIndex].Beat);
                 }
                 else
                 {

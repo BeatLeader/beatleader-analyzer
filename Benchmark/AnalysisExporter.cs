@@ -1547,6 +1547,107 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
 </html>";
         }
 
+        public void ExportDifficultyBreakdown(string beatSaverUrl, string characteristic, string difficulty, string outputPath = null)
+        {
+            outputPath ??= "difficulty_breakdown.html";
+
+            Console.WriteLine($"Downloading map from: {beatSaverUrl}");
+            var map = new Parse().TryDownloadLink(beatSaverUrl).LastOrDefault();
+
+            if (map == null)
+            {
+                Console.WriteLine("Failed to download map!");
+                return;
+            }
+
+            var ratings = analyzer.GetRating(map, characteristic);
+            var rating = ratings?.FirstOrDefault(r => r.Difficulty == difficulty);
+
+            if (rating == null)
+            {
+                Console.WriteLine($"Could not find difficulty: {characteristic} - {difficulty}");
+                return;
+            }
+
+            Console.WriteLine($"\nGenerating difficulty breakdown for: {characteristic} - {difficulty}");
+            Console.WriteLine($"Total swings: {rating.SwingData.Count}");
+            Console.WriteLine($"Pass: {rating.Pass:F2}, Tech: {rating.Tech:F2}");
+
+            var html = DifficultyBreakdownHtmlExporter.GenerateBreakdownHtml(rating, map.Info._beatsPerMinute);
+
+            File.WriteAllText(outputPath, html);
+            Console.WriteLine($"✓ Difficulty breakdown exported to: {outputPath}");
+            
+            OpenInBrowser(outputPath);
+        }
+
+        public void ExportDifficultyBreakdownFromFile(string zipPath, string characteristic, string difficulty, string outputPath = null)
+        {
+            outputPath ??= "difficulty_breakdown.html";
+
+            Console.WriteLine($"Loading map from file: {zipPath}");
+            
+            if (!File.Exists(zipPath) && !Directory.Exists(zipPath))
+            {
+                Console.WriteLine($"Error: Path not found: {zipPath}");
+                return;
+            }
+
+            try
+            {
+                var parser = new Parse();
+                BeatmapV3 map = null;
+
+                if (zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    using (var fileStream = File.OpenRead(zipPath))
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        fileStream.CopyTo(memoryStream);
+                        memoryStream.Position = 0;
+                        
+                        var maps = parser.TryLoadZip(memoryStream);
+                        map = maps?.LastOrDefault();
+                    }
+                }
+                else
+                {
+                    map = parser.TryLoadPath(zipPath);
+                }
+
+                if (map == null)
+                {
+                    Console.WriteLine("Failed to load map from file!");
+                    return;
+                }
+
+                var ratings = analyzer.GetRating(map, characteristic);
+                var rating = ratings?.FirstOrDefault(r => r.Difficulty == difficulty);
+
+                if (rating == null)
+                {
+                    Console.WriteLine($"Could not find difficulty: {characteristic} - {difficulty}");
+                    return;
+                }
+
+                Console.WriteLine($"\nGenerating difficulty breakdown for: {characteristic} - {difficulty}");
+                Console.WriteLine($"Total swings: {rating.SwingData.Count}");
+                Console.WriteLine($"Pass: {rating.Pass:F2}, Tech: {rating.Tech:F2}");
+
+                var html = DifficultyBreakdownHtmlExporter.GenerateBreakdownHtml(rating, map.Info._beatsPerMinute);
+
+                File.WriteAllText(outputPath, html);
+                Console.WriteLine($"✓ Difficulty breakdown exported to: {outputPath}");
+                
+                OpenInBrowser(outputPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading map: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+        }
+
         private string GenerateMultiDifficultySwingHtml(BeatmapV3 map, List<(string characteristic, string difficulty, Ratings rating)> difficulties)
         {
             // Create a comprehensive data structure for all difficulties

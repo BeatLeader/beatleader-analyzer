@@ -9,8 +9,6 @@ using static beatleader_analyzer.BeatmapScanner.Helper.MultiNote.MultiNoteClassi
 using static beatleader_analyzer.BeatmapScanner.Helper.WallHelper.WallClassifier;
 using beatleader_analyzer.BeatmapScanner.Helper.Debug;
 using Parser.Map.Difficulty.V3.Grid;
-using System.IO;
-using System.Text;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -19,7 +17,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class Analyze
     {
-        private const double PASS_CALIBRATION_FACTOR = 0.3;
+        private const double PASS_CALIBRATION_FACTOR = 0.8;
         private const double ONE_SABER_NERF = 0.35;
         private const double BALANCED_TECH_SCALER = 10.0;
 
