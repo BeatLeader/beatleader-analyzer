@@ -506,10 +506,34 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         {
             // We still don't know the direction, so we can just assume that it's fine if there's a dot note
             if (note1.CutDirection == 8 || note2.CutDirection == 8) return true;
-            if (note1.Time >41 && note1.Time < 42)
+
+            // For notes with different CutDirections, they form a valid window if swingable
+            // Check if aligned with either direction OR if they're in a reasonable position
+            if (note1.CutDirection != note2.CutDirection)
             {
-                Console.WriteLine(note1.Direction);
+                bool alignedWithNote1 = IsAlignedInSwingDirection(note1, note2, note1.Direction);
+                bool alignedWithNote2 = IsAlignedInSwingDirection(note1, note2, note2.Direction);
+                
+                // Also check if the geometric angle between them is reasonable for a window
+                // (not perpendicular to both arrows)
+                if (!alignedWithNote1 && !alignedWithNote2)
+                {
+                    // Calculate geometric angle from note1 to note2
+                    int lineDiff = note2.Line - note1.Line;
+                    int layerDiff = note2.Layer - note1.Layer;
+                    double angleRad = Math.Atan2(layerDiff, lineDiff);
+                    double angleDeg = (angleRad * 180.0 / Math.PI + 360.0) % 360.0;
+                    
+                    // Check if geometric angle is within 90° of either note's direction
+                    double diff1 = Math.Abs((angleDeg - note1.Direction + 180.0) % 360.0 - 180.0);
+                    double diff2 = Math.Abs((angleDeg - note2.Direction + 180.0) % 360.0 - 180.0);
+                    
+                    return diff1 <= 90 || diff2 <= 90;
+                }
+                
+                return alignedWithNote1 || alignedWithNote2;
             }
+
             return IsAlignedInSwingDirection(note1, note2, note1.Direction);
         }
 

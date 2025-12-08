@@ -305,6 +305,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
         /// <summary>
         /// Applies snap angle for a single group of simultaneous notes AFTER they've been ordered.
+        /// Only applies if notes are aligned with their CutDirection (a true slanted window).
         /// </summary>
         private static void ApplySnapAngleForGroup(List<Cube> cubes, int startIndex, int count)
         {
@@ -346,15 +347,25 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 int lineDiff = cubes[lastIdx].Line - cubes[firstIdx].Line;
                 int layerDiff = cubes[lastIdx].Layer - cubes[firstIdx].Layer;
                 
-                // Calculate angle
+                // Calculate geometric angle
                 double angleRadians = Math.Atan2(layerDiff, lineDiff);
                 double angleDegrees = angleRadians * 180.0 / Math.PI;
                 double snapAngle = (angleDegrees + 360.0) % 360.0;
                 
-                // Apply snap angle to all notes in this group
-                foreach (int idx in group)
+                // Get the CutDirection's angle
+                double cutDirectionAngle = Mod(DirectionToDegree[cubes[firstIdx].CutDirection] + cubes[firstIdx].AngleOffset, 360);
+                
+                // Only apply snap angle if notes are roughly aligned with their CutDirection
+                double angleDiff = Math.Abs(Mod(snapAngle - cutDirectionAngle + 180, 360) - 180);
+                
+                // Allow up to 45° deviation for slanted windows
+                if (angleDiff <= 45)
                 {
-                    cubes[idx].Direction = snapAngle;
+                    // Apply snap angle to all notes in this group
+                    foreach (int idx in group)
+                    {
+                        cubes[idx].Direction = snapAngle;
+                    }
                 }
             }
         }
