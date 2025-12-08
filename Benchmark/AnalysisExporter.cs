@@ -250,7 +250,6 @@ namespace Benchmark
                     SlantedWindows = rating.Patterns.SlantedWindows,
                     Sliders = rating.Patterns.Sliders,
                     CurvedSliders = rating.Patterns.CurvedSliders,
-                    Loloppes = rating.Patterns.Loloppes,
                     DodgeWalls = rating.Patterns.DodgeWalls,
                     CrouchWalls = rating.Patterns.CrouchWalls,
                     ParityErrors = rating.Patterns.ParityErrors,
@@ -260,7 +259,7 @@ namespace Benchmark
                 {
                     DodgeWalls = rating.DodgeWalls.Select(w => new
                     {
-                        Time = Math.Round(w.Beats, 3),
+                        Time = Math.Round(w.BpmTime, 3),
                         Duration = Math.Round(w.DurationInBeats, 3),
                         X = w.x,
                         Y = w.y,
@@ -269,7 +268,7 @@ namespace Benchmark
                     }).ToList(),
                     CrouchWalls = rating.CrouchWalls.Select(w => new
                     {
-                        Time = Math.Round(w.Beats, 3),
+                        Time = Math.Round(w.BpmTime, 3),
                         Duration = Math.Round(w.DurationInBeats, 3),
                         X = w.x,
                         Y = w.y,
@@ -712,10 +711,6 @@ namespace Benchmark
                     <div class=""pattern-badge"">
                         <div class=""count"">${{data.Patterns.CurvedSliders}}</div>
                         <div class=""label"">Curved Sliders</div>
-                    </div>
-                    <div class=""pattern-badge"">
-                        <div class=""count"">${{data.Patterns.Loloppes}}</div>
-                        <div class=""label"">Loloppes</div>
                     </div>
                     <div class=""pattern-badge"">
                         <div class=""count"">${{data.Patterns.DodgeWalls}}</div>
@@ -1309,7 +1304,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <option value=""Tower"">Tower</option>
                     <option value=""Window"">Window</option>
                     <option value=""Slanted Window"">Slanted Window</option>
-                    <option value=""Loloppe"">Loloppe</option>
                     <option value=""Slider"">Slider</option>
                     <option value=""Curved Slider"">Curved Slider</option>
                 </select>
@@ -1840,7 +1834,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <option value=""Tower"">Tower</option>
                     <option value=""Window"">Window</option>
                     <option value=""Slanted Window"">Slanted Window</option>
-                    <option value=""Loloppe"">Loloppe</option>
                     <option value=""Slider"">Slider</option>
                     <option value=""Curved Slider"">Curved Slider</option>
                 </select>

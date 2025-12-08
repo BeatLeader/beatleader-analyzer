@@ -27,7 +27,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
 
             // Sort walls by time to group simultaneous walls
             var wallsByTime = walls
-                .OrderBy(w => w.Beats)
+                .OrderBy(w => w.BpmTime)
                 .ToList();
 
             var processed = new HashSet<int>();
@@ -66,7 +66,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                 // Group walls that occur at the same time (within tolerance)
                 for (int j = i + 1; j < wallsByTime.Count; j++)
                 {
-                    if (Math.Abs(wallsByTime[j].Beats - currentWall.Beats) <= TIME_TOLERANCE)
+                    if (Math.Abs(wallsByTime[j].BpmTime - currentWall.BpmTime) <= TIME_TOLERANCE)
                     {
                         simultaneousWalls.Add(wallsByTime[j]);
                         processed.Add(j);
@@ -81,7 +81,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                 if (IsCrouchWall(simultaneousWalls))
                 {
                     // Check if enough time has passed since player could stand up from last crouch
-                    float timeSinceLastCrouch = currentWall.Beats - lastCrouchEndTime;
+                    float timeSinceLastCrouch = currentWall.BpmTime - lastCrouchEndTime;
                     
                     if (timeSinceLastCrouch >= cooldownBeats)
                     {
@@ -94,7 +94,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                             
                             // Track the wall with longest duration for potential extension
                             lastCrouchWall = crouchWalls.OrderByDescending(w => w.DurationInBeats).First();
-                            lastCrouchEndTime = lastCrouchWall.Beats + lastCrouchWall.DurationInBeats;
+                            lastCrouchEndTime = lastCrouchWall.BpmTime + lastCrouchWall.DurationInBeats;
                         }
                     }
                     else if (lastCrouchWall != null)
@@ -103,8 +103,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                         var crouchWalls = simultaneousWalls.Where(w => w.y == 2).ToList();
                         if (crouchWalls.Count > 0)
                         {
-                            float currentWallEnd = crouchWalls.Max(w => w.Beats + w.DurationInBeats);
-                            float newDuration = currentWallEnd - lastCrouchWall.Beats;
+                            float currentWallEnd = crouchWalls.Max(w => w.BpmTime + w.DurationInBeats);
+                            float newDuration = currentWallEnd - lastCrouchWall.BpmTime;
                             lastCrouchWall.DurationInBeats = newDuration;
                             lastCrouchEndTime = currentWallEnd;
                         }
@@ -142,7 +142,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                     }
 
                     // Check if enough time has passed since last dodge in this area
-                    float timeSinceLastDodge = currentWall.Beats - lastDodgeTime[coverageKey];
+                    float timeSinceLastDodge = currentWall.BpmTime - lastDodgeTime[coverageKey];
                     
                     if (timeSinceLastDodge >= cooldownBeats)
                     {
@@ -152,24 +152,24 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                         
                         // Track this wall for potential duration extension
                         lastDodgeWall[coverageKey] = currentWall;
-                        lastDodgeTime[coverageKey] = currentWall.Beats;
+                        lastDodgeTime[coverageKey] = currentWall.BpmTime;
                         
                         // Also update "both" if we covered a specific side
                         if (coverageKey != "both")
                         {
                             // If covering both sides separately in quick succession, track that too
                             float otherSideTime = coverageKey == "left" ? lastDodgeTime["right"] : lastDodgeTime["left"];
-                            if (currentWall.Beats - otherSideTime < cooldownBeats)
+                            if (currentWall.BpmTime - otherSideTime < cooldownBeats)
                             {
-                                lastDodgeTime["both"] = currentWall.Beats;
+                                lastDodgeTime["both"] = currentWall.BpmTime;
                             }
                         }
                     }
                     else if (lastDodgeWall[coverageKey] != null)
                     {
                         // Player is already dodged - extend the duration of the previous wall
-                        float currentWallEnd = currentWall.Beats + currentWall.DurationInBeats;
-                        float newDuration = currentWallEnd - lastDodgeWall[coverageKey].Beats;
+                        float currentWallEnd = currentWall.BpmTime + currentWall.DurationInBeats;
+                        float newDuration = currentWallEnd - lastDodgeWall[coverageKey].BpmTime;
                         lastDodgeWall[coverageKey].DurationInBeats = newDuration;
                         lastDodgeTime[coverageKey] = currentWallEnd;
                         

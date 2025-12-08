@@ -27,7 +27,7 @@ namespace Analyzer.BeatmapScanner
 
             foreach (var chain in chains)
             {
-                var found = cubes.FirstOrDefault(x => x.Time == chain.Beats && x.Type == chain.Color && x.Line == chain.x && x.Layer == chain.y && x.CutDirection == chain.CutDirection);
+                var found = cubes.FirstOrDefault(x => x.Time == chain.BpmTime && x.Type == chain.Color && x.Line == chain.x && x.Layer == chain.y && x.CutDirection == chain.CutDirection);
                 if (found != null)
                 {
                     found.Chain = true;

@@ -187,7 +187,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 bool isWindow = IsWindow(cubes, patternIndices, out bool isSlanted);
                 bool isTower = IsTower(cubes, patternIndices);
                 bool isStack = IsStack(cubes, patternIndices);
-                bool isLoloppe = IsLoloppe(cubes, patternIndices);
                 
                 // DEBUG: Log classification results
                 if (noteCount >= 2 && patternIndices.All(i => cubes[i].CutDirection == 8))
@@ -205,7 +204,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                                 writer.WriteLine($"  IsWindow: {isWindow} (slanted: {isSlanted})");
                                 writer.WriteLine($"  IsTower: {isTower}");
                                 writer.WriteLine($"  IsStack: {isStack}");
-                                writer.WriteLine($"  IsLoloppe: {isLoloppe}");
                                 writer.WriteLine();
                             }
                         }
@@ -231,10 +229,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 else if (isStack)
                 {
                     stats.Stacks++;
-                }
-                else if (isLoloppe)
-                {
-                    stats.Loloppes++;
                 }
             }
             else
@@ -273,12 +267,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                     {
                         return isSlanted ? "Slanted Window" : "Window";
                     }
-                    else if (IsLoloppe(cubes, patternIndices))
-                    {
-                        return "Loloppe";
-                    }
                 }
-                else if (noteCount == 3)
+                else if (noteCount >= 3)
                 {
                     if (IsTower(cubes, patternIndices))
                     {
@@ -389,29 +379,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             bool sameDirection = vec1X == vec2X && vec1Y == vec2Y;
 
             return isCollinear && isDiagonal1 && isDiagonal2 && sameDirection;
-        }
-
-        /// <summary>
-        /// Checks if two adjacent notes form a Loloppe (perpendicular to swing direction).
-        /// </summary>
-        private static bool IsLoloppe(List<Cube> cubes, List<int> indices)
-        {
-            if (indices.Count != 2) return false;
-
-            Cube note1 = cubes[indices[0]];
-            Cube note2 = cubes[indices[1]];
-
-            if (note1.CutDirection == 8 || note2.CutDirection == 8) return false;
-
-            double direction = note1.Direction != 8 ? note1.Direction : note2.Direction;
-
-            int lineDiff = Math.Abs(note1.Line - note2.Line);
-            int layerDiff = Math.Abs(note1.Layer - note2.Layer);
-
-            bool isAdjacent = lineDiff == 1 && layerDiff == 0 || lineDiff == 0 && layerDiff == 1;
-            if (!isAdjacent) return false;
-
-            return IsPerpendicularToSwingDirection(note1, note2, direction);
         }
 
         /// <summary>
@@ -537,10 +504,13 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// </summary>
         private static bool IsAlignedInSwingDirection(Cube note1, Cube note2)
         {
-            double direction = note1.CutDirection != 8 ? note1.Direction : note2.Direction;
-            if (direction == 8) return true;
-
-            return IsAlignedInSwingDirection(note1, note2, direction);
+            // We still don't know the direction, so we can just assume that it's fine if there's a dot note
+            if (note1.CutDirection == 8 || note2.CutDirection == 8) return true;
+            if (note1.Time >41 && note1.Time < 42)
+            {
+                Console.WriteLine(note1.Direction);
+            }
+            return IsAlignedInSwingDirection(note1, note2, note1.Direction);
         }
 
         /// <summary>

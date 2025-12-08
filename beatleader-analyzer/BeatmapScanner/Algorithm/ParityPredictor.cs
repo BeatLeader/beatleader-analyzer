@@ -121,8 +121,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             // Get bombs between previous and current swing (strictly between)
             var bombsBetween = bombs
-                .Where(b => b.Beats > prevSwing.Beat && b.Beats < currentSwing.Beat)
-                .OrderBy(b => b.Beats)
+                .Where(b => b.BpmTime > prevSwing.Beat && b.BpmTime < currentSwing.Beat)
+                .OrderBy(b => b.BpmTime)
                 .ToList();
 
             if (bombsBetween.Count == 0)

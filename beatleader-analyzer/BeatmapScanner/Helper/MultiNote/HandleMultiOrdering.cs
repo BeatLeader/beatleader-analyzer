@@ -23,16 +23,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
             var timeGroupedCubes = cubes.GroupBy(x => x.Time).ToDictionary(x => x.Key, x => x.ToArray());
 
-#if NET9_0_OR_GREATER
-            var timeGroupedCubeIndices = new OrderedDictionary<float, int[]>(
-                cubes
-                    .Select((val, index) => (index, val))
-                    .Where(x => x.val.CutDirection != 8)
-                    .GroupBy(x => x.val.Time, x => x.index)
-                    .Select(x => new KeyValuePair<float, int[]>(x.Key, [.. x]))
-            );
-#endif
-
             int skipCount = 0;
 
             for (int n = 0; n < cubes.Count - 1; n++)

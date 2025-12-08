@@ -133,7 +133,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 foreach (var wall in crouchWalls)
                 {
-                    float wallStart = wall.Beats;
+                    float wallStart = wall.BpmTime;
                     float wallDuration = wall.DurationInBeats;
                     float wallEnd = wallStart + wallDuration;
 
@@ -155,8 +155,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private static bool IsSwingDuringWall(SwingData swing, Wall wall)
         {
             float wallDuration = wall.DurationInBeats;
-            float wallEnd = wall.Beats + wallDuration;
-            return swing.Beat >= wall.Beats && swing.Beat <= wallEnd;
+            float wallEnd = wall.BpmTime + wallDuration;
+            return swing.Beat >= wall.BpmTime && swing.Beat <= wallEnd;
         }
 
         public static List<PerSwing> CalcAverage(List<SwingData> swingData, int WINDOW)

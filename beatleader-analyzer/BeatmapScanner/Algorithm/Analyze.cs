@@ -168,7 +168,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 CurvedSliders = redMultiNotes.CurvedSliders + blueMultiNotes.CurvedSliders,
                 Windows = redMultiNotes.Windows + blueMultiNotes.Windows,
                 SlantedWindows = redMultiNotes.SlantedWindows + blueMultiNotes.SlantedWindows,
-                Loloppes = redMultiNotes.Loloppes + blueMultiNotes.Loloppes,
                 DodgeWalls = dodgeWallCount,
                 CrouchWalls = crouchWallCount,
                 ParityErrors = parityErrorsCount,
