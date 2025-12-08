@@ -132,7 +132,16 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                     return false;
                 }
                 
-                // For sliders, check direction consistency and alignment
+                // Special case: Notes at the same position (dot spam)
+                // These should always be considered multi-note hits if close enough in time
+                int xDiff = next.Line - prev.Line;
+                int yDiff = next.Layer - prev.Layer;
+                if (xDiff == 0 && yDiff == 0 && prev.CutDirection == 8 && next.CutDirection == 8)
+                {
+                    return true;
+                }
+                
+                // For sliders with position changes, check direction consistency and alignment
                 if (next.CutDirection != 8)
                 {
                     if (!IsSameDir(prev.Direction, next.Direction))
