@@ -11,7 +11,7 @@ namespace Analyzer.BeatmapScanner.Data
         public int SlantedWindows { get; set; } = 0;
         public int DodgeWalls { get; set; } = 0;
         public int CrouchWalls { get; set; } = 0;
-        public int Resets { get; set; } = 0;
-        public int BombResets { get; set; } = 0;
+        public int ParityErrors { get; set; } = 0;
+        public int BombAvoidances { get; set; } = 0;
     }
 }

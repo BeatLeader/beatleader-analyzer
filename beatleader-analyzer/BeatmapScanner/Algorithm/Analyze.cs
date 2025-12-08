@@ -7,6 +7,7 @@ using beatleader_analyzer.BeatmapScanner.Data;
 using System.Runtime.InteropServices;
 using static beatleader_analyzer.BeatmapScanner.Helper.MultiNote.MultiNoteClassifier;
 using static beatleader_analyzer.BeatmapScanner.Helper.WallHelper.WallClassifier;
+using beatleader_analyzer.BeatmapScanner.Helper.Debug;
 using Parser.Map.Difficulty.V3.Grid;
 using System.IO;
 using System.Text;
@@ -18,8 +19,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class Analyze
     {
-        private const double PASS_CALIBRATION_FACTOR = 0.752;
+        private const double PASS_CALIBRATION_FACTOR = 0.3;
         private const double ONE_SABER_NERF = 0.35;
+        private const double BALANCED_TECH_SCALER = 10.0;
 
         public static Ratings UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm, List<Wall> walls = null, List<Bomb> bombs = null)
         {
@@ -27,9 +29,17 @@ namespace Analyzer.BeatmapScanner.Algorithm
             List<SwingData> blueSwingData = [];
             List<SwingData> combinedSwingData = [];
 
+            // Generate a session ID for this analysis run to group related logs
+            string sessionId = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fff");
+
             if (red.Count > 2)
             {
                 FlowDetector.Detect(red, bpm, false, bombs);
+                
+                // Debug: Log processed red cubes after flow detection
+                CubeDebugLogger.LogProcessedCubes(red, "Red", bpm, sessionId);
+                CubeDebugLogger.LogMultiNotePatterns(red, "Red", sessionId);
+                
                 redSwingData = SwingProcesser.Process(red);
                 
                 if (redSwingData.Count > 0)
@@ -43,6 +53,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
             if (blue.Count > 2)
             {
                 FlowDetector.Detect(blue, bpm, true, bombs);
+                
+                // Debug: Log processed blue cubes after flow detection
+                CubeDebugLogger.LogProcessedCubes(blue, "Blue", bpm, sessionId);
+                CubeDebugLogger.LogMultiNotePatterns(blue, "Blue", sessionId);
+                
                 blueSwingData = SwingProcesser.Process(blue);
                 
                 if (blueSwingData.Count > 0)
@@ -51,6 +66,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     SwingCurve.Calc(blueSwingData, true);
                     combinedSwingData.AddRange(blueSwingData);
                 }
+            }
+            
+            // Debug: Log combined cubes to a single file for easy comparison
+            if (red.Count > 2 || blue.Count > 2)
+            {
+                CubeDebugLogger.LogProcessedCubesCombined(red, blue, bpm, sessionId);
             }
 
             combinedSwingData.Sort((a, b) => a.Beat.CompareTo(b.Beat));
@@ -116,7 +137,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 combinedSwingData.Sort(CompareAngleAndPathStrain);
                 double tech = AverageAnglePath(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
-                balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass));
+                balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * BALANCED_TECH_SCALER;
             }
 
             var redMultiNotes = red.Count > 2 ? CountMultiNoteHits(red, bpm) : new Statistics();
@@ -136,8 +157,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
             int dodgeWallCount = dodgeWallsCount;
             int crouchWallCount = crouchWallsCount;
 
-            int resetCount = combinedSwingData.Count(s => s.Reset);
-            int bombResetCount = combinedSwingData.Count(s => s.BombReset);
+            int parityErrorsCount = combinedSwingData.Count(s => s.ParityErrors);
+            int bombAvoidanceCount = combinedSwingData.Count(s => s.BombAvoidance);
 
             var combinedPatterns = new Statistics
             {
@@ -150,8 +171,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 Loloppes = redMultiNotes.Loloppes + blueMultiNotes.Loloppes,
                 DodgeWalls = dodgeWallCount,
                 CrouchWalls = crouchWallCount,
-                Resets = resetCount,
-                BombResets = bombResetCount
+                ParityErrors = parityErrorsCount,
+                BombAvoidances = bombAvoidanceCount
             };
 
             combinedSwingData.Sort((x, y) => x.Beat.CompareTo(y.Beat));
@@ -189,3 +210,4 @@ namespace Analyzer.BeatmapScanner.Algorithm
         }
     }
 }
+

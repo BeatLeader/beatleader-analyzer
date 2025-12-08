@@ -13,7 +13,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class ParityPredictor
     {
-        private const double RESET_PENALTY = 10.0;
+        private const double MISMATCH_PENALTY = 10.0;
         private const double BOMB_REPOSITIONING_COST = 2.0;
         private const double LEFT_FOREHAND_NEUTRAL = 292.5;
         private const double RIGHT_FOREHAND_NEUTRAL = 247.5;
@@ -94,8 +94,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
 
             swings[0].Forehand = parityPath[0] == 1;
-            swings[0].Reset = false;
-            swings[0].BombReset = false;
+            swings[0].ParityErrors = false;
+            swings[0].BombAvoidance = false;
 
             for (int i = 1; i < n; i++)
             {
@@ -104,8 +104,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 bool sameDirection = IsSameDir(swings[i - 1].Angle, swings[i].Angle);
                 bool sameParity = swings[i].Forehand == swings[i - 1].Forehand;
                 
-                swings[i].Reset = sameDirection && sameParity;
-                swings[i].BombReset = bombInfluences[i].hasBombs;
+                swings[i].ParityErrors = sameDirection && sameParity;
+                swings[i].BombAvoidance = bombInfluences[i].hasBombs;
             }
         }
 
@@ -216,7 +216,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 if (fromParity == toParity)
                 {
-                    baseCost = RESET_PENALTY;
+                    baseCost = MISMATCH_PENALTY;
                 }
                 else
                 {
@@ -228,7 +228,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 if (fromParity != toParity)
                 {
-                    baseCost = RESET_PENALTY + BOMB_REPOSITIONING_COST;
+                    baseCost = MISMATCH_PENALTY + BOMB_REPOSITIONING_COST;
                 }
                 else
                 {

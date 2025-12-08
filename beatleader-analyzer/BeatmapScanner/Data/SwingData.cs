@@ -13,8 +13,8 @@ namespace Analyzer.BeatmapScanner.Data
         public (double x, double y) EntryPosition { get; set; } = (0, 0);
         public (double x, double y) ExitPosition { get; set; } = (0, 0);
         public bool Forehand { get; set; } = true;
-        public bool Reset { get; set; } = false;
-        public bool BombReset { get; set; } = false;
+        public bool ParityErrors { get; set; } = false;
+        public bool BombAvoidance { get; set; } = false;
         public double AngleStrain { get; set; } = 0;
         public double PathStrain { get; set; } = 0;
         public double ExcessDistance { get; set; } = 0;

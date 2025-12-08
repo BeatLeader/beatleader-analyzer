@@ -102,7 +102,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     (double x, double y) simHandCurPos = swingData[i].EntryPosition;
                     (double x, double y) simHandPrePos;
 
-                    if (!swingData[i].Reset && !swingData[i - 1].Reset)
+                    if (!swingData[i].ParityErrors && !swingData[i - 1].ParityErrors)
                     {
                         simHandPrePos = swingData[i - 2].EntryPosition;
                     }
@@ -125,7 +125,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 double first, last, pathLookback;
 
-                if (swingData[i].Reset)
+                if (swingData[i].ParityErrors)
                 {
                     pathLookback = 0.9;
                     first = 0.5;

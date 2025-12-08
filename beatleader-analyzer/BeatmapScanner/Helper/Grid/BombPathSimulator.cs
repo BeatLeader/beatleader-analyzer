@@ -73,7 +73,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.Grid
             int playerX = (int)Math.Round(startX);
             int playerY = (int)Math.Round(startY);
             double currentDirection = lastSwingDirection;
-            bool hadBombReset = false;
+            bool hadBombAvoidance = false;
             int relocationCount = 0;
 
             // Check each bomb in chronological order
@@ -84,7 +84,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.Grid
                 {
                     // Bomb spawns where player is standing!
                     // Player MUST relocate to opposite grid edge
-                    hadBombReset = true;
+                    hadBombAvoidance = true;
                     relocationCount++;
 
                     // Reverse direction by 180°
@@ -100,7 +100,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.Grid
                 // else: Bomb is elsewhere, player stays put
             }
 
-            return (playerX, playerY, currentDirection, hadBombReset, relocationCount);
+            return (playerX, playerY, currentDirection, hadBombAvoidance, relocationCount);
         }
     }
 }

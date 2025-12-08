@@ -253,8 +253,8 @@ namespace Benchmark
                     Loloppes = rating.Patterns.Loloppes,
                     DodgeWalls = rating.Patterns.DodgeWalls,
                     CrouchWalls = rating.Patterns.CrouchWalls,
-                    Resets = rating.Patterns.Resets,
-                    BombResets = rating.Patterns.BombResets
+                    ParityErrors = rating.Patterns.ParityErrors,
+                    BombAvoidances = rating.Patterns.BombAvoidances
                 },
                 Walls = new
                 {
@@ -289,8 +289,8 @@ namespace Benchmark
                         Hand = s.Start.Type == 0 ? "Red" : "Blue",
                         Angle = Math.Round(s.Angle, 1),
                         Parity = s.Forehand ? "Forehand" : "Backhand",
-                        Reset = s.Reset,
-                        BombReset = s.BombReset,
+                        ParityError = s.ParityErrors,
+                        BombAvoidance = s.BombAvoidance,
                         AngleStrain = Math.Round(s.AngleStrain, 3),
                         PathStrain = Math.Round(s.PathStrain, 3)
                     })
@@ -299,8 +299,8 @@ namespace Benchmark
                 {
                     AverageDifficulty = Math.Round(rating.SwingData.Average(s => s.SwingDiff), 3),
                     MaxDifficulty = Math.Round(rating.SwingData.Max(s => s.SwingDiff), 3),
-                    ResetPercentage = Math.Round((double)rating.Patterns.Resets / rating.SwingData.Count * 100, 3),
-                    BombResetPercentage = Math.Round((double)rating.Patterns.BombResets / rating.SwingData.Count * 100, 3),
+                    ParityErrorPercentage = Math.Round((double)rating.Patterns.ParityErrors / rating.SwingData.Count * 100, 3),
+                    BombAvoidancePercentage = Math.Round((double)rating.Patterns.BombAvoidances / rating.SwingData.Count * 100, 3),
                     RedHandSwings = rating.SwingData.Count(s => s.Start.Type == 0),
                     BlueHandSwings = rating.SwingData.Count(s => s.Start.Type == 1)
                 }
@@ -728,12 +728,12 @@ namespace Benchmark
                         <div class=""label"">Crouch Walls</div>
                     </div>
                     <div class=""pattern-badge"">
-                        <div class=""count"">${{data.Patterns.Resets}}</div>
-                        <div class=""label"">Resets</div>
+                        <div class=""count"">${{data.Patterns.ParityErrors}}</div>
+                        <div class=""label"">Parity Errors</div>
                     </div>
                     <div class=""pattern-badge"">
-                        <div class=""count"">${{data.Patterns.BombResets}}</div>
-                        <div class=""label"">Bomb Resets</div>
+                        <div class=""count"">${{data.Patterns.BombAvoidances}}</div>
+                        <div class=""label"">Bomb Avoidances</div>
                     </div>
                 </div>
                 
@@ -825,8 +825,8 @@ namespace Benchmark
                                 </div>
                                 <div style=""margin-top: 5px;"">
                                     <span class=""badge badge-${{swing.Hand.toLowerCase()}}"">${{swing.Hand}} Hand</span>
-                                    ${{swing.Reset ? '<span class=""badge badge-reset"">RESET</span>' : ''}}
-                                    ${{swing.BombReset ? '<span class=""badge badge-bomb"">BOMB RESET</span>' : ''}}
+                                    ${{swing.ParityError ? '<span class=""badge badge-reset"">RESET</span>' : ''}}
+                                    ${{swing.BombAvoidance ? '<span class=""badge badge-bomb"">BOMB RESET</span>' : ''}}
                                 </div>
                             </div>
                         </div>
@@ -839,14 +839,14 @@ namespace Benchmark
             new Chart(ctx, {{
                 type: 'bar',
                 data: {{
-                    labels: ['Avg Difficulty', 'Max Difficulty', 'Reset %', 'Bomb Reset %'],
+                    labels: ['Avg Difficulty', 'Max Difficulty', 'Parity Error %', 'Bomb Avoidance %'],
                     datasets: [{{
                         label: 'Statistics',
                         data: [
                             data.Statistics.AverageDifficulty,
                             data.Statistics.MaxDifficulty,
-                            data.Statistics.ResetPercentage,
-                            data.Statistics.BombResetPercentage
+                            data.Statistics.ParityErrorPercentage,
+                            data.Statistics.BombAvoidancePercentage
                         ],
                         backgroundColor: [
                             'rgba(102, 126, 234, 0.8)',
@@ -943,8 +943,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     },
                     Angle = Math.Round(s.Angle, 1),
                     Parity = s.Forehand ? "Forehand" : "Backhand",
-                    Reset = s.Reset,
-                    BombReset = s.BombReset,
+                    ParityError = s.ParityErrors,
+                    BombAvoidance = s.BombAvoidance,
                     Difficulty = Math.Round(s.SwingDiff, 3),
                     Metrics = new
                     {
@@ -1105,8 +1105,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 Angle = Math.Round(s.Angle, 1),
                 Parity = s.Forehand ? "Forehand" : "Backhand",
                 PatternType = s.PatternType,
-                Reset = s.Reset,
-                BombReset = s.BombReset,
+                ParityError = s.ParityErrors,
+                BombAvoidance = s.BombAvoidance,
                 Difficulty = Math.Round(s.SwingDiff, 3),
                 AngleStrain = Math.Round(s.AngleStrain, 3),
                 PathStrain = Math.Round(s.PathStrain, 3),
@@ -1331,10 +1331,10 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <option value=""Curved Slider"">Curved Slider</option>
                 </select>
                 <label>
-                    <input type=""checkbox"" id=""filterReset""> Show Resets Only
+                    <input type=""checkbox"" id=""filterParityError""> Show Parity Errors Only
                 </label>
                 <label>
-                    <input type=""checkbox"" id=""filterBombReset""> Show Bomb Resets Only
+                    <input type=""checkbox"" id=""filterBombAvoidance""> Show Bomb Avoidances Only
                 </label>
                 <button onclick=""resetFilters()"">Reset Filters</button>
             </div>
@@ -1391,8 +1391,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <td><span class=""badge badge-${{swing.Parity.toLowerCase()}}"">${{swing.Parity}}</span></td>
                     <td>${{swing.PatternType}}</td>
                     <td>
-                        ${{swing.Reset ? '<span class=""badge badge-reset"">R</span>' : ''}}
-                        ${{swing.BombReset ? '<span class=""badge badge-reset"">B</span>' : ''}}
+                        ${{swing.ParityError ? '<span class=""badge badge-reset"">PE</span>' : ''}}
+                        ${{swing.BombAvoidance ? '<span class=""badge badge-reset"">BA</span>' : ''}}
                     </td>
                     <td><strong>${{swing.Difficulty}}</strong></td>
                     <td>${{swing.AngleStrain}}</td>
@@ -1407,16 +1407,16 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             const handFilter = document.getElementById('filterHand').value;
             const parityFilter = document.getElementById('filterParity').value;
             const patternFilter = document.getElementById('filterPattern').value;
-            const resetOnly = document.getElementById('filterReset').checked;
-            const bombResetOnly = document.getElementById('filterBombReset').checked;
+            const parityErrorOnly = document.getElementById('filterParityError').checked;
+            const bombAvoidanceOnly = document.getElementById('filterBombAvoidance').checked;
             
             filteredData = swingData.filter(swing => {{
                 if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
                 if (handFilter && swing.Hand !== handFilter) return false;
                 if (parityFilter && swing.Parity !== parityFilter) return false;
                 if (patternFilter && swing.PatternType !== patternFilter) return false;
-                if (resetOnly && !swing.Reset) return false;
-                if (bombResetOnly && !swing.BombReset) return false;
+                if (parityErrorOnly && !swing.ParityError) return false;
+                if (bombAvoidanceOnly && !swing.BombAvoidance) return false;
                 return true;
             }});
             
@@ -1428,8 +1428,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             document.getElementById('filterHand').value = '';
             document.getElementById('filterParity').value = '';
             document.getElementById('filterPattern').value = '';
-            document.getElementById('filterReset').checked = false;
-            document.getElementById('filterBombReset').checked = false;
+            document.getElementById('filterParityError').checked = false;
+            document.getElementById('filterBombAvoidance').checked = false;
             applyFilters();
         }}
         
@@ -1438,8 +1438,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             const handFilter = document.getElementById('filterHand').value;
             const parityFilter = document.getElementById('filterParity').value;
             const patternFilter = document.getElementById('filterPattern').value;
-            const resetOnly = document.getElementById('filterReset').checked;
-            const bombResetOnly = document.getElementById('filterBombReset').checked;
+            const parityErrorOnly = document.getElementById('filterParityError').checked;
+            const bombAvoidanceOnly = document.getElementById('filterBombAvoidance').checked;
             
             filteredData = swingData.filter(swing => {{
                 if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
@@ -1454,8 +1454,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                         if (swing.PatternType !== patternFilter) return false;
                     }}
                 }}
-                if (resetOnly && !swing.Reset) return false;
-                if (bombResetOnly && !swing.BombReset) return false;
+                if (parityErrorOnly && !swing.ParityError) return false;
+                if (bombAvoidanceOnly && !swing.BombAvoidance) return false;
                 return true;
             }});
             
@@ -1466,8 +1466,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         document.getElementById('filterHand').addEventListener('change', applyFilters);
         document.getElementById('filterParity').addEventListener('change', applyFilters);
         document.getElementById('filterPattern').addEventListener('change', applyFilters);
-        document.getElementById('filterReset').addEventListener('change', applyFilters);
-        document.getElementById('filterBombReset').addEventListener('change', applyFilters);
+        document.getElementById('filterParityError').addEventListener('change', applyFilters);
+        document.getElementById('filterBombAvoidance').addEventListener('change', applyFilters);
         
         // Add sort functionality
         function sortTable(column, type) {{
@@ -1599,8 +1599,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     Angle = Math.Round(s.Angle, 1),
                     Parity = s.Forehand ? "Forehand" : "Backhand",
                     PatternType = s.PatternType,
-                    Reset = s.Reset,
-                    BombReset = s.BombReset,
+                    ParityError = s.ParityErrors,
+                    BombAvoidance = s.BombAvoidance,
                     Difficulty = Math.Round(s.SwingDiff, 3),
                     AngleStrain = Math.Round(s.AngleStrain, 3),
                     PathStrain = Math.Round(s.PathStrain, 3),
@@ -1874,10 +1874,10 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <option value=""Curved Slider"">Curved Slider</option>
                 </select>
                 <label>
-                    <input type=""checkbox"" id=""filterReset""> Show Resets Only
+                    <input type=""checkbox"" id=""filterParityError""> Show Parity Errors Only
                 </label>
                 <label>
-                    <input type=""checkbox"" id=""filterBombReset""> Show Bomb Resets Only
+                    <input type=""checkbox"" id=""filterBombAvoidance""> Show Bomb Avoidances Only
                 </label>
                 <button onclick=""resetFilters()"">Reset Filters</button>
             </div>
@@ -1997,8 +1997,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <td><span class=""badge badge-${{swing.Parity.toLowerCase()}}"">${{swing.Parity}}</span></td>
                     <td>${{swing.PatternType}}</td>
                     <td>
-                        ${{swing.Reset ? '<span class=""badge badge-reset"">R</span>' : ''}}
-                        ${{swing.BombReset ? '<span class=""badge badge-reset"">B</span>' : ''}}
+                        ${{swing.ParityError ? '<span class=""badge badge-reset"">PE</span>' : ''}}
+                        ${{swing.BombAvoidance ? '<span class=""badge badge-reset"">BA</span>' : ''}}
                     </td>
                     <td><strong>${{swing.Difficulty}}</strong></td>
                     <td>${{swing.AngleStrain}}</td>
@@ -2013,8 +2013,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             const handFilter = document.getElementById('filterHand').value;
             const parityFilter = document.getElementById('filterParity').value;
             const patternFilter = document.getElementById('filterPattern').value;
-            const resetOnly = document.getElementById('filterReset').checked;
-            const bombResetOnly = document.getElementById('filterBombReset').checked;
+            const parityErrorOnly = document.getElementById('filterParityError').checked;
+            const bombAvoidanceOnly = document.getElementById('filterBombAvoidance').checked;
             
             filteredData = swingData.filter(swing => {{
                 if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
@@ -2029,8 +2029,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                         if (swing.PatternType !== patternFilter) return false;
                     }}
                 }}
-                if (resetOnly && !swing.Reset) return false;
-                if (bombResetOnly && !swing.BombReset) return false;
+                if (parityErrorOnly && !swing.ParityError) return false;
+                if (bombAvoidanceOnly && !swing.BombAvoidance) return false;
                 return true;
             }});
             
@@ -2042,8 +2042,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             document.getElementById('filterHand').value = '';
             document.getElementById('filterParity').value = '';
             document.getElementById('filterPattern').value = '';
-            document.getElementById('filterReset').checked = false;
-            document.getElementById('filterBombReset').checked = false;
+            document.getElementById('filterParityError').checked = false;
+            document.getElementById('filterBombAvoidance').checked = false;
             applyFilters();
         }}
         
@@ -2051,8 +2051,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         document.getElementById('filterHand').addEventListener('change', applyFilters);
         document.getElementById('filterParity').addEventListener('change', applyFilters);
         document.getElementById('filterPattern').addEventListener('change', applyFilters);
-        document.getElementById('filterReset').addEventListener('change', applyFilters);
-        document.getElementById('filterBombReset').addEventListener('change', applyFilters);
+        document.getElementById('filterParityError').addEventListener('change', applyFilters);
+        document.getElementById('filterBombAvoidance').addEventListener('change', applyFilters);
         
         function sortTable(column, type) {{
             if (currentSortColumn === column) {{

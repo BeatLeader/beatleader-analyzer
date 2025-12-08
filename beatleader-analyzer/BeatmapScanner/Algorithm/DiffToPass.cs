@@ -14,7 +14,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     internal class DiffToPass
     {
         private const double STREAM_BONUS = 1.05;
-        private const double RESET_MULTIPLIER = 2.0;
+        private const double PARITY_ERROR_MULTIPLIER = 2.0;
         
         // Distance falloff constants adjusted for meter scale
         // Previously 3.0 in normalized units, now 1.8m for meter scale
@@ -28,7 +28,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private const double SPEED_FALLOFF_BASE = 1.4;
         private const double STRESS_FALLOFF = 2.0;
         private const double DODGE_WALL_BUFF = 1.01;
-        private const double CROUCH_WALL_INITIAL_BUFF = 1.10;
         private const double CROUCH_WALL_DURING_BUFF = 1.05;
 
         public static void CalcSwingDiff(List<SwingData> swingData, double bpm, List<Wall> dodgeWalls = null, List<Wall> crouchWalls = null)
@@ -61,9 +60,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double distanceDiff = swing.ExcessDistance / (swing.ExcessDistance + DISTANCE_FALLOFF) + 1.0;
                 
                 double swingSpeed = swing.SwingFrequency * distanceDiff * bps;
-                if (swing.Reset)
+                if (swing.ParityErrors)
                 {
-                    swingSpeed *= RESET_MULTIPLIER;
+                    swingSpeed *= PARITY_ERROR_MULTIPLIER;
                 }
                 
                 double xHitDist = swing.EntryPosition.x - swing.ExitPosition.x;
@@ -126,24 +125,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                     if (swing.Beat >= wallStart && swing.Beat <= wallEnd)
                     {
-                        bool isInitial = i > 0 && swingData[i - 1].Beat < wallStart;
-
-                        if (isInitial)
-                        {
-                            maxBuff = Math.Max(maxBuff, CROUCH_WALL_INITIAL_BUFF);
-                        }
-                        else
-                        {
-                            maxBuff = Math.Max(maxBuff, CROUCH_WALL_DURING_BUFF);
-                        }
-                    }
-                    else if (i < swingData.Count - 1)
-                    {
-                        var nextSwing = swingData[i + 1];
-                        if (swing.Beat < wallStart && nextSwing.Beat >= wallStart)
-                        {
-                            maxBuff = Math.Max(maxBuff, CROUCH_WALL_INITIAL_BUFF);
-                        }
+                        maxBuff = Math.Max(maxBuff, CROUCH_WALL_DURING_BUFF);
                     }
                 }
 

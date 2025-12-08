@@ -1,6 +1,7 @@
 using Analyzer.BeatmapScanner.Data;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 {
@@ -152,9 +153,67 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             int noteCount = patternIndices.Count;
             bool isSimultaneous = AreNotesSimultaneous(cubes, patternIndices);
 
+            // DEBUG: Log problematic patterns
+            if (noteCount >= 2 && isSimultaneous)
+            {
+                var firstNote = cubes[patternIndices[0]];
+                if ((Math.Abs(firstNote.Time - 196f) < 0.1f || Math.Abs(firstNote.Time - 197f) < 0.1f || 
+                     Math.Abs(firstNote.Time - 217f) < 0.1f || Math.Abs(firstNote.Time - 248f) < 0.1f) &&
+                    patternIndices.All(i => cubes[i].CutDirection == 8))
+                {
+                    try
+                    {
+                        string logPath = "C:\\Temp\\classification_debug.txt";
+                        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath));
+                        
+                        using (var writer = new System.IO.StreamWriter(logPath, append: true))
+                        {
+                            writer.WriteLine($"=== CLASSIFYING PATTERN at Time {firstNote.Time} ===");
+                            writer.WriteLine($"Note count: {noteCount}, Simultaneous: {isSimultaneous}");
+                            for (int i = 0; i < patternIndices.Count; i++)
+                            {
+                                var note = cubes[patternIndices[i]];
+                                writer.WriteLine($"  Note {i}: Line={note.Line}, Layer={note.Layer}, Direction={note.Direction:F2}");
+                            }
+                            writer.WriteLine($"About to classify...");
+                        }
+                    }
+                    catch { }
+                }
+            }
+
             if (isSimultaneous)
             {
-                if (IsWindow(cubes, patternIndices, out bool isSlanted))
+                bool isWindow = IsWindow(cubes, patternIndices, out bool isSlanted);
+                bool isTower = IsTower(cubes, patternIndices);
+                bool isStack = IsStack(cubes, patternIndices);
+                bool isLoloppe = IsLoloppe(cubes, patternIndices);
+                
+                // DEBUG: Log classification results
+                if (noteCount >= 2 && patternIndices.All(i => cubes[i].CutDirection == 8))
+                {
+                    var firstNote = cubes[patternIndices[0]];
+                    if (Math.Abs(firstNote.Time - 196f) < 0.1f || Math.Abs(firstNote.Time - 197f) < 0.1f || 
+                        Math.Abs(firstNote.Time - 217f) < 0.1f || Math.Abs(firstNote.Time - 248f) < 0.1f)
+                    {
+                        try
+                        {
+                            string logPath = "C:\\Temp\\classification_debug.txt";
+                            using (var writer = new System.IO.StreamWriter(logPath, append: true))
+                            {
+                                writer.WriteLine($"Classification checks:");
+                                writer.WriteLine($"  IsWindow: {isWindow} (slanted: {isSlanted})");
+                                writer.WriteLine($"  IsTower: {isTower}");
+                                writer.WriteLine($"  IsStack: {isStack}");
+                                writer.WriteLine($"  IsLoloppe: {isLoloppe}");
+                                writer.WriteLine();
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                
+                if (isWindow)
                 {
                     if (isSlanted)
                     {
@@ -165,15 +224,15 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                         stats.Windows++;
                     }
                 }
-                else if (IsTower(cubes, patternIndices))
+                else if (isTower)
                 {
                     stats.Towers++;
                 }
-                else if (IsStack(cubes, patternIndices))
+                else if (isStack)
                 {
                     stats.Stacks++;
                 }
-                else if (IsLoloppe(cubes, patternIndices))
+                else if (isLoloppe)
                 {
                     stats.Loloppes++;
                 }
@@ -268,6 +327,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
         /// <summary>
         /// Checks if two adjacent notes form a Stack (aligned in swing direction).
+        /// Includes orthogonally adjacent (horizontal/vertical) and diagonally adjacent notes.
         /// </summary>
         private static bool IsStack(List<Cube> cubes, List<int> indices)
         {
@@ -279,7 +339,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             int lineDiff = Math.Abs(note1.Line - note2.Line);
             int layerDiff = Math.Abs(note1.Layer - note2.Layer);
 
-            bool isAdjacent = lineDiff == 1 && layerDiff == 0 || lineDiff == 0 && layerDiff == 1;
+            // Check for adjacency: orthogonal (h/v) or diagonal
+            bool isOrthogonallyAdjacent = (lineDiff == 1 && layerDiff == 0) || (lineDiff == 0 && layerDiff == 1);
+            bool isDiagonallyAdjacent = lineDiff == 1 && layerDiff == 1;
+            bool isAdjacent = isOrthogonallyAdjacent || isDiagonallyAdjacent;
 
             if (!isAdjacent) return false;
 

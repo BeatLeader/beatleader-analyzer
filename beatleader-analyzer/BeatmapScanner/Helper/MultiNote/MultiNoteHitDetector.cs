@@ -115,6 +115,33 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 // For simultaneous notes (stacks, windows, towers, etc.),
                 // there's no X/Y distance limit - they can be anywhere on the grid
                 // No distance check needed for simultaneous multi-note patterns
+                
+                // If both notes are dots, we can't reliably determine the swing direction yet
+                // Just check if they form a valid geometric pattern (adjacent or with gap)
+                if (prev.CutDirection == 8 && next.CutDirection == 8)
+                {
+                    int xDiff = Math.Abs(next.Line - prev.Line);
+                    int yDiff = Math.Abs(next.Layer - prev.Layer);
+                    
+                    // Adjacent (stack/tower) or have gap (window)
+                    bool isAdjacent = (xDiff <= 1 && yDiff == 0) || (xDiff == 0 && yDiff <= 1) || (xDiff == 1 && yDiff == 1);
+                    bool hasGap = xDiff >= 2 || yDiff >= 2;
+                    
+                    return isAdjacent || hasGap;
+                }
+                
+                // If at least one note has an arrow, we can infer the direction
+                // and check alignment
+                if (prev.CutDirection != 8 || next.CutDirection != 8)
+                {
+                    // Use the arrow note's direction for alignment check
+                    double checkDirection = prev.CutDirection != 8 ? prev.Direction : next.Direction;
+                    
+                    if (!IsPositionAlignedWithDirection(prev, next, checkDirection, isSimultaneous))
+                    {
+                        return false;
+                    }
+                }
             }
             else
             {
@@ -128,19 +155,20 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 {
                     return false;
                 }
-            }
+                
+                // For sliders, check direction consistency and alignment
+                if (next.CutDirection != 8)
+                {
+                    if (!IsSameDir(prev.Direction, next.Direction))
+                    {
+                        return false;
+                    }
+                }
 
-            if (next.CutDirection != 8)
-            {
-                if (!IsSameDir(prev.Direction, next.Direction))
+                if (!IsPositionAlignedWithDirection(prev, next, prev.Direction, isSimultaneous))
                 {
                     return false;
                 }
-            }
-
-            if (!IsPositionAlignedWithDirection(prev, next, prev.Direction, isSimultaneous))
-            {
-                return false;
             }
 
             return true;

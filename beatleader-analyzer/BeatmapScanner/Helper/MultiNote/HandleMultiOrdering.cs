@@ -5,6 +5,7 @@ using Analyzer.BeatmapScanner.Data;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using Analyzer.BeatmapScanner.Algorithm;
 
 namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 {
@@ -49,11 +50,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                     Cube[] simultaneousNotes = timeGroupedCubes[currentCube.Time];
                     skipCount = simultaneousNotes.Length - 1;
 
-                    double entryDirection = DetermineSwingDirection(cubes, currentCube, n, bpm
-#if NET9_0_OR_GREATER
-                        , timeGroupedCubeIndices
-#endif
-                    );
+                    double entryDirection = DetermineSwingDirection(cubes, currentCube, n, bpm);
 
                     if (entryDirection == -1)
                     {
@@ -74,11 +71,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             }
         }
 
-        private static double DetermineSwingDirection(List<Cube> cubes, Cube currentCube, int currentIndex, float bpm
-#if NET9_0_OR_GREATER
-            , OrderedDictionary<float, int[]> timeGroupedCubeIndices
-#endif
-        )
+        private static double DetermineSwingDirection(List<Cube> cubes, Cube currentCube, int currentIndex, float bpm)
         {
             var timeGroupedCubes = cubes.Where(c => c.Time == currentCube.Time).ToArray();
             Cube arrowNote = timeGroupedCubes.LastOrDefault(c => c.CutDirection != 8);
@@ -88,48 +81,64 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 return ReverseCutDirection(Mod(DirectionToDegree[arrowNote.CutDirection] + arrowNote.AngleOffset, 360));
             }
 
-            int foundArrowIndex;
+            // All notes in the group are dots - calculate geometric direction and validate with flow
+            // For dots, infer direction from the geometric angle between first and last note
+            var first = timeGroupedCubes[0];
+            var last = timeGroupedCubes[timeGroupedCubes.Length - 1];
 
-#if NET9_0_OR_GREATER
-            var timeIndex = timeGroupedCubeIndices.IndexOf(currentCube.Time);
-            if (timeIndex != -1)
+            int lineDiff = last.Line - first.Line;
+            int layerDiff = last.Layer - first.Layer;
+
+            if (lineDiff != 0 || layerDiff != 0)
             {
-                timeIndex++;
-            }
-            else
-            {
-                timeIndex = -1;
-                for (int i = 0; i < timeGroupedCubeIndices.Count; i++)
+                double angleRad = Math.Atan2(layerDiff, lineDiff);
+                double angleDeg = angleRad * 180.0 / Math.PI;
+                if (angleDeg < 0) angleDeg += 360;
+
+                double inferredSwingDirection = angleDeg;
+
+                // Validate the inferred direction by checking flow consistency with the last direction
+                // Find the previous direction note before this group
+                int prevNoteIndex = -1;
+                for (int i = currentIndex - 1; i >= 0; i--)
                 {
-                    if (timeGroupedCubeIndices.GetAt(i).Key > currentCube.Time)
+                    if (cubes[i].Direction != 8)
                     {
-                        timeIndex = i;
+                        prevNoteIndex = i;
                         break;
                     }
                 }
-            }
-            foundArrowIndex = timeIndex == -1 ? -1 : timeGroupedCubeIndices.GetAt(timeIndex).Value[0];
-#else
-            foundArrowIndex = cubes.FindIndex(c => c.CutDirection != 8 && c.Time > currentCube.Time);
-#endif
 
-            if (foundArrowIndex == -1)
-            {
-                return -1;
-            }
-
-            Cube futureArrow = cubes[foundArrowIndex];
-            double direction = ReverseCutDirection(Mod(DirectionToDegree[futureArrow.CutDirection] + futureArrow.AngleOffset, 360));
-
-            for (int i = foundArrowIndex - 1; i > currentIndex; i--)
-            {
-                if (!AreNotesCloseInDepth(cubes[i], cubes[i + 1], bpm))
+                if (prevNoteIndex >= 0)
                 {
-                    direction = ReverseCutDirection(direction);
+                    // Reverse the direction for each note between the arrow and current group
+                    // to predict what direction we should have at this group
+                    double predictedDirection = cubes[prevNoteIndex].Direction; ;
+                    for (int i = prevNoteIndex; i < currentIndex; i++)
+                    {
+                        // Check if notes are close enough in time to maintain flow direction
+                        if (i + 1 < cubes.Count && !AreNotesCloseInDepth(cubes[i], cubes[i + 1], bpm))
+                        {
+                            predictedDirection = ReverseCutDirection(predictedDirection);
+                        }
+                    }
+
+                    // Compare predicted direction with inferred direction
+                    // Allow ±90° tolerance for natural flow variation
+                    double angleDiff = Math.Abs(Mod(inferredSwingDirection - predictedDirection + 180, 360) - 180);
+
+                    // If the inferred direction doesn't align with flow, use the reverse direction
+                    if (angleDiff > 90)
+                    {
+                        inferredSwingDirection = Mod(inferredSwingDirection + 180, 360);
+                    }
                 }
+
+                // Return the entry direction (reverse of swing direction)
+                return ReverseCutDirection(inferredSwingDirection);
             }
 
-            return direction;
+            return FlowDetector.InferDirectionFromFutureArrow(cubes, 0, bpm); ; // No direction available, potentially the first note?
         }
 
         private static (double x, double y) CalculateEntryPoint(List<Cube> cubes, int startIndex, double swingDirection)

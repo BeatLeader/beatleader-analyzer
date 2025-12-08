@@ -351,7 +351,63 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 cubes[prevIndex].Tail = false;
             }
             
-            cubes[currentIndex].Tail = true;
+            
+            // Only mark as Tail if we're sure this is the last note in the pattern
+            // Check if there are more simultaneous notes that could be part of this pattern
+            bool isLastInPattern = true;
+            if (currentIndex + 1 < cubes.Count)
+            {
+                float currentTime = cubes[currentIndex].Time;
+                int currentType = cubes[currentIndex].Type;
+                
+                // Find all remaining simultaneous notes of the same type
+                for (int i = currentIndex + 1; i < cubes.Count; i++)
+                {
+                    if (Math.Abs(cubes[i].Time - currentTime) >= 0.001f)
+                    {
+                        // No more simultaneous notes
+                        break;
+                    }
+                    
+                    if (cubes[i].Type != currentType)
+                    {
+                        // Different hand
+                        continue;
+                    }
+                    
+                    // Check if this note forms a valid multi-note hit with ANY note in the current pattern
+                    // Multi-note hits don't require adjacency (windows can have gaps, for example)
+                    bool isPartOfPattern = false;
+                    
+                    for (int j = prevIndex; j <= currentIndex; j++)
+                    {
+                        if (!cubes[j].Pattern || cubes[j].Type != currentType)
+                        {
+                            continue;
+                        }
+                        
+                        // Use the same multi-note hit detection logic used elsewhere
+                        // Notes are simultaneous (already verified above) and same type
+                        // So we just need to check if they could form a valid multi-note hit
+                        if (IsMultiNoteHit(cubes[j], cubes[i], 0)) // BPM doesn't matter for simultaneous notes
+                        {
+                            isPartOfPattern = true;
+                            break;
+                        }
+                    }
+                    
+                    if (isPartOfPattern)
+                    {
+                        isLastInPattern = false;
+                        break;
+                    }
+                }
+            }
+            
+            if (isLastInPattern)
+            {
+                cubes[currentIndex].Tail = true;
+            }
         }
     }
 }
