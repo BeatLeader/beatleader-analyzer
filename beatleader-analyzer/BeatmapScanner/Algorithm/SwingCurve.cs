@@ -23,10 +23,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
         // Maximum reasonable distance in meters squared (full grid diagonal ~3m, squared = 9m²)
         // Using 4.68m² (sqrt(4.68) ≈ 2.16m) as practical maximum for position complexity
         private const double MAX_GRID_DISTANCE_SQUARED = 4.68;
-        
-        // Distance normalization factor in meters for excess distance calculation
-        // Adjusted for meter scale (previously 3.0 in normalized units)
-        private const double EXCESS_DISTANCE_NORMALIZATION = 1.8;
 
         public static void Calc(List<SwingData> swingData, bool isRightHand)
         {
@@ -34,11 +30,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 return;
             }
-
-            swingData[0].PathStrain = 0;
-            swingData[0].PositionComplexity = 0;
-            swingData[0].ExcessDistance = 0;
-            swingData[0].CurveComplexity = 0;
 
             var cosValues = new double[swingData.Count];
             var sinValues = new double[swingData.Count];
@@ -73,7 +64,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 double dx = point3.X - point0.X;
                 double dy = point3.Y - point0.Y;
-                double directDistance = Math.Sqrt(dx * dx + dy * dy);
 
                 for (int f = 1; f < point.Length; f++)
                 {
@@ -94,8 +84,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     angleCount++;
                 }
 
-                double rawExcessDistance = Math.Max(0, distance - directDistance);
-                double excessDistance = Math.Min(rawExcessDistance / EXCESS_DISTANCE_NORMALIZATION, 1.0);
+                distance -= 0.75;
 
                 if (i > 1)
                 {
@@ -119,8 +108,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     {
                         rawPositionComplexity = MAX_GRID_DISTANCE_SQUARED;
                     }   
-
-                    positionComplexity = rawPositionComplexity / MAX_GRID_DISTANCE_SQUARED;
                 }
 
                 double first, last, pathLookback;
@@ -160,14 +147,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
 
                 swingData[i].PositionComplexity = positionComplexity;
-                swingData[i].ExcessDistance = excessDistance;
+                swingData[i].PreviousDistance = distance;
                 swingData[i].CurveComplexity = curveComplexity;
-                
+                swingData[i].AnglePathStrain = pathAngleStrain;
+
                 swingData[i].PathStrain =
                     0.25 * curveComplexity +
                     0.25 * pathAngleStrain +
-                    0.25 * positionComplexity +
-                    0.25 * excessDistance;
+                    0.25 * positionComplexity;
             }
 
             if (UseParallel)

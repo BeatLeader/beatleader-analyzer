@@ -83,7 +83,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             for (int i = 0; i < swingData.Count; i++)
             {
                 var swing = swingData[i];
-                double distanceDiff = swing.ExcessDistance / (swing.ExcessDistance + DISTANCE_FALLOFF) + 1.0;
+                double distanceDiff = swing.PreviousDistance / (swing.PreviousDistance + DISTANCE_FALLOFF) + 1;
                 
                 double swingSpeed = swing.SwingFrequency * distanceDiff * bps;
                 if (swing.ParityErrors)

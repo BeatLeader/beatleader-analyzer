@@ -270,7 +270,7 @@ namespace Benchmark
                 html.AppendLine($"                        <td class=\"{handClass}\">{(swing.Start.Type == 0 ? "Red" : "Blue")}</td>");
                 html.AppendLine($"                        <td>{swing.PatternType}</td>");
                 html.AppendLine($"                        <td>{swing.SwingFrequency:F3}</td>");
-                html.AppendLine($"                        <td>{swing.ExcessDistance:F3}</td>");
+                html.AppendLine($"                        <td>{swing.PreviousDistance:F3}</td>");
                 html.AppendLine($"                        <td>{swing.DistanceDiff:F3}</td>");
                 html.AppendLine($"                        <td>{swing.SwingSpeed:F3}</td>");
                 html.AppendLine($"                        <td>{swing.AngleStrain:F3}</td>");
