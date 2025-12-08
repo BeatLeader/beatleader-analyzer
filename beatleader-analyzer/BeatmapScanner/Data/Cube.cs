@@ -23,6 +23,7 @@ namespace Analyzer.BeatmapScanner.Data
         public bool Chain { get; set; } = false;
         public int TailLine { get; set; } = 0;
         public int TailLayer {  get; set; } = 0;
+        public int TailDirection { get; set; } = 0;
         public float Squish { get; set; } = 0f;
         
         
@@ -47,6 +48,7 @@ namespace Analyzer.BeatmapScanner.Data
             Chain = cube.Chain;
             TailLine = cube.TailLine;
             TailLayer = cube.TailLayer;
+            TailDirection = cube.TailDirection;
             Squish = cube.Squish;
         }
 

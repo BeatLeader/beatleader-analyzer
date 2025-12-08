@@ -287,6 +287,7 @@ namespace Benchmark
                         Difficulty = Math.Round(s.SwingDiff, 3),
                         Hand = s.Start.Type == 0 ? "Red" : "Blue",
                         Angle = Math.Round(s.Angle, 1),
+                        Direction = Benchmark.AngleToDirection(s.Angle),
                         Parity = s.Forehand ? "Forehand" : "Backhand",
                         ParityError = s.ParityErrors,
                         BombAvoidance = s.BombAvoidance,
@@ -813,7 +814,7 @@ namespace Benchmark
                                 <div>
                                     <strong>Beat:</strong> ${{swing.Time}} | 
                                     <strong>Difficulty:</strong> ${{swing.Difficulty}} | 
-                                    <strong>Angle:</strong> ${{swing.Angle}}° | 
+                                    <strong>Angle:</strong> ${{swing.Angle}}° (${{swing.Direction}}) | 
                                     <strong>Parity:</strong> ${{swing.Parity}}
                                 </div>
                                 <div style=""margin-top: 5px;"">
@@ -935,6 +936,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                         Y = Math.Round(s.ExitPosition.y, 3)
                     },
                     Angle = Math.Round(s.Angle, 1),
+                    Direction = Benchmark.AngleToDirection(s.Angle),
                     Parity = s.Forehand ? "Forehand" : "Backhand",
                     ParityError = s.ParityErrors,
                     BombAvoidance = s.BombAvoidance,
@@ -1087,6 +1089,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 ExitX = Math.Round(s.ExitPosition.x, 3),
                 ExitY = Math.Round(s.ExitPosition.y, 3),
                 Angle = Math.Round(s.Angle, 1),
+                Direction = Benchmark.AngleToDirection(s.Angle),
                 Parity = s.Forehand ? "Forehand" : "Backhand",
                 PatternType = s.PatternType,
                 ParityError = s.ParityErrors,
@@ -1332,7 +1335,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                             <th class=""sortable"" data-column=""Position"" data-type=""string"">Position</th>
                             <th class=""sortable"" data-column=""Entry"" data-type=""string"">Entry</th>
                             <th class=""sortable"" data-column=""Exit"" data-type=""string"">Exit</th>
-                            <th class=""sortable"" data-column=""Angle"" data-type=""number"">Angle</th>
+                            <th class=""sortable"" data-column=""Angle"" data-type=""number"">Angle / Direction</th>
                             <th class=""sortable"" data-column=""Parity"" data-type=""string"">Parity</th>
                             <th class=""sortable"" data-column=""PatternType"" data-type=""string"">Pattern Type</th>
                             <th>Flags</th>
@@ -1361,7 +1364,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <td>(${{swing.Line}}, ${{swing.Layer}})</td>
                     <td>(${{swing.EntryX}}, ${{swing.EntryY}})</td>
                     <td>(${{swing.ExitX}}, ${{swing.ExitY}})</td>
-                    <td>${{swing.Angle}}°</td>
+                    <td>${{swing.Angle}}° (${{swing.Direction}})</td>
                     <td><span class=""badge badge-${{swing.Parity.toLowerCase()}}"">${{swing.Parity}}</span></td>
                     <td>${{swing.PatternType}}</td>
                     <td>
@@ -1669,6 +1672,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     ExitX = Math.Round(s.ExitPosition.x, 3),
                     ExitY = Math.Round(s.ExitPosition.y, 3),
                     Angle = Math.Round(s.Angle, 1),
+                    Direction = Benchmark.AngleToDirection(s.Angle),
                     Parity = s.Forehand ? "Forehand" : "Backhand",
                     PatternType = s.PatternType,
                     ParityError = s.ParityErrors,
@@ -1963,7 +1967,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                             <th class=""sortable"" data-column=""Position"" data-type=""string"">Position</th>
                             <th class=""sortable"" data-column=""Entry"" data-type=""string"">Entry</th>
                             <th class=""sortable"" data-column=""Exit"" data-type=""string"">Exit</th>
-                            <th class=""sortable"" data-column=""Angle"" data-type=""number"">Angle</th>
+                            <th class=""sortable"" data-column=""Angle"" data-type=""number"">Angle / Direction</th>
                             <th class=""sortable"" data-column=""Parity"" data-type=""string"">Parity</th>
                             <th class=""sortable"" data-column=""PatternType"" data-type=""string"">Pattern Type</th>
                             <th>Flags</th>
@@ -2055,7 +2059,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <td>(${{swing.Line}}, ${{swing.Layer}})</td>
                     <td>(${{swing.EntryX}}, ${{swing.EntryY}})</td>
                     <td>(${{swing.ExitX}}, ${{swing.ExitY}})</td>
-                    <td>${{swing.Angle}}°</td>
+                    <td>${{swing.Angle}}° (${{swing.Direction}})</td>
                     <td><span class=""badge badge-${{swing.Parity.toLowerCase()}}"">${{swing.Parity}}</span></td>
                     <td>${{swing.PatternType}}</td>
                     <td>
@@ -2222,3 +2226,5 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         }
     }
 }
+
+

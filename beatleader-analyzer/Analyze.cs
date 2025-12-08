@@ -9,13 +9,13 @@ namespace beatleader_analyzer
 {
     public class Analyze
     {
-        public Ratings GetRating(DifficultyV3 diff, string characteristic, string difficulty, float bpm, float timescale = 1, float njsMult = 1)
+        public Ratings GetRating(DifficultyV3 diff, string characteristic, string difficulty, float bpm, float timescale = 1, float njsMult = 1, bool strictAngles = false)
         {
             try
             {
                 if (diff.Notes.Count >= 20)
                 {
-                    Ratings rating = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(diff.Notes, diff.Chains, diff.Bombs, diff.Walls, bpm, timescale, njsMult);
+                    Ratings rating = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(diff.Notes, diff.Chains, diff.Bombs, diff.Walls, bpm, timescale, njsMult, strictAngles);
                     rating.Characteristic = characteristic;
                     rating.Difficulty = difficulty;
                     return rating;
@@ -32,7 +32,7 @@ namespace beatleader_analyzer
             }
         }
 
-        public List<Ratings> GetRating(BeatmapV3 beatmap, string characteristic, float timescale = 1, float njsMult = 1)
+        public List<Ratings> GetRating(BeatmapV3 beatmap, string characteristic, float timescale = 1, float njsMult = 1, bool strictAngles = false)
         {
             List<Ratings> ratings = [];
             var data = beatmap.Info._difficultyBeatmapSets.FirstOrDefault(x => x._beatmapCharacteristicName == characteristic);
@@ -43,7 +43,7 @@ namespace beatleader_analyzer
                 {
                     if (difficulty.Data.Notes.Count >= 20)
                     {
-                        Ratings rating = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(difficulty.Data.Notes, difficulty.Data.Chains, difficulty.Data.Bombs, difficulty.Data.Walls, beatmap.Info._beatsPerMinute, timescale, njsMult);
+                        Ratings rating = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(difficulty.Data.Notes, difficulty.Data.Chains, difficulty.Data.Bombs, difficulty.Data.Walls, beatmap.Info._beatsPerMinute, timescale, njsMult, strictAngles);
                         rating.Characteristic = difficulty.Characteristic;
                         rating.Difficulty = difficulty.Difficulty;
                         ratings.Add(rating);

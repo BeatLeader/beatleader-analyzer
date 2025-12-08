@@ -21,7 +21,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private const double ONE_SABER_NERF = 0.35;
         private const double BALANCED_TECH_SCALER = 10.0;
 
-        public static Ratings UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm, List<Wall> walls = null, List<Bomb> bombs = null)
+        public static Ratings UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm, List<Wall> walls = null, List<Bomb> bombs = null, bool strictAngles = false)
         {
             List<SwingData> redSwingData = [];
             List<SwingData> blueSwingData = [];
@@ -32,13 +32,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (red.Count > 2)
             {
-                FlowDetector.Detect(red, bpm, false, bombs);
+                PreprocessNotes.Detect(red, bpm, false, bombs);
                 
                 // Debug: Log processed red cubes after flow detection
                 CubeDebugLogger.LogProcessedCubes(red, "Red", bpm, sessionId);
                 CubeDebugLogger.LogMultiNotePatterns(red, "Red", sessionId);
                 
-                redSwingData = SwingProcesser.Process(red);
+                redSwingData = SwingProcesser.Process(red, strictAngles);
                 
                 if (redSwingData.Count > 0)
                 {
@@ -50,13 +50,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (blue.Count > 2)
             {
-                FlowDetector.Detect(blue, bpm, true, bombs);
+                PreprocessNotes.Detect(blue, bpm, true, bombs);
                 
                 // Debug: Log processed blue cubes after flow detection
                 CubeDebugLogger.LogProcessedCubes(blue, "Blue", bpm, sessionId);
                 CubeDebugLogger.LogMultiNotePatterns(blue, "Blue", sessionId);
                 
-                blueSwingData = SwingProcesser.Process(blue);
+                blueSwingData = SwingProcesser.Process(blue, strictAngles);
                 
                 if (blueSwingData.Count > 0)
                 {

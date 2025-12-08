@@ -128,7 +128,9 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 return ReverseCutDirection(inferredSwingDirection);
             }
 
-            return FlowDetector.InferDirectionFromFutureArrow(cubes, 0, bpm); ; // No direction available, potentially the first note?
+            // No direction available - use default based on position
+            // If no previous notes, assume entry from bottom-center
+            return cubes[currentIndex].Layer >= 2 ? 270 : 90; // Default to down if high, up if low
         }
 
         private static (double x, double y) CalculateEntryPoint(List<Cube> cubes, int startIndex, double swingDirection)

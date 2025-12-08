@@ -34,10 +34,9 @@ namespace Analyzer.BeatmapScanner.Data
         public double SwingDiff { get; set; } = 0;
         public string PatternType { get; set; } = "Single";
 
-        public SwingData(double beat, double angle, Cube start)
+        public SwingData(double beat, Cube start)
         {
             Beat = beat;
-            Angle = angle;
             Start = start;
         }
 

@@ -9,7 +9,7 @@ namespace Analyzer.BeatmapScanner
 {
     internal class BeatmapScanner
     {
-        public static Ratings Analyzer(List<Note> notes, List<Chain> chains, List<Bomb> bombs, List<Wall> walls, float bpm, float timescale, float njsMult = 1)
+        public static Ratings Analyzer(List<Note> notes, List<Chain> chains, List<Bomb> bombs, List<Wall> walls, float bpm, float timescale, float njsMult = 1, bool strictAngles = false)
         {
             Ratings ratings;
             List<Cube> cubes = [];
@@ -33,6 +33,7 @@ namespace Analyzer.BeatmapScanner
                     found.Chain = true;
                     found.TailLine = chain.tx;
                     found.TailLayer = chain.ty;
+                    found.TailDirection = chain.TailCutDirection;
                     found.Squish = chain.Squish;
                 }
             }
@@ -40,7 +41,7 @@ namespace Analyzer.BeatmapScanner
             var red = cubes.Where(c => c.Type == 0).ToList();
             var blue = cubes.Where(c => c.Type == 1).ToList();
 
-            return Analyze.UseLackWizAlgorithm(red, blue, bpm, walls, bombs);
+            return Analyze.UseLackWizAlgorithm(red, blue, bpm, walls, bombs, strictAngles);
         }
     }
 }

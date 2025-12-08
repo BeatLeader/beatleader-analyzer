@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.MultiNote.MultiNoteHitDetector;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
 
 namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 {
@@ -17,9 +16,9 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// Detects if two notes form a multi-note hit pattern and ensures they are in correct order.
         /// For simultaneous notes, orders them by their alignment with the swing direction.
         /// </summary>
-        public static bool DetectAndOrderMultiNoteHit(List<Cube> cubes, int prevIndex, int currentIndex, float bpm, out bool needsReorder)
+        public static bool DetectAndOrderMultiNoteHit(List<Cube> cubes, int prevIndex, int currentIndex, float bpm)
         {
-            needsReorder = false;
+            bool needsReorder = false;
             
             if (prevIndex < 0 || currentIndex >= cubes.Count)
             {

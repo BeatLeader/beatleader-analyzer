@@ -1,12 +1,6 @@
 ﻿using Analyzer.BeatmapScanner.Data;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.CalculateBaseEntryExit;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
-using static beatleader_analyzer.BeatmapScanner.Helper.Grid.FindAngleViaPosition;
-using static beatleader_analyzer.BeatmapScanner.Helper.Grid.GridPositionHelper;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.CalculateEntryExit;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -16,7 +10,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class SwingProcesser
     {
-        public static List<SwingData> Process(List<Cube> cubes)
+        public static List<SwingData> Process(List<Cube> cubes, bool strictAngles = false)
         {
             if (cubes.Count == 0)
             {
@@ -33,40 +27,33 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
             int[] headCubes = headIndices.ToArray();
             
-            var swingData = new List<SwingData>(cubes.Count);
-
-            swingData.Add(new SwingData(cubes[0].Time, cubes[0].Direction, cubes[0]));
-            (swingData[^1].EntryPosition, swingData[^1].ExitPosition) = 
-                CalcBaseEntryExit((cubes[0].Line, cubes[0].Layer), cubes[0].Direction);
+            var swingData = new List<SwingData>(cubes.Count)
+            {
+                new SwingData(cubes[0].Time, cubes[0])
+            };
+            // Calculate entry and exit positions, and set angle.
+            CalcEntryExit(null, swingData[^1], strictAngles);
 
             for (int i = 1; i < cubes.Count; i++)
             {
                 var previousAngle = swingData[^1].Angle;
                 var currentBeat = cubes[i].Time;
-                var currentAngle = cubes[i].Direction;
-                (double x, double y) currentPosition = (cubes[i].Line, cubes[i].Layer);
 
                 if (!cubes[i].Pattern || cubes[i].Head)
                 {
-                    swingData.Add(new SwingData(currentBeat, currentAngle, cubes[i]));
-                    (swingData[^1].EntryPosition, swingData[^1].ExitPosition) = CalcBaseEntryExit(currentPosition, currentAngle);
+                    swingData.Add(new SwingData(currentBeat, cubes[i]));
+                    // Calculate entry and exit positions, and set angle.
+                    CalcEntryExit(swingData[^2], swingData[^1], strictAngles);
                     
                     if (cubes[i].Chain)
                     {
-                        double angleInRadians = ConvertDegreesToRadians(currentAngle);
-                        double cosAngle = Math.Cos(angleInRadians);
-                        double sinAngle = Math.Sin(angleInRadians);
-                        
-                        // Chain tail position in meters using centered grid
-                        (double tailX, double tailY) = GridToMeters(cubes[i].TailLine, cubes[i].TailLayer);
-                        swingData[^1].ExitPosition = (
-                            (tailX + cosAngle * NOTE_SIZE) * cubes[i].Squish, 
-                            (tailY + sinAngle * NOTE_SIZE) * cubes[i].Squish
-                        );
+                        // Override exit position for chains
+                        CalcChainExit(swingData[^1], cubes[i]);
                     }
                 }
                 else
                 {
+                    // Multi-note pattern: find the head note index
                     int headIndex = -1;
                     for (int h = headCubes.Length - 1; h >= 0; h--)
                     {
@@ -77,23 +64,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         }
                     }
 
-                    if (headIndex >= 0)
-                    {
-                        currentAngle = FindAngleViaPos(cubes[i], cubes[headIndex], previousAngle, true);
-                    }
-
-                    swingData[^1].Angle = currentAngle;
-                    
-                    double angleInRadians = ConvertDegreesToRadians(currentAngle);
-                    double cosAngle = Math.Cos(angleInRadians);
-                    double sinAngle = Math.Sin(angleInRadians);
-                    
-                    // Multi-note exit position in meters using centered grid
-                    (double noteX, double noteY) = GridToMeters(currentPosition.x, currentPosition.y);
-                    double noteExitX = noteX + cosAngle * NOTE_SIZE;
-                    double noteExitY = noteY + sinAngle * NOTE_SIZE;
-
-                    swingData[^1].ExitPosition = (noteExitX, noteExitY);
+                    // Calculate multi-note exit position with averaged angle
+                    Cube headCube = headIndex >= 0 ? cubes[headIndex] : null;
+                    CalcMultiNoteExit(swingData[^1], cubes[i], headCube, strictAngles);
                 }
             }
 
