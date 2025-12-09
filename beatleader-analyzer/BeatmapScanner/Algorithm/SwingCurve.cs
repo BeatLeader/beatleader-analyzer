@@ -150,7 +150,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 swingData[i].PositionComplexity = positionComplexity;
                 swingData[i].CurveComplexity = curveComplexity;
-                swingData[i].AnglePathStrain = pathAngleStrain;
+                swingData[i].AnglePathStrain = pathAngleStrain * 2;
 
                 swingData[i].PathStrain = curveComplexity + pathAngleStrain + positionComplexity;
             }

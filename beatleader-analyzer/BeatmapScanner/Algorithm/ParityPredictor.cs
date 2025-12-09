@@ -51,14 +51,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             var dpCost = new double[numSwings, 2];
             var dpPrev = new int[numSwings, 2];
-            var bombInfluences = new (bool hasBombs, int blockingLayer, int blockingLine)[numSwings];
+            var bombInfluences = new (bool hasBombs, bool parityFlip, double playerX, double playerY)[numSwings];
 
             int firstIdx = swingIndices[0];
             dpCost[0, 0] = CalculateAngleStrain(cubes[firstIdx].Direction, false, isRightHand);
             dpCost[0, 1] = CalculateAngleStrain(cubes[firstIdx].Direction, true, isRightHand);
             dpPrev[0, 0] = -1;
             dpPrev[0, 1] = -1;
-            bombInfluences[0] = (false, 0, 0);
+            bombInfluences[0] = (false, false, -1, -1);
 
             for (int swingIdx = 1; swingIdx < numSwings; swingIdx++)
             {
@@ -66,7 +66,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 int prevNoteIdx = swingIndices[swingIdx - 1];
                 
                 bool sameDirection = IsSameDir(cubes[prevNoteIdx].Direction, cubes[currNoteIdx].Direction);
-                var bombInfluence = bombs != null ? AnalyzeBombInfluence(cubes, prevNoteIdx, currNoteIdx, bombs) : (false, 0, 0);
+                var bombInfluence = bombs != null ? AnalyzeBombInfluence(cubes, prevNoteIdx, currNoteIdx, bombs) : (false, false, -1, -1);
                 bombInfluences[swingIdx] = bombInfluence;
 
                 for (int currParity = 0; currParity <= 1; currParity++)
@@ -80,7 +80,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     for (int prevParity = 0; prevParity <= 1; prevParity++)
                     {
                         double transitionCost = CalculateTransitionCost(
-                            prevParity, currParity, sameDirection, bombInfluence);
+                            prevParity, currParity, sameDirection, (bombInfluence.hasBombs, bombInfluence.parityFlip));
 
                         double totalCost = dpCost[swingIdx - 1, prevParity] + angleCost + transitionCost;
 
@@ -149,7 +149,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 bool sameParity = cubes[currNoteIdx].Forehand == cubes[prevSwingHeadIdx].Forehand;
 
                 cubes[currNoteIdx].ParityErrors = sameDirection && sameParity;
-                cubes[currNoteIdx].BombAvoidance = bombInfluences[swingIdx].Item1;
+                cubes[currNoteIdx].BombAvoidance = bombInfluences[swingIdx].hasBombs;
 
                 // Apply same parity to all notes in this pattern group
                 if (cubes[currNoteIdx].Pattern && cubes[currNoteIdx].Head)
@@ -166,11 +166,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
         }
 
-        private static (bool hasBombs, int blockingLayer, int blockingLine) AnalyzeBombInfluence(List<Cube> cubes, int prevSwingHeadIndex, int currentSwingHeadIndex, List<Bomb> bombs)
+        public static (bool hasBombs, bool parityFlip, double playerX, double playerY) AnalyzeBombInfluence(List<Cube> cubes, int prevSwingHeadIndex, int currentSwingHeadIndex, List<Bomb> bombs)
         {
             if (bombs == null || bombs.Count == 0)
             {
-                return (false, 0, 0);
+                return (false, false, -1, -1);
             }
 
             // Get the tail of the previous swing (for patterns) or the head itself (for single notes)
@@ -200,7 +200,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (allRelevantBombs.Count == 0)
             {
-                return (false, 0, 0);
+                return (false, false, -1, -1);
             }
 
             // Calculate player's position after previous swing
@@ -219,8 +219,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             bool encounteredBomb = false;
             int reversalCount = 0;
-            int lastBombX = 0;
-            int lastBombY = 0;
+            bool parityFlip = false;
 
             // Simulate player trying to recover from swing and encountering bombs
             foreach (var bomb in allRelevantBombs)
@@ -232,27 +231,50 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 if (distToBomb < 0.8)
                 {
-                    // Bomb is at player's position! Player must reverse direction
+                    // Bomb is at player's position! Player must avoid it
                     reversalCount++;
                     encounteredBomb = true;
-                    lastBombX = bomb.x;
-                    lastBombY = bomb.y;
+                    parityFlip = !parityFlip;
 
-                    // Player reverses: go to opposite side of grid
-                    // If player was high (Y > 1), go low. If low, go high.
-                    // If player was left (X < 1.5), go right. If right, go left.
-                    double newY = playerY > 1.0 ? 0 : 2;
-                    double newX = playerX < 1.5 ? 3 : 0;
+                    // Player moves maximum 2 grid spaces away from bomb
+                    // Determine if bomb is in a corner or edge
+                    bool bombInHorizontalEdge = bomb.x <= 0 || bomb.x >= 3;
+                    bool bombInVerticalEdge = bomb.y <= 0 || bomb.y >= 2;
+                    bool bombInCorner = bombInHorizontalEdge && bombInVerticalEdge;
+
+                    if (bombInCorner)
+                    {
+                        // Bomb in corner: move 2 spaces in both directions
+                        // (0,0) -> (2,2), (3,0) -> (1,2), (0,2) -> (2,0), (3,2) -> (1,0)
+                        playerX = bomb.x <= 1.5 ? bomb.x + 2 : bomb.x - 2;
+                        playerY = bomb.y <= 1.0 ? bomb.y + 2 : bomb.y - 2;
+                    }
+                    else if (bombInHorizontalEdge)
+                    {
+                        // Bomb at left/right edge: move 2 spaces horizontally only
+                        // (0,y) -> (2,y), (3,y) -> (1,y)
+                        playerX = bomb.x <= 1.5 ? bomb.x + 2 : bomb.x - 2;
+                        // Keep Y position (stay at same row)
+                    }
+                    else if (bombInVerticalEdge)
+                    {
+                        // Bomb at top/bottom edge: move 2 spaces vertically only
+                        // (x,0) -> (x,2), (x,2) -> (x,0)
+                        playerY = bomb.y <= 1.0 ? bomb.y + 2 : bomb.y - 2;
+                        // Keep X position (stay at same column)
+                    }
                     
-                    playerX = newX;
-                    playerY = newY;
+                    // Clamp to valid grid bounds
+                    playerX = Math.Clamp(playerX, 0, 3);
+                    playerY = Math.Clamp(playerY, 0, 2);
                 }
             }
 
-            return (encounteredBomb, lastBombY, lastBombX);
+            // Return player position after bomb avoidance (or -1,-1 if no bombs encountered)
+            return (encounteredBomb, parityFlip, encounteredBomb ? playerX : -1, encounteredBomb ? playerY : -1);
         }
 
-        private static double CalculateTransitionCost(int fromParity, int toParity, bool sameDirection, (bool hasBombs, int blockingLayer, int blockingLine) bombInfluence)
+        private static double CalculateTransitionCost(int fromParity, int toParity, bool sameDirection, (bool hasBombs, bool parityFlip) bombInfluence)
         {
             double baseCost;
             
@@ -274,7 +296,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (bombInfluence.hasBombs)
             {
-                if (fromParity != toParity)
+                if (bombInfluence.parityFlip)
                 {
                     baseCost = MISMATCH_PENALTY + BOMB_REPOSITIONING_COST;
                 }

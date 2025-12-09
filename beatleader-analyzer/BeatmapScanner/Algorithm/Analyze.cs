@@ -28,7 +28,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (red.Count > 2)
             {
-                PreprocessNotes.Detect(red, bpm, false);
+                PreprocessNotes.Detect(red, bombs, bpm, false);
                 ParityPredictor.Predict(red, false, bombs);
                 redSwingData = SwingProcesser.Process(red, false, strictAngles);
                 
@@ -41,7 +41,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (blue.Count > 2)
             {
-                PreprocessNotes.Detect(blue, bpm, true);
+                PreprocessNotes.Detect(blue, bombs, bpm, true);
                 ParityPredictor.Predict(blue, true, bombs);
                 blueSwingData = SwingProcesser.Process(blue, true, strictAngles);
                 

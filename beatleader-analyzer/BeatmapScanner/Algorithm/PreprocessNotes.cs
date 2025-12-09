@@ -1,7 +1,9 @@
 ﻿using Analyzer.BeatmapScanner.Data;
+using Parser.Map.Difficulty.V3.Grid;
 using System;
 using System.Collections.Generic;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.Grid.FindAngleViaPosition;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -15,37 +17,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
         /// Detects multi-note patterns and sets swing directions.
         /// Groups notes by proximity and validates/corrects angles based on geometry.
         /// </summary>
-        public static void Detect(List<Cube> cubes, float bpm, bool isRightHand)
+        public static void Detect(List<Cube> cubes, List<Bomb> bombs, float bpm, bool isRightHand)
         {
-            if (cubes.Count == 0)
-            {
-                return;
-            }
-
-            // Handle single note case
-            if (cubes.Count == 1)
-            {
-                Cube cube = cubes[0];
-                
-                if (cube.CutDirection != 8)
-                {
-                    // Arrow: use literal direction
-                    cube.Direction = Mod(DirectionToDegree[cube.CutDirection] + cube.AngleOffset, 360);
-                }
-                else
-                {
-                    // Dot: use position-based direction
-                    cube.Direction = GetInitialPosition(cube.X, cube.Y, isRightHand);
-                }
-                
-                return;
-            }
-
-            // Step 1: Create groups of notes that are close together in time
+            // Step 1: Create groups of notes that are close together in time (can be singular too)
             var groups = CreateNoteGroups(cubes, bpm);
             
             // Step 2: Set initial direction for all HEAD notes only
-            SetInitialDirections(cubes, groups, isRightHand);
+            SetInitialDirections(cubes, groups, bombs, isRightHand);
             
             // Step 3: For each group, validate and correct angle based on geometry
             ValidateAndCorrectGroupAngles(cubes, groups);
@@ -83,7 +61,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     float z2 = CalculateZPosition(cubes[j].Beat, cubes[j].Njs, bpm);
                     float depthDiff = Math.Abs(z2 - z1);
                     
-                    // If within multi-note hit range (~0.3 meters), add to group
+                    // If within multi-note hit range (~0.5 meters), add to group
                     if (depthDiff < 0.5f)
                     {
                         group.Add(j);
@@ -117,9 +95,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
         /// Sets initial direction for HEAD notes only (first note in each group).
         /// Non-head notes inherit from head during validation phase.
         /// </summary>
-        private static void SetInitialDirections(List<Cube> cubes, List<List<int>> groups, bool isRightHand)
+        private static void SetInitialDirections(List<Cube> cubes, List<List<int>> groups, List<Bomb> bombs, bool isRightHand)
         {
             double previousDirection = 270.0; // Start with forehand down
+            int previousCubeIndex = 0;
             
             foreach (var group in groups)
             {
@@ -134,7 +113,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
                 else
                 {
-                    // Dot: reverse previous direction
+                    // Dot: calculate direction based on previous swing and bomb avoidance
                     if (group == groups[0])
                     {
                         // First note: use position-based
@@ -142,13 +121,47 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     }
                     else
                     {
-                        // Subsequent: reverse previous
-                        headCube.Direction = Mod(previousDirection + 180, 360);
+                        // Check for bomb avoidance
+                        var bombInfluence = ParityPredictor.AnalyzeBombInfluence(cubes, previousCubeIndex, headIndex, bombs);
+                        
+                        // If bomb avoidance occurred, calculate direction from player's new position
+                        if (bombInfluence.hasBombs && bombInfluence.playerX >= 0)
+                        {
+                            double deltaX = headCube.X - bombInfluence.playerX;
+                            double deltaY = headCube.Y - bombInfluence.playerY;
+                            
+                            if (Math.Abs(deltaX) > 0.01 || Math.Abs(deltaY) > 0.01)
+                            {
+                                // Calculate angle from player position (after bomb avoidance) to current dot note
+                                double angleRad = Math.Atan2(deltaY, deltaX);
+                                headCube.Direction = (angleRad * 180.0 / Math.PI + 360.0) % 360.0;
+                            }
+                            else
+                            {
+                                // Same position, use previous direction reversed
+                                headCube.Direction = FindAngleViaPos(headCube, cubes[previousCubeIndex], previousDirection, false);
+                            }
+                        }
+                        else
+                        {
+                            // No bomb avoidance: normal flow
+                            // If bomb avoidance suggests parity flip, keep previous direction
+                            // Otherwise, reverse direction
+                            if (bombInfluence.parityFlip)
+                            {
+                                headCube.Direction = FindAngleViaPos(headCube, cubes[previousCubeIndex], Mod(previousDirection + 180, 360), false);
+                            }
+                            else
+                            {
+                                headCube.Direction = FindAngleViaPos(headCube, cubes[previousCubeIndex], previousDirection, false);
+                            }
+                        }
                     }
                 }
                 
                 previousDirection = headCube.Direction;
-                
+                previousCubeIndex = headIndex;
+
                 // Mark head
                 headCube.Head = true;
                 
@@ -161,8 +174,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
         }
         
         /// <summary>
-        /// For each group with 2+ notes, calculate geometric angle and validate against head direction.
-        /// If angle doesn't match, reverse it and apply to all notes in group.
+        /// For each group with 2+ notes, calculate geometric angle and normalize it based on head direction.
+        /// Uses the geometric angle (from head to tail position) in the direction that matches swing flow.
         /// </summary>
         private static void ValidateAndCorrectGroupAngles(List<Cube> cubes, List<List<int>> groups)
         {
@@ -197,24 +210,26 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     continue;
                 }
                 
-                // Calculate geometric angle
+                // Calculate geometric angle from head to tail
                 double angleRad = Math.Atan2(layerDiff, lineDiff);
                 double geometricAngle = (angleRad * 180.0 / Math.PI + 360.0) % 360.0;
                 
                 // Calculate reverse of geometric angle
                 double reverseAngle = Mod(geometricAngle + 180, 360);
                 
-                // Determine which angle is closer to head direction
+                // Determine which angle better matches the intended swing direction
+                // Compare both geometric and reverse to see which is in the same "hemisphere" as head direction
                 double diffGeometric = Math.Abs(Mod(geometricAngle - headDirection + 180, 360) - 180);
                 double diffReverse = Math.Abs(Mod(reverseAngle - headDirection + 180, 360) - 180);
                 
-                // Choose the angle that's closer to head direction
-                double finalAngle = diffGeometric < diffReverse ? geometricAngle : reverseAngle;
+                // Use the geometric angle in the direction that matches swing flow
+                // This ensures patterns are normalized to their actual geometric angle
+                double normalizedAngle = diffGeometric < diffReverse ? geometricAngle : reverseAngle;
                 
-                // Apply final angle to ALL notes in the group
+                // Apply normalized geometric angle to ALL notes in the group
                 foreach (int idx in group)
                 {
-                    cubes[idx].Direction = finalAngle;
+                    cubes[idx].Direction = normalizedAngle;
                     cubes[idx].Pattern = true;
                 }
             }

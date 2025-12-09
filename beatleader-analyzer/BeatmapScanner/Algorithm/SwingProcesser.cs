@@ -72,14 +72,33 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
 
+            // Normalize angles between swings if within tolerance angle
+            // Only for fast sections (< 1 beat) and single notes
+            // Skip multi-note patterns as they are already geometrically normalized in preprocessing
+            // Skip notes with bomb avoidance as they have special direction calculation
             for (int i = 1; i < swingData.Count; i++)
             {
+                if (swingData[i].Beat - swingData[i - 1].Beat >= 1.0)
+                {
+                    continue;
+                }
+
+                if (swingData[i].Start.Pattern && swingData[i].Start.Head)
+                {
+                    continue;
+                }
+
+                if (swingData[i].Start.BombAvoidance)
+                {
+                    continue;
+                }
+
                 NormalizeAngle(swingData[i - 1], swingData[i], strictAngles);
             }
 
             for (int i = 0; i < swingData.Count; i++)
             {
-                swingData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[i] }, isRightHand);
+                swingData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[i] }, isRightHand) * 2;
             }
 
             return swingData;
