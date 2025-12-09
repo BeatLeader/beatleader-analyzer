@@ -23,11 +23,11 @@ namespace Analyzer.BeatmapScanner
                 cubes.Add(cube);
             }
 
-            cubes = cubes.OrderBy(c => c.Time).ToList();
+            cubes = cubes.OrderBy(c => c.Beat).ToList();
 
             foreach (var chain in chains)
             {
-                var found = cubes.FirstOrDefault(x => x.Time == chain.BpmTime && x.Type == chain.Color && x.Line == chain.x && x.Layer == chain.y && x.CutDirection == chain.CutDirection);
+                var found = cubes.FirstOrDefault(x => x.Beat == chain.BpmTime && x.Type == chain.Color && x.X == chain.x && x.Y == chain.y && x.CutDirection == chain.CutDirection);
                 if (found != null)
                 {
                     found.Chain = true;

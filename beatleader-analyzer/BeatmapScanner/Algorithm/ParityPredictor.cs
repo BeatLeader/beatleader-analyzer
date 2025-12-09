@@ -1,10 +1,10 @@
 ﻿using Analyzer.BeatmapScanner.Data;
+using Parser.Map.Difficulty.V3.Grid;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.SwingAngleStrain;
-using Parser.Map.Difficulty.V3.Grid;
+using static beatleader_parser.VNJS.Easings;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -20,46 +20,59 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private const double LEFT_BACKHAND_NEUTRAL = 112.5;
         private const double RIGHT_BACKHAND_NEUTRAL = 67.5;
 
-        public static void Predict(List<SwingData> swingData, bool isRightHand, List<Bomb> bombs = null)
+        public static void Predict(List<Cube> cubes, bool isRightHand, List<Bomb> bombs = null)
         {
-            if (swingData == null || swingData.Count == 0)
+            if (cubes == null || cubes.Count == 0)
             {
                 return;
             }
 
-            OptimizeParityDynamic(swingData, isRightHand, bombs);
-
-            for (int i = 0; i < swingData.Count; i++)
-            {
-                swingData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[i] }, isRightHand);
-            }
+            OptimizeParityDynamic(cubes, isRightHand, bombs);
         }
 
-        private static void OptimizeParityDynamic(List<SwingData> swings, bool isRightHand, List<Bomb> bombs)
+        private static void OptimizeParityDynamic(List<Cube> cubes, bool isRightHand, List<Bomb> bombs)
         {
-            int n = swings.Count;
+            int n = cubes.Count;
             if (n == 0) return;
 
-            var dpCost = new double[n, 2];
-            var dpPrev = new int[n, 2];
-            var bombInfluences = new (bool hasBombs, int blockingLayer, int blockingLine)[n];
+            // Build list of pattern group head indices (includes single notes and head notes of patterns)
+            var swingIndices = new List<int>();
+            for (int i = 0; i < n; i++)
+            {
+                // Include note if it's NOT part of a pattern, OR if it's the HEAD of a pattern
+                if (!cubes[i].Pattern || cubes[i].Head)
+                {
+                    swingIndices.Add(i);
+                }
+            }
 
-            dpCost[0, 0] = CalculateAngleStrain(swings[0].Angle, false, isRightHand);
-            dpCost[0, 1] = CalculateAngleStrain(swings[0].Angle, true, isRightHand);
+            int numSwings = swingIndices.Count;
+            if (numSwings == 0) return;
+
+            var dpCost = new double[numSwings, 2];
+            var dpPrev = new int[numSwings, 2];
+            var bombInfluences = new (bool hasBombs, int blockingLayer, int blockingLine)[numSwings];
+
+            int firstIdx = swingIndices[0];
+            dpCost[0, 0] = CalculateAngleStrain(cubes[firstIdx].Direction, false, isRightHand);
+            dpCost[0, 1] = CalculateAngleStrain(cubes[firstIdx].Direction, true, isRightHand);
             dpPrev[0, 0] = -1;
             dpPrev[0, 1] = -1;
             bombInfluences[0] = (false, 0, 0);
 
-            for (int i = 1; i < n; i++)
+            for (int swingIdx = 1; swingIdx < numSwings; swingIdx++)
             {
-                bool sameDirection = IsSameDir(swings[i - 1].Angle, swings[i].Angle);
-                var bombInfluence = bombs != null ? AnalyzeBombInfluence(swings, i, bombs) : (false, 0, 0);
-                bombInfluences[i] = bombInfluence;
+                int currNoteIdx = swingIndices[swingIdx];
+                int prevNoteIdx = swingIndices[swingIdx - 1];
+                
+                bool sameDirection = IsSameDir(cubes[prevNoteIdx].Direction, cubes[currNoteIdx].Direction);
+                var bombInfluence = bombs != null ? AnalyzeBombInfluence(cubes, prevNoteIdx, currNoteIdx, bombs) : (false, 0, 0);
+                bombInfluences[swingIdx] = bombInfluence;
 
                 for (int currParity = 0; currParity <= 1; currParity++)
                 {
                     bool isForehand = currParity == 1;
-                    double angleCost = CalculateAngleStrain(swings[i].Angle, isForehand, isRightHand);
+                    double angleCost = CalculateAngleStrain(cubes[currNoteIdx].Direction, isForehand, isRightHand);
 
                     double minCost = double.MaxValue;
                     int bestPrevParity = -1;
@@ -69,7 +82,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         double transitionCost = CalculateTransitionCost(
                             prevParity, currParity, sameDirection, bombInfluence);
 
-                        double totalCost = dpCost[i - 1, prevParity] + angleCost + transitionCost;
+                        double totalCost = dpCost[swingIdx - 1, prevParity] + angleCost + transitionCost;
 
                         if (totalCost < minCost)
                         {
@@ -78,129 +91,164 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         }
                     }
 
-                    dpCost[i, currParity] = minCost;
-                    dpPrev[i, currParity] = bestPrevParity;
+                    dpCost[swingIdx, currParity] = minCost;
+                    dpPrev[swingIdx, currParity] = bestPrevParity;
                 }
             }
 
-            int finalParity = dpCost[n - 1, 0] <= dpCost[n - 1, 1] ? 0 : 1;
+            int finalParity = dpCost[numSwings - 1, 0] <= dpCost[numSwings - 1, 1] ? 0 : 1;
 
-            var parityPath = new int[n];
-            parityPath[n - 1] = finalParity;
+            var swingParityPath = new int[numSwings];
+            swingParityPath[numSwings - 1] = finalParity;
 
-            for (int i = n - 1; i > 0; i--)
+            for (int swingIdx = numSwings - 1; swingIdx > 0; swingIdx--)
             {
-                parityPath[i - 1] = dpPrev[i, parityPath[i]];
+                swingParityPath[swingIdx - 1] = dpPrev[swingIdx, swingParityPath[swingIdx]];
             }
 
-            swings[0].Forehand = parityPath[0] == 1;
-            swings[0].ParityErrors = false;
-            swings[0].BombAvoidance = false;
+            // Apply parity to all notes based on their swing group
+            int firstNoteIdx = swingIndices[0];
+            cubes[firstNoteIdx].Forehand = swingParityPath[0] == 1;
+            cubes[firstNoteIdx].ParityErrors = false;
+            cubes[firstNoteIdx].BombAvoidance = false;
 
-            for (int i = 1; i < n; i++)
+            // Apply parity from first swing to all notes in its pattern group
+            if (cubes[firstNoteIdx].Pattern && cubes[firstNoteIdx].Head)
             {
-                swings[i].Forehand = parityPath[i] == 1;
+                for (int i = firstNoteIdx + 1; i < n && cubes[i].Pattern && !cubes[i].Head; i++)
+                {
+                    cubes[i].Forehand = cubes[firstNoteIdx].Forehand;
+                    cubes[i].ParityErrors = false;
+                    cubes[i].BombAvoidance = false;
+                }
+            }
+
+            for (int swingIdx = 1; swingIdx < numSwings; swingIdx++)
+            {
+                int currNoteIdx = swingIndices[swingIdx];
+                int prevSwingHeadIdx = swingIndices[swingIdx - 1];
                 
-                bool sameDirection = IsSameDir(swings[i - 1].Angle, swings[i].Angle);
-                bool sameParity = swings[i].Forehand == swings[i - 1].Forehand;
+                // Get the last note of the previous swing (either single note or tail of pattern)
+                int prevSwingLastIdx = prevSwingHeadIdx;
+                if (cubes[prevSwingHeadIdx].Pattern && cubes[prevSwingHeadIdx].Head)
+                {
+                    // Find the tail of the previous pattern
+                    for (int i = prevSwingHeadIdx + 1; i < n && cubes[i].Pattern && !cubes[i].Head; i++)
+                    {
+                        if (cubes[i].Tail)
+                        {
+                            prevSwingLastIdx = i;
+                            break;
+                        }
+                    }
+                }
                 
-                swings[i].ParityErrors = sameDirection && sameParity;
-                swings[i].BombAvoidance = bombInfluences[i].hasBombs;
+                cubes[currNoteIdx].Forehand = swingParityPath[swingIdx] == 1;
+                
+                bool sameDirection = IsSameDir(cubes[prevSwingLastIdx].Direction, cubes[currNoteIdx].Direction);
+                bool sameParity = cubes[currNoteIdx].Forehand == cubes[prevSwingHeadIdx].Forehand;
+
+                cubes[currNoteIdx].ParityErrors = sameDirection && sameParity;
+                cubes[currNoteIdx].BombAvoidance = bombInfluences[swingIdx].Item1;
+
+                // Apply same parity to all notes in this pattern group
+                if (cubes[currNoteIdx].Pattern && cubes[currNoteIdx].Head)
+                {
+                    for (int i = currNoteIdx + 1; i < n && cubes[i].Pattern && !cubes[i].Head; i++)
+                    {
+                        cubes[i].Forehand = cubes[currNoteIdx].Forehand;
+                        cubes[i].ParityErrors = cubes[currNoteIdx].ParityErrors;
+                        cubes[i].BombAvoidance = cubes[currNoteIdx].BombAvoidance;
+                        
+                        if (cubes[i].Tail) break;
+                    }
+                }
             }
         }
 
-        private static (bool hasBombs, int blockingLayer, int blockingLine) AnalyzeBombInfluence(List<SwingData> swings, int currentIndex, List<Bomb> bombs)
+        private static (bool hasBombs, int blockingLayer, int blockingLine) AnalyzeBombInfluence(List<Cube> cubes, int prevSwingHeadIndex, int currentSwingHeadIndex, List<Bomb> bombs)
         {
-            if (bombs == null || bombs.Count == 0 || currentIndex == 0)
+            if (bombs == null || bombs.Count == 0)
             {
                 return (false, 0, 0);
             }
 
-            var prevSwing = swings[currentIndex - 1];
-            var currentSwing = swings[currentIndex];
+            // Get the tail of the previous swing (for patterns) or the head itself (for single notes)
+            var prevSwingTailCube = cubes[prevSwingHeadIndex];
+            if (cubes[prevSwingHeadIndex].Pattern && cubes[prevSwingHeadIndex].Head)
+            {
+                // Find the tail of the pattern
+                for (int i = prevSwingHeadIndex + 1; i < cubes.Count && cubes[i].Pattern && !cubes[i].Head; i++)
+                {
+                    if (cubes[i].Tail)
+                    {
+                        prevSwingTailCube = cubes[i];
+                        break;
+                    }
+                }
+            }
+            
+            var currentCube = cubes[currentSwingHeadIndex];
 
-            // Get bombs between previous and current swing (strictly between)
+            // Get ALL bombs between previous swing's tail and current swing's head
             var bombsBetween = bombs
-                .Where(b => b.BpmTime > prevSwing.Beat && b.BpmTime < currentSwing.Beat)
+                .Where(b => b.BpmTime > prevSwingTailCube.Beat && b.BpmTime < currentCube.Beat)
                 .OrderBy(b => b.BpmTime)
                 .ToList();
 
-            if (bombsBetween.Count == 0)
+            var allRelevantBombs = bombsBetween.ToList();
+
+            if (allRelevantBombs.Count == 0)
             {
                 return (false, 0, 0);
             }
 
-            // Calculate player's position after previous swing using same logic as FlowDetector
+            // Calculate player's position after previous swing
             // Player swings to maximum extent in that direction, clamped to grid bounds
-            double prevAngleRadians = prevSwing.Angle * Math.PI / 180.0;
+            double prevAngleRadians = prevSwingTailCube.Direction * Math.PI / 180.0;
             double prevDirX = Math.Cos(prevAngleRadians);
             double prevDirY = Math.Sin(prevAngleRadians);
 
             // Calculate target position in swing direction (large distance to ensure grid edge)
-            double targetX = prevSwing.Start.Line + prevDirX * 10.0;
-            double targetY = prevSwing.Start.Layer + prevDirY * 10.0;
+            double targetX = prevSwingTailCube.X + prevDirX * 10.0;
+            double targetY = prevSwingTailCube.Y + prevDirY * 10.0;
 
             // Clamp to grid bounds: X [0, 3], Y [0, 2]
             double playerX = Math.Clamp(targetX, 0, 3);
             double playerY = Math.Clamp(targetY, 0, 2);
 
-            // Calculate direction needed to reach current swing note
-            double toNoteX = currentSwing.Start.Line - playerX;
-            double toNoteY = currentSwing.Start.Layer - playerY;
-            double angleToNote = Math.Atan2(toNoteY, toNoteX) * 180.0 / Math.PI;
-            if (angleToNote < 0) angleToNote += 360;
-
-            double currentDirection = angleToNote;
             bool encounteredBomb = false;
+            int reversalCount = 0;
             int lastBombX = 0;
             int lastBombY = 0;
 
-            // Simulate player movement through bomb field (same logic as FlowDetector)
-            foreach (var bomb in bombsBetween)
+            // Simulate player trying to recover from swing and encountering bombs
+            foreach (var bomb in allRelevantBombs)
             {
-                // Calculate vector from player position to bomb
+                // Check if bomb is at or very close to player's current position (within 0.8 units)
                 double toBombX = bomb.x - playerX;
                 double toBombY = bomb.y - playerY;
-                double distanceToBomb = Math.Sqrt(toBombX * toBombX + toBombY * toBombY);
+                double distToBomb = Math.Sqrt(toBombX * toBombX + toBombY * toBombY);
 
-                // Calculate if bomb is in the current movement direction
-                double currentRadians = currentDirection * Math.PI / 180.0;
-                double currentDirX = Math.Cos(currentRadians);
-                double currentDirY = Math.Sin(currentRadians);
-
-                // Project bomb position onto current direction
-                double projection = toBombX * currentDirX + toBombY * currentDirY;
-
-                // Check perpendicular distance (how far off the line the bomb is)
-                double perpDistance = Math.Abs(toBombX * currentDirY - toBombY * currentDirX);
-
-                // Bomb blocks the path if it matches FlowDetector criteria
-                if (projection > 0.2 && perpDistance < 1.2 && distanceToBomb < 2.5)
+                if (distToBomb < 0.8)
                 {
-                    // Bomb blocks the path! Player must reverse direction
+                    // Bomb is at player's position! Player must reverse direction
+                    reversalCount++;
                     encounteredBomb = true;
                     lastBombX = bomb.x;
                     lastBombY = bomb.y;
 
-                    // Reverse direction (simplified - just flip 180°)
-                    currentDirection = (currentDirection + 180.0) % 360.0;
-
-                    // Update player's virtual position - they moved back in the new direction
-                    currentRadians = currentDirection * Math.PI / 180.0;
-                    currentDirX = Math.Cos(currentRadians);
-                    currentDirY = Math.Sin(currentRadians);
-                    playerX += currentDirX * 0.5;
-                    playerY += currentDirY * 0.5;
-                }
-                else
-                {
-                    // Bomb doesn't block - player continues in current direction
-                    playerX += currentDirX * 0.3;
-                    playerY += currentDirY * 0.3;
+                    // Player reverses: go to opposite side of grid
+                    // If player was high (Y > 1), go low. If low, go high.
+                    // If player was left (X < 1.5), go right. If right, go left.
+                    double newY = playerY > 1.0 ? 0 : 2;
+                    double newX = playerX < 1.5 ? 3 : 0;
+                    
+                    playerX = newX;
+                    playerY = newY;
                 }
             }
 
-            // Return whether any bombs were encountered during navigation
             return (encounteredBomb, lastBombY, lastBombX);
         }
 

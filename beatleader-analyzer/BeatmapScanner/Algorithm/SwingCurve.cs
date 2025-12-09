@@ -36,7 +36,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             
             for (int i = 0; i < swingData.Count; i++)
             {
-                double radians = ConvertDegreesToRadians(swingData[i].Angle);
+                double radians = ConvertDegreesToRadians(swingData[i].Direction);
                 cosValues[i] = Math.Cos(radians);
                 sinValues[i] = Math.Sin(radians);
             }
@@ -146,15 +146,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     }
                 }
 
-                swingData[i].PositionComplexity = positionComplexity;
                 swingData[i].PreviousDistance = distance;
+
+                swingData[i].PositionComplexity = positionComplexity;
                 swingData[i].CurveComplexity = curveComplexity;
                 swingData[i].AnglePathStrain = pathAngleStrain;
 
-                swingData[i].PathStrain =
-                    0.25 * curveComplexity +
-                    0.25 * pathAngleStrain +
-                    0.25 * positionComplexity;
+                swingData[i].PathStrain = curveComplexity + pathAngleStrain + positionComplexity;
             }
 
             if (UseParallel)

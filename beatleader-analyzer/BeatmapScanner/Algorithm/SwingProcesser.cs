@@ -1,6 +1,7 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System.Collections.Generic;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.CalculateEntryExit;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.SwingAngleStrain;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -10,7 +11,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class SwingProcesser
     {
-        public static List<SwingData> Process(List<Cube> cubes, bool strictAngles = false)
+        public static List<SwingData> Process(List<Cube> cubes, bool isRightHand, bool strictAngles = false)
         {
             if (cubes.Count == 0)
             {
@@ -29,22 +30,23 @@ namespace Analyzer.BeatmapScanner.Algorithm
             
             var swingData = new List<SwingData>(cubes.Count)
             {
-                new SwingData(cubes[0].Time, cubes[0])
+                new SwingData(cubes[0])
             };
-            // Calculate entry and exit positions, and set angle.
-            CalcEntryExit(null, swingData[^1], strictAngles);
+
+            // Calculate entry and exit positions for first note
+            CalcEntryExitWithMemory(null, swingData[^1]);
 
             for (int i = 1; i < cubes.Count; i++)
             {
-                var previousAngle = swingData[^1].Angle;
-                var currentBeat = cubes[i].Time;
+                var currentBeat = cubes[i].Beat;
 
                 if (!cubes[i].Pattern || cubes[i].Head)
                 {
-                    swingData.Add(new SwingData(currentBeat, cubes[i]));
-                    // Calculate entry and exit positions, and set angle.
-                    CalcEntryExit(swingData[^2], swingData[^1], strictAngles);
-                    
+                    swingData.Add(new SwingData(cubes[i]));
+
+                    // Calculate entry and exit positions
+                    CalcEntryExitWithMemory(swingData[^2], swingData[^1]);
+
                     if (cubes[i].Chain)
                     {
                         // Override exit position for chains
@@ -68,6 +70,16 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     Cube headCube = headIndex >= 0 ? cubes[headIndex] : null;
                     CalcMultiNoteExit(swingData[^1], cubes[i], headCube, strictAngles);
                 }
+            }
+
+            for (int i = 1; i < swingData.Count; i++)
+            {
+                NormalizeAngle(swingData[i - 1], swingData[i], strictAngles);
+            }
+
+            for (int i = 0; i < swingData.Count; i++)
+            {
+                swingData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[i] }, isRightHand);
             }
 
             return swingData;

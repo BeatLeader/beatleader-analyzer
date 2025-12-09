@@ -13,15 +13,15 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.Grid
         public static double FindAngleViaPos(Cube current, Cube previous, double guideAngle, bool isSameSwing)
         {
             (double x, double y) startPosition;
-            (double x, double y) currentPosition = (current.Line, current.Layer);
+            (double x, double y) currentPosition = (current.X, current.Y);
 
             if (isSameSwing)
             {
-                startPosition = (previous.Line, previous.Layer);
+                startPosition = (previous.X, previous.Y);
             }
             else
             {
-                startPosition = SimSwingPos(previous.Line, previous.Layer, guideAngle);
+                startPosition = SimSwingPos(previous.X, previous.Y, guideAngle);
             }
 
             if (Math.Abs(startPosition.x - currentPosition.x) < 0.001 && 

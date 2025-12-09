@@ -15,15 +15,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         private const double STREAM_BONUS = 1.05;
         private const double PARITY_ERROR_MULTIPLIER = 2.0;
-        
-        // Distance falloff constants adjusted for meter scale
-        // Previously 3.0 in normalized units, now 1.8m for meter scale
-        private const double DISTANCE_FALLOFF = 1.8;
-        
-        // Hit distance falloff adjusted for meter scale  
-        // Previously 2.0 in normalized units, now 1.2m for meter scale
-        private const double HIT_DISTANCE_FALLOFF = 1.2;
-        
+        private const double DISTANCE_FALLOFF = 3.0;
+        private const double HIT_DISTANCE_FALLOFF = 2.0;
         private const double ANGLE_STRAIN_WEIGHT = 0.1;
         private const double SPEED_FALLOFF_BASE = 1.4;
         private const double STRESS_FALLOFF = 2.0;

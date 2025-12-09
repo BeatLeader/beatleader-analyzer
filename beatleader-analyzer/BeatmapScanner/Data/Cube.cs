@@ -9,9 +9,9 @@ namespace Analyzer.BeatmapScanner.Data
     /// </summary>
     public class Cube
     {
-        public float Time { get; set; } = 0;
-        public int Line { get; set; } = 0;
-        public int Layer { get; set; } = 0;
+        public float Beat { get; set; } = 0;
+        public int X { get; set; } = 0;
+        public int Y { get; set; } = 0;
         public int Type { get; set; } = 0;
         public int CutDirection { get; set; } = 0;
         public double AngleOffset { get; set; } = 0;
@@ -21,6 +21,9 @@ namespace Analyzer.BeatmapScanner.Data
         public bool Tail { get; set; } = false;
         public bool Pattern { get; set; } = false;
         public bool Chain { get; set; } = false;
+        public bool Forehand { get; set; } = true;
+        public bool ParityErrors { get; set; } = false;
+        public bool BombAvoidance { get; set; } = false;
         public int TailLine { get; set; } = 0;
         public int TailLayer {  get; set; } = 0;
         public int TailDirection { get; set; } = 0;
@@ -34,9 +37,9 @@ namespace Analyzer.BeatmapScanner.Data
 
         public Cube(Cube cube)
         {
-            Time = cube.Time;
-            Line = cube.Line;
-            Layer = cube.Layer;
+            Beat = cube.Beat;
+            X = cube.X;
+            Y = cube.Y;
             Type = cube.Type;
             CutDirection = cube.CutDirection;
             AngleOffset = cube.AngleOffset;
@@ -46,6 +49,9 @@ namespace Analyzer.BeatmapScanner.Data
             Tail = cube.Tail;
             Pattern = cube.Pattern;
             Chain = cube.Chain;
+            Forehand = cube.Forehand;
+            ParityErrors = cube.ParityErrors;
+            BombAvoidance = cube.BombAvoidance;
             TailLine = cube.TailLine;
             TailLayer = cube.TailLayer;
             TailDirection = cube.TailDirection;
@@ -54,9 +60,9 @@ namespace Analyzer.BeatmapScanner.Data
 
         public Cube(Note note)
         {
-            Time = note.BpmTime;
-            Line = note.x;
-            Layer = note.y;
+            Beat = note.BpmTime;
+            X = note.x;
+            Y = note.y;
             Type = note.Color;
             CutDirection = note.CutDirection;
             AngleOffset = note.AngleOffset;

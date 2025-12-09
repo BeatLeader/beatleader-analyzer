@@ -9,7 +9,7 @@ namespace Analyzer.BeatmapScanner.Data
     {
         public Cube Start { get; set; } = null!;
         public double Beat { get; set; } = 0;
-        public double Angle { get; set; } = 0;
+        public double Direction { get; set; } = 0;
         public (double x, double y) EntryPosition { get; set; } = (0, 0);
         public (double x, double y) ExitPosition { get; set; } = (0, 0);
         public bool Forehand { get; set; } = true;
@@ -35,10 +35,14 @@ namespace Analyzer.BeatmapScanner.Data
         public double SwingDiff { get; set; } = 0;
         public string PatternType { get; set; } = "Single";
 
-        public SwingData(double beat, Cube start)
+        public SwingData(Cube start)
         {
-            Beat = beat;
             Start = start;
+            Beat = start.Beat;
+            Direction = start.Direction;
+            Forehand = start.Forehand;
+            ParityErrors = start.ParityErrors;
+            BombAvoidance = start.BombAvoidance;
         }
 
         internal readonly record struct Point(double X, double Y);
