@@ -7,7 +7,7 @@ namespace Analyzer.BeatmapScanner.Data
     /// </summary>
     public class SwingData
     {
-        public Cube Start { get; set; } = null!;
+        public List<Cube> Notes { get; set; } = null!;
         public double Beat { get; set; } = 0;
         public double Direction { get; set; } = 0;
         public (double x, double y) EntryPosition { get; set; } = (0, 0);
@@ -35,9 +35,10 @@ namespace Analyzer.BeatmapScanner.Data
         public double SwingDiff { get; set; } = 0;
         public string PatternType { get; set; } = "Single";
 
-        public SwingData(Cube start)
+        public SwingData(List<Cube> cubes)
         {
-            Start = start;
+            var start = cubes[0];
+            Notes = cubes;
             Beat = start.Beat;
             Direction = start.Direction;
             Forehand = start.Forehand;

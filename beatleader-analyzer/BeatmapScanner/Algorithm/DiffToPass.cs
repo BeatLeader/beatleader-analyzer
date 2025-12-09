@@ -33,13 +33,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
             // Calculate swing frequency per hand (red and blue separately)
             for (int i = 0; i < swingData.Count; i++)
             {
-                int currentHand = swingData[i].Start.Type;
+                int currentHand = swingData[i].Notes[0].Type;
                 
                 // Find previous swing of the same hand
                 int prevSameHandIndex = -1;
                 for (int j = i - 1; j >= 0; j--)
                 {
-                    if (swingData[j].Start.Type == currentHand)
+                    if (swingData[j].Notes[0].Type == currentHand)
                     {
                         prevSameHandIndex = j;
                         break;
@@ -50,7 +50,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 int nextSameHandIndex = -1;
                 for (int j = i + 1; j < swingData.Count; j++)
                 {
-                    if (swingData[j].Start.Type == currentHand)
+                    if (swingData[j].Notes[0].Type == currentHand)
                     {
                         nextSameHandIndex = j;
                         break;
@@ -104,11 +104,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 swing.SwingDiff = swingSpeed * speedFalloff * stressMultiplier;
 
-                double njsBuff = NjsBuff.CalculateNjsBuff(swing.Start.Njs);
+                double njsBuff = NjsBuff.CalculateNjsBuff(swing.Notes[0].Njs);
                 swing.NjsBuff = njsBuff;
                 swing.SwingDiff *= njsBuff;
 
-                int currentHand = swing.Start.Type;
+                int currentHand = swing.Notes[0].Type;
                 if (previousHand.HasValue && previousHand.Value != currentHand)
                 {
                     swing.SwingDiff *= STREAM_BONUS;

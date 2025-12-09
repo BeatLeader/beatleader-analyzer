@@ -1,6 +1,7 @@
 using beatleader_analyzer;
 using beatleader_analyzer.BeatmapScanner.Data;
 using beatleader_parser;
+using Newtonsoft.Json;
 using Parser.Map;
 using System;
 using System.Collections.Generic;
@@ -8,8 +9,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Newtonsoft.Json;
-using BenchmarkDotNet.Helpers;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Benchmark
@@ -286,7 +285,7 @@ namespace Benchmark
                         Rank = index + 1,
                         Time = Math.Round(s.Beat, 3),
                         Difficulty = Math.Round(s.SwingDiff, 3),
-                        Hand = s.Start.Type == 0 ? "Red" : "Blue",
+                        Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
                         Angle = Math.Round(s.Direction, 1),
                         Direction = Benchmark.AngleToDirection(s.Direction),
                         Parity = s.Forehand ? "Forehand" : "Backhand",
@@ -300,8 +299,8 @@ namespace Benchmark
                     MaxDifficulty = Math.Round(rating.SwingData.Max(s => s.SwingDiff), 3),
                     ParityErrorPercentage = Math.Round((double)rating.Patterns.ParityErrors / rating.SwingData.Count * 100, 3),
                     BombAvoidancePercentage = Math.Round((double)rating.Patterns.BombAvoidances / rating.SwingData.Count * 100, 3),
-                    RedHandSwings = rating.SwingData.Count(s => s.Start.Type == 0),
-                    BlueHandSwings = rating.SwingData.Count(s => s.Start.Type == 1)
+                    RedHandSwings = rating.SwingData.Count(s => s.Notes[0].Type == 0),
+                    BlueHandSwings = rating.SwingData.Count(s => s.Notes[0].Type == 1)
                 }
             };
         }
@@ -920,11 +919,11 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 {
                     Index = index,
                     Time = Math.Round(s.Beat, 3),
-                    Hand = s.Start.Type == 0 ? "Red" : "Blue",
+                    Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
                     Position = new
                     {
-                        Line = s.Start.X,
-                        Layer = s.Start.Y
+                        Line = s.Notes[0].X,
+                        Layer = s.Notes[0].Y
                     },
                     Entry = new
                     {
@@ -1082,9 +1081,9 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             {
                 Index = index,
                 Time = Math.Round(s.Beat, 3),
-                Hand = s.Start.Type == 0 ? "Red" : "Blue",
-                Line = s.Start.X,
-                Layer = s.Start.Y,
+                Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
+                Line = s.Notes[0].X,
+                Layer = s.Notes[0].Y,
                 EntryX = Math.Round(s.EntryPosition.x, 3),
                 EntryY = Math.Round(s.EntryPosition.y, 3),
                 ExitX = Math.Round(s.ExitPosition.x, 3),
@@ -1664,9 +1663,9 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 {
                     Index = index,
                     Time = Math.Round(s.Beat, 3),
-                    Hand = s.Start.Type == 0 ? "Red" : "Blue",
-                    Line = s.Start.X,
-                    Layer = s.Start.Y,
+                    Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
+                    Line = s.Notes[0].X,
+                    Layer = s.Notes[0].Y,
                     EntryX = Math.Round(s.EntryPosition.x, 3),
                     EntryY = Math.Round(s.EntryPosition.y, 3),
                     ExitX = Math.Round(s.ExitPosition.x, 3),

@@ -94,7 +94,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
             SwingData previous,
             SwingData current)
         {
-            Cube cube = current.Start;
+            Cube cube = current.Notes[0];
             (double centerX, double centerY) = GridToMeters(cube.X, cube.Y);
 
             double swingAngle = cube.Direction;
@@ -110,8 +110,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
         public static void NormalizeAngle(SwingData previous, SwingData current, bool strictAngles)
         {
             // Calculate the geometric angle
-            double deltaX = current.Start.X - previous.Start.X;
-            double deltaY = current.Start.Y - previous.Start.Y;
+            double deltaX = current.Notes[0].X - previous.Notes[0].X;
+            double deltaY = current.Notes[0].Y - previous.Notes[0].Y;
 
             // Calculate angle in radians, then convert to degrees
             double angleRadians = Math.Atan2(deltaY, deltaX);
@@ -124,7 +124,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
             }
 
             // Get the current note's intended direction
-            double currentAngle = current.Start.Direction;
+            double currentAngle = current.Notes[0].Direction;
 
             // Calculate angular difference (shortest path around circle)
             double angleDiff = Math.Abs(potentialAngle - currentAngle);
@@ -141,7 +141,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
             {
                 current.Direction = potentialAngle;
 
-                (double centerX, double centerY) = GridToMeters(current.Start.X, current.Start.Y);
+                (double centerX, double centerY) = GridToMeters(current.Notes[0].X, current.Notes[0].Y);
 
                 double angleRad = ConvertDegreesToRadians(current.Direction);
                 double cos = Math.Cos(angleRad);

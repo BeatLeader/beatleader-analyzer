@@ -66,8 +66,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Use all classified walls for difficulty calculation
                 DiffToPass.CalcSwingDiff(combinedSwingData, bpm, dodgeWallsAll, crouchWallsAll);
                 
-                redSwingData = combinedSwingData.Where(x => x.Start.Type == 0).ToList();
-                blueSwingData = combinedSwingData.Where(x => x.Start.Type == 1).ToList();
+                redSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 0).ToList();
+                blueSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 1).ToList();
 
                 var windowSizes = new HashSet<int> { 8, 16, 32, 64, 128 };
                 double passDiffRed = 0.0;
@@ -108,7 +108,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 foreach (var swing in combinedSwingData)
                 {
-                    double buff = NjsBuff.CalculateNjsBuff(swing.Start.Njs);
+                    double buff = NjsBuff.CalculateNjsBuff(swing.Notes[0].Njs);
                     swing.AngleStrain *= buff;
                     swing.PathStrain *= buff;
                 }

@@ -1,5 +1,7 @@
 ﻿using Analyzer.BeatmapScanner.Data;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.CalculateEntryExit;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.SwingAngleStrain;
 
@@ -18,23 +20,65 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return new List<SwingData>();
             }
 
-            var headIndices = new List<int>(cubes.Count / 10);
-            for (int i = 0; i < cubes.Count; i++)
+            var groups = new List<List<Cube>>();
+            List<Cube> current = null;
+            
+            for (int idx = 0; idx < cubes.Count; idx++)
             {
-                if (cubes[i].Head)
+                var obj = cubes[idx];
+                
+                if (obj.Head)
                 {
-                    headIndices.Add(i);
+                    // Close previous group if exists
+                    if (current != null)
+                    {
+                        groups.Add(current);
+                    }
+                    current = [obj];
+                }
+                else
+                {
+                    if (current == null)
+                    {
+                        // First cube doesn't have Head=true, treat it as a single-note group
+                        current = [obj];
+                        groups.Add(current);
+                        current = null;
+                    }
+                    else
+                    {
+                        current.Add(obj);
+                    }
+                }
+                
+                // Check if this cube closes the group (Tail marker)
+                if (obj.Tail && current != null)
+                {
+                    groups.Add(current);
+                    current = null;
                 }
             }
-            int[] headCubes = headIndices.ToArray();
             
-            var swingData = new List<SwingData>(cubes.Count)
+            // Don't forget the last group if it wasn't closed
+            if (current != null)
             {
-                new SwingData(cubes[0])
+                groups.Add(current);
+            }
+
+            if (groups.Count == 0)
+            {
+                return new List<SwingData>();
+            }
+            
+            var swingData = new List<SwingData>(groups.Count)
+            {
+                new SwingData(groups[0])
             };
 
             // Calculate entry and exit positions for first note
             CalcEntryExitWithMemory(null, swingData[^1]);
+
+            int groupIndex = 0;
 
             for (int i = 1; i < cubes.Count; i++)
             {
@@ -42,7 +86,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 if (!cubes[i].Pattern || cubes[i].Head)
                 {
-                    swingData.Add(new SwingData(cubes[i]));
+                    groupIndex++;
+                    
+                    if (groupIndex >= groups.Count)
+                    {
+                        break;
+                    }
+                    
+                    swingData.Add(new SwingData(groups[groupIndex]));
 
                     // Calculate entry and exit positions
                     CalcEntryExitWithMemory(swingData[^2], swingData[^1]);
@@ -55,19 +106,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
                 else
                 {
-                    // Multi-note pattern: find the head note index
-                    int headIndex = -1;
-                    for (int h = headCubes.Length - 1; h >= 0; h--)
-                    {
-                        if (headCubes[h] < i)
-                        {
-                            headIndex = headCubes[h];
-                            break;
-                        }
-                    }
-
                     // Calculate multi-note exit position with averaged angle
-                    Cube headCube = headIndex >= 0 ? cubes[headIndex] : null;
+                    Cube headCube = groupIndex >= 0 ? groups[groupIndex][0] : null;
                     CalcMultiNoteExit(swingData[^1], cubes[i], headCube, strictAngles);
                 }
             }
@@ -83,12 +123,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     continue;
                 }
 
-                if (swingData[i].Start.Pattern && swingData[i].Start.Head)
+                if (swingData[i].Notes[0].Pattern && swingData[i].Notes[0].Head)
                 {
                     continue;
                 }
 
-                if (swingData[i].Start.BombAvoidance)
+                if (swingData[i].Notes[0].BombAvoidance)
                 {
                     continue;
                 }
@@ -96,12 +136,64 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 NormalizeAngle(swingData[i - 1], swingData[i], strictAngles);
             }
 
+            // Second pass: verify that direction match geometry for multi-note swings with only dots
+            VerifyMultiNotes(swingData);
+
             for (int i = 0; i < swingData.Count; i++)
             {
                 swingData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[i] }, isRightHand) * 4;
             }
 
             return swingData;
+        }
+
+        public static void VerifyMultiNotes(List<SwingData> swingData)
+        {
+            // Calculate geometric direction for multi-note swings
+            for(int i = 0; i < swingData.Count; i++)
+            {
+                var swing = swingData[i];
+                if(swing.Notes.Count <= 1 || !swing.Notes.All(x => x.CutDirection == 8))
+                {
+                    continue;
+                }
+
+                var entry = swing.Notes[0];
+                var exit = swing.Notes.Last();
+                var deltaX = exit.X - entry.X;
+                var deltaY = exit.Y - entry.Y;
+                var geometricAngle = Math.Atan2(deltaY, deltaX) * (180.0 / Math.PI);
+                if (geometricAngle < 0)
+                {
+                    geometricAngle += 360.0;
+                }
+
+                // Calculate the reverse of the geometric angle
+                var reverseGeometricAngle = (geometricAngle + 180.0) % 360.0;
+                
+                // Check if head note direction is closest to geometric angle or its reverse
+                var headDirection = entry.Direction;
+                
+                // Calculate angular distance to geometric angle
+                var diffToGeometric = Math.Abs(geometricAngle - headDirection);
+                if (diffToGeometric > 180)
+                {
+                    diffToGeometric = 360 - diffToGeometric;
+                }
+                
+                // Calculate angular distance to reverse geometric angle
+                var diffToReverse = Math.Abs(reverseGeometricAngle - headDirection);
+                if (diffToReverse > 180)
+                {
+                    diffToReverse = 360 - diffToReverse;
+                }
+                
+                // Use the angle that is closest to the head direction
+                double finalAngle = diffToGeometric <= diffToReverse ? geometricAngle : reverseGeometricAngle;
+
+                swing.Notes.ForEach(n => n.Direction = finalAngle);
+                swing.Direction = finalAngle;
+            }
         }
     }
 }
