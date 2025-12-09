@@ -143,13 +143,26 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     }
                 }
                 
-                cubes[currNoteIdx].Forehand = swingParityPath[swingIdx] == 1;
-                
                 bool sameDirection = IsSameDir(cubes[prevSwingLastIdx].Direction, cubes[currNoteIdx].Direction);
-                bool sameParity = cubes[currNoteIdx].Forehand == cubes[prevSwingHeadIdx].Forehand;
-
-                cubes[currNoteIdx].ParityErrors = sameDirection && sameParity;
-                cubes[currNoteIdx].BombAvoidance = bombInfluences[swingIdx].hasBombs;
+                bool hasBombAvoidance = bombInfluences[swingIdx].hasBombs;
+                
+                // If bomb avoidance resulted in same direction, force same parity (parity error)
+                if (hasBombAvoidance && sameDirection)
+                {
+                    // Override the optimal parity - must use same parity as previous (parity error)
+                    cubes[currNoteIdx].Forehand = cubes[prevSwingHeadIdx].Forehand;
+                    cubes[currNoteIdx].ParityErrors = true;
+                }
+                else
+                {
+                    // Normal case: use the optimized parity from DP
+                    cubes[currNoteIdx].Forehand = swingParityPath[swingIdx] == 1;
+                    
+                    bool sameParity = cubes[currNoteIdx].Forehand == cubes[prevSwingHeadIdx].Forehand;
+                    cubes[currNoteIdx].ParityErrors = sameDirection && sameParity;
+                }
+                
+                cubes[currNoteIdx].BombAvoidance = hasBombAvoidance;
 
                 // Apply same parity to all notes in this pattern group
                 if (cubes[currNoteIdx].Pattern && cubes[currNoteIdx].Head)

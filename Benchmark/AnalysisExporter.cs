@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using BenchmarkDotNet.Helpers;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Benchmark
 {
@@ -1649,6 +1650,525 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 Console.WriteLine($"Error loading map: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
             }
+        }
+
+        public void ExportCurveDebugDataFromUrl(string beatSaverUrl, string characteristic, string difficulty, string outputPath = null)
+        {
+            outputPath ??= $"debug_{characteristic}_{difficulty}_{DateTime.Now:yyyyMMdd_HHmmss}.html";
+
+            Console.WriteLine($"Downloading map from: {beatSaverUrl}");
+            var map = new Parse().TryDownloadLink(beatSaverUrl).LastOrDefault();
+
+            if (map == null)
+            {
+                Console.WriteLine("Failed to download map!");
+                return;
+            }
+
+            ExportCurveDebugDataInternal(map, characteristic, difficulty, outputPath);
+        }
+
+        public void ExportCurveDebugData(string zipPath, string characteristic, string difficulty, string outputPath = null)
+        {
+            outputPath ??= $"debug_{characteristic}_{difficulty}_{DateTime.Now:yyyyMMdd_HHmmss}.html";
+
+            Console.WriteLine($"Loading map from file: {zipPath}");
+            
+            if (!File.Exists(zipPath) && !Directory.Exists(zipPath))
+            {
+                Console.WriteLine($"Error: Path not found: {zipPath}");
+                return;
+            }
+
+            try
+            {
+                var parser = new Parse();
+                BeatmapV3 map = null;
+
+                if (zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    using (var fileStream = File.OpenRead(zipPath))
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        fileStream.CopyTo(memoryStream);
+                        memoryStream.Position = 0;
+
+                        var maps = parser.TryLoadZip(memoryStream);
+                        map = maps?.LastOrDefault();
+                    }
+                }
+                else
+                {
+                    map = parser.TryLoadPath(zipPath);
+                }
+
+                if (map == null)
+                {
+                    Console.WriteLine("Failed to load map from file!");
+                    return;
+                }
+
+                ExportCurveDebugDataInternal(map, characteristic, difficulty, outputPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+        }
+
+        private void ExportCurveDebugDataInternal(BeatmapV3 map, string characteristic, string difficulty, string outputPath)
+        {
+            // Run analysis with debug data capture
+            var ratings = analyzer.GetRatingWithCurveDebug(map, characteristic);
+            var rating = ratings?.FirstOrDefault(r => r.Difficulty == difficulty);
+
+            if (rating == null)
+            {
+                Console.WriteLine($"Could not find difficulty: {characteristic} - {difficulty}");
+                return;
+            }
+
+            Console.WriteLine($"\nGenerating curve debug data for: {characteristic} - {difficulty}");
+            Console.WriteLine($"Total swings: {rating.SwingData.Count}");
+            
+            // Get debug data
+            var debugData = Analyzer.BeatmapScanner.Algorithm.SwingCurve.DebugData;
+            Console.WriteLine($"Debug data count: {debugData.Count}");
+
+            if (debugData.Count == 0)
+            {
+                Console.WriteLine("Warning: No debug data captured!");
+                return;
+            }
+
+            var html = GenerateCurveDebugHtml(map, characteristic, difficulty, rating);
+
+            File.WriteAllText(outputPath, html);
+            Console.WriteLine($"✓ Curve debug data exported to: {outputPath}");
+
+            OpenInBrowser(outputPath);
+        }
+
+        private string GenerateCurveDebugHtml(BeatmapV3 map, string characteristic, string difficulty, Ratings rating)
+        {
+            var debugData = Analyzer.BeatmapScanner.Algorithm.SwingCurve.DebugData;
+            
+            // Sort by swing index to ensure correct order
+            var sortedDebugData = debugData.OrderBy(d => d.SwingIndex).Select(d => new
+            {
+                d.SwingIndex,
+                d.Beat,
+                d.Hand,
+                d.IsReset,
+                d.EntryX,
+                d.EntryY,
+                d.ExitX,
+                d.ExitY,
+                d.Point0X,
+                d.Point0Y,
+                d.Point1X,
+                d.Point1Y,
+                d.Point2X,
+                d.Point2Y,
+                d.Point3X,
+                d.Point3Y,
+                BezierPoints = d.BezierPoints.Select(pt => new { x = pt.x, y = pt.y }).ToList(),
+                d.Distance,
+                d.DistanceMinusOffset,
+                d.SimHandCurPosX,
+                d.SimHandCurPosY,
+                d.SimHandPrePosX,
+                d.SimHandPrePosY,
+                d.RawPositionComplexity,
+                d.PositionComplexity,
+                d.AngleList,
+                d.AngleChangeList,
+                d.AngleCount,
+                d.AngleChangeCount,
+                d.First,
+                d.Last,
+                d.PathLookback,
+                d.FirstIndex,
+                d.LastIndex,
+                d.PathLookbackIndex,
+                d.AvgAngleChange,
+                d.CurveComplexity,
+                d.PathAngleStrain,
+                d.PathStrain
+            }).ToList();
+            
+            Console.WriteLine($"Serializing {sortedDebugData.Count} debug entries...");
+            var debugDataJson = JsonConvert.SerializeObject(sortedDebugData);
+
+            return $@"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>SwingCurve Debug - {map.Info._songName}</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }}
+        
+        .container {{
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }}
+        
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }}
+        
+        .header h1 {{
+            font-size: 2em;
+            margin-bottom: 10px;
+        }}
+        
+        .content {{
+            padding: 30px;
+        }}
+        
+        .swing-section {{
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }}
+        
+        .swing-section.red {{
+            border-left-color: #dc3545;
+        }}
+        
+        .swing-section.blue {{
+            border-left-color: #007bff;
+        }}
+        
+        .swing-section h4 {{
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }}
+        
+        .data-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }}
+        
+        .data-item {{
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }}
+        
+        .key {{
+            font-weight: bold;
+            color: #555;
+            font-size: 0.9em;
+        }}
+        
+        .value {{
+            color: #27ae60;
+            font-family: 'Courier New', monospace;
+            margin-left: 5px;
+        }}
+        
+        .subsection {{
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }}
+        
+        .subsection h5 {{
+            color: #555;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }}
+        
+        .bezier-points {{
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.85em;
+        }}
+        
+        .angle-lists {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }}
+        
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+        }}
+        
+        table td {{
+            padding: 4px 8px;
+            border-bottom: 1px solid #eee;
+        }}
+        
+        table td:first-child {{
+            font-weight: bold;
+            color: #666;
+            width: 30%;
+        }}
+        
+        .controls {{
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }}
+        
+        .controls input {{
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }}
+        
+        .controls select {{
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>SwingCurve Debug Data</h1>
+            <p>{map.Info._songName} • {characteristic} - {difficulty}</p>
+            <p>Total Swings: {rating.SwingData.Count}</p>
+            <p style=""font-size: 0.9em; opacity: 0.9; margin-top: 10px;"">Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}</p>
+        </div>
+        
+        <div class=""content"">
+            <div class=""controls"">
+                <input type=""text"" id=""searchBox"" placeholder=""Search by beat, hand..."">
+                <select id=""filterHand"">
+                    <option value="""">All Hands</option>
+                    <option value=""Red"">Red Hand</option>
+                    <option value=""Blue"">Blue Hand</option>
+                </select>
+                <label>
+                    <input type=""checkbox"" id=""filterReset""> Show Resets Only
+                </label>
+            </div>
+            
+            <div id=""swingsContainer""></div>
+        </div>
+    </div>
+    
+    <script>
+        const debugData = {debugDataJson};
+        let filteredData = [...debugData];
+        
+        function renderSwings() {{
+            const container = document.getElementById('swingsContainer');
+            container.innerHTML = filteredData.map(swing => {{
+                const handClass = swing.Hand.toLowerCase();
+                
+                return `
+                    <div class=""swing-section ${{handClass}}"">
+                        <h4>Swing ${{swing.SwingIndex}} (Time=${{swing.Beat.toFixed(3)}}, ${{swing.Hand}})${{swing.IsReset ? ' [RESET]' : ''}}</h4>
+                        
+                        <div class=""data-grid"">
+                            <div class=""data-item"">
+                                <span class=""key"">Entry Position:</span>
+                                <span class=""value"">(${{swing.EntryX.toFixed(3)}}, ${{swing.EntryY.toFixed(3)}})</span>
+                            </div>
+                            <div class=""data-item"">
+                                <span class=""key"">Exit Position:</span>
+                                <span class=""value"">(${{swing.ExitX.toFixed(3)}}, ${{swing.ExitY.toFixed(3)}})</span>
+                            </div>
+                            <div class=""data-item"">
+                                <span class=""key"">Distance:</span>
+                                <span class=""value"">${{swing.DistanceMinusOffset.toFixed(3)}}</span>
+                            </div>
+                            <div class=""data-item"">
+                                <span class=""key"">Position Complexity:</span>
+                                <span class=""value"">${{swing.PositionComplexity.toFixed(3)}}</span>
+                            </div>
+                            <div class=""data-item"">
+                                <span class=""key"">Reset:</span>
+                                <span class=""value"">${{swing.IsReset ? 'Yes' : 'No'}}</span>
+                            </div>
+                            <div class=""data-item"">
+                                <span class=""key"">Length of List:</span>
+                                <span class=""value"">${{swing.BezierPoints.length}}</span>
+                            </div>
+                            <div class=""data-item"">
+                                <span class=""key"">Avg Angle Change:</span>
+                                <span class=""value"">${{swing.AvgAngleChange.toFixed(3)}}</span>
+                            </div>
+                            <div class=""data-item"">
+                                <span class=""key"">Curve Complexity:</span>
+                                <span class=""value"">${{swing.CurveComplexity.toFixed(3)}}</span>
+                            </div>
+                            <div class=""data-item"">
+                                <span class=""key"">Path Angle Strain:</span>
+                                <span class=""value"">${{swing.PathAngleStrain.toFixed(3)}}</span>
+                            </div>
+                            <div class=""data-item"">
+                                <span class=""key"">Path Strain (Total):</span>
+                                <span class=""value"">${{swing.PathStrain.toFixed(3)}}</span>
+                            </div>
+                        </div>
+                        
+                        <div class=""subsection"">
+                            <h5>Bezier Control Points</h5>
+                            <table>
+                                <tr>
+                                    <td>Point 0 (Previous Exit):</td>
+                                    <td>(${{swing.Point0X.toFixed(3)}}, ${{swing.Point0Y.toFixed(3)}})</td>
+                                </tr>
+                                <tr>
+                                    <td>Point 1 (Control 1):</td>
+                                    <td>(${{swing.Point1X.toFixed(3)}}, ${{swing.Point1Y.toFixed(3)}})</td>
+                                </tr>
+                                <tr>
+                                    <td>Point 2 (Control 2):</td>
+                                    <td>(${{swing.Point2X.toFixed(3)}}, ${{swing.Point2Y.toFixed(3)}})</td>
+                                </tr>
+                                <tr>
+                                    <td>Point 3 (Current Entry):</td>
+                                    <td>(${{swing.Point3X.toFixed(3)}}, ${{swing.Point3Y.toFixed(3)}})</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class=""subsection"">
+                            <h5>Position Complexity Details</h5>
+                            <table>
+                                <tr>
+                                    <td>Sim Hand Current Position:</td>
+                                    <td>(${{swing.SimHandCurPosX.toFixed(3)}}, ${{swing.SimHandCurPosY.toFixed(3)}})</td>
+                                </tr>
+                                <tr>
+                                    <td>Sim Hand Previous Position:</td>
+                                    <td>(${{swing.SimHandPrePosX.toFixed(3)}}, ${{swing.SimHandPrePosY.toFixed(3)}})</td>
+                                </tr>
+                                <tr>
+                                    <td>Raw Position Complexity:</td>
+                                    <td>${{swing.RawPositionComplexity.toFixed(3)}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Clamped Position Complexity:</td>
+                                    <td>${{swing.PositionComplexity.toFixed(3)}}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class=""subsection"">
+                            <h5>Curve Analysis Parameters</h5>
+                            <table>
+                                <tr>
+                                    <td>Angle Count:</td>
+                                    <td>${{swing.AngleCount}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Angle Change Count:</td>
+                                    <td>${{swing.AngleChangeCount}}</td>
+                                </tr>
+                                <tr>
+                                    <td>First / Last / PathLookback:</td>
+                                    <td>${{swing.First.toFixed(2)}} / ${{swing.Last.toFixed(2)}} / ${{swing.PathLookback.toFixed(2)}}</td>
+                                </tr>
+                                <tr>
+                                    <td>First Index / Last Index:</td>
+                                    <td>${{swing.FirstIndex}} / ${{swing.LastIndex}}</td>
+                                </tr>
+                                <tr>
+                                    <td>Path Lookback Index:</td>
+                                    <td>${{swing.PathLookbackIndex}}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class=""subsection"">
+                            <h5>Bezier Curve Points (${{swing.BezierPoints.length}} points)</h5>
+                            <div class=""bezier-points"">
+                                ${{swing.BezierPoints.map((pt, idx) => 
+                                    `<div>[${{idx}}]: (${{pt.x.toFixed(3)}}, ${{pt.y.toFixed(3)}})</div>`
+                                ).join('')}}
+                            </div>
+                        </div>
+                        
+                        <div class=""angle-lists"">
+                            <div class=""subsection"">
+                                <h5>Angle List (${{swing.AngleList.length}} angles)</h5>
+                                <div class=""bezier-points"">
+                                    ${{swing.AngleList.map((angle, idx) => 
+                                        `<div>[${{idx}}]: ${{angle.toFixed(2)}}°</div>`
+                                    ).join('')}}
+                                </div>
+                            </div>
+                            
+                            <div class=""subsection"">
+                                <h5>Angle Change List (${{swing.AngleChangeList.length}} changes)</h5>
+                                <div class=""bezier-points"">
+                                    ${{swing.AngleChangeList.map((change, idx) => 
+                                        `<div>[${{idx}}]: ${{change.toFixed(2)}}°</div>`
+                                    ).join('')}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }}).join('');
+        }}
+        
+        function applyFilters() {{
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const handFilter = document.getElementById('filterHand').value;
+            const resetOnly = document.getElementById('filterReset').checked;
+            
+            filteredData = debugData.filter(swing => {{
+                if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
+                if (handFilter && swing.Hand !== handFilter) return false;
+                if (resetOnly && !swing.IsReset) return false;
+                return true;
+            }});
+            
+            renderSwings();
+        }}
+        
+        document.getElementById('searchBox').addEventListener('input', applyFilters);
+        document.getElementById('filterHand').addEventListener('change', applyFilters);
+        document.getElementById('filterReset').addEventListener('change', applyFilters);
+        
+        renderSwings();
+    </script>
+</body>
+</html>";
         }
 
         private string GenerateMultiDifficultySwingHtml(BeatmapV3 map, List<(string characteristic, string difficulty, Ratings rating)> difficulties)

@@ -98,7 +98,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             for (int i = 0; i < swingData.Count; i++)
             {
-                swingData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[i] }, isRightHand) * 2;
+                swingData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[i] }, isRightHand) * 4;
             }
 
             return swingData;

@@ -41,13 +41,16 @@ namespace Analyzer.BeatmapScanner.Algorithm
             while (i < cubes.Count)
             {
                 var group = new List<int> { i };
-                float currentTime = cubes[i].Beat;
-                float currentNjs = cubes[i].Njs;
                 
                 // Add notes that are at the same time or very close in depth
                 for (int j = i + 1; j < cubes.Count; j++)
                 {
-                    float timeDiff = cubes[j].Beat - currentTime;
+                    // Get the previous note in the group (last added note)
+                    int prevIndex = group[group.Count - 1];
+                    float prevTime = cubes[prevIndex].Beat;
+                    float prevNjs = cubes[prevIndex].Njs;
+                    
+                    float timeDiff = cubes[j].Beat - prevTime;
                     
                     // Check if simultaneous (same time)
                     if (Math.Abs(timeDiff) < 0.001f)
@@ -57,12 +60,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     }
                     
                     // Check if very close in depth (multi-note hit range)
-                    float z1 = CalculateZPosition(currentTime, currentNjs, bpm);
+                    // Compare PREVIOUS note to CURRENT note (not first note to current)
+                    float z1 = CalculateZPosition(prevTime, prevNjs, bpm);
                     float z2 = CalculateZPosition(cubes[j].Beat, cubes[j].Njs, bpm);
                     float depthDiff = Math.Abs(z2 - z1);
                     
                     // If within multi-note hit range (~0.5 meters), add to group
-                    if (depthDiff < 0.5f)
+                    if (depthDiff < 0.3f)
                     {
                         group.Add(j);
                     }
@@ -174,34 +178,62 @@ namespace Analyzer.BeatmapScanner.Algorithm
         }
         
         /// <summary>
-        /// For each group with 2+ notes, calculate geometric angle and normalize it based on head direction.
-        /// Uses the geometric angle (from head to tail position) in the direction that matches swing flow.
+        /// For each group with 2+ notes, calculate geometric angle from head to tail.
+        /// For sliders and patterns, the direction is always from the lowest beat (head) to highest beat (tail).
+        /// When both geometric and reverse angles are roughly equidistant from the previous swing,
+        /// prefer the angle that would naturally alternate parity.
         /// </summary>
         private static void ValidateAndCorrectGroupAngles(List<Cube> cubes, List<List<int>> groups)
         {
-            foreach (var group in groups)
+            for (int groupIdx = 0; groupIdx < groups.Count; groupIdx++)
             {
+                var group = groups[groupIdx];
+                
                 if (group.Count < 2)
                 {
                     // Single note: just copy head direction to itself (already set)
                     continue;
                 }
                 
-                // Get head note direction
+                // Get head note direction (initial guess, will be overridden for patterns)
                 int headIndex = group[0];
                 double headDirection = cubes[headIndex].Direction;
                 
-                // Calculate geometric angle from first to last note position
-                Cube firstNote = cubes[group[0]];
-                Cube lastNote = cubes[group[group.Count - 1]];
+                // Find the actual head (lowest beat) and tail (highest beat)
+                // This handles cases where notes might not be in perfect chronological order
+                int actualHeadIndex = group[0];
+                int actualTailIndex = group[0];
+                double minBeat = cubes[group[0]].Beat;
+                double maxBeat = cubes[group[0]].Beat;
                 
-                int lineDiff = lastNote.X - firstNote.X;
-                int layerDiff = lastNote.Y - firstNote.Y;
+                for (int i = 1; i < group.Count; i++)
+                {
+                    int idx = group[i];
+                    if (cubes[idx].Beat < minBeat)
+                    {
+                        minBeat = cubes[idx].Beat;
+                        actualHeadIndex = idx;
+                    }
+                    if (cubes[idx].Beat > maxBeat)
+                    {
+                        maxBeat = cubes[idx].Beat;
+                        actualTailIndex = idx;
+                    }
+                }
                 
-                // If notes are at same position, skip geometric correction
+                Cube headNote = cubes[actualHeadIndex];
+                Cube tailNote = cubes[actualTailIndex];
+                
+                int lineDiff = tailNote.X - headNote.X;
+                int layerDiff = tailNote.Y - headNote.Y;
+                
+                // Check if this is a simultaneous pattern (all notes at same beat time)
+                bool isSimultaneous = Math.Abs(maxBeat - minBeat) < 0.001;
+                
+                // If notes are at the exact same position (shouldn't happen in practice), use flow direction
                 if (lineDiff == 0 && layerDiff == 0)
                 {
-                    // Apply head direction to all notes
+                    // No spatial movement between notes - use flow-based direction
                     foreach (int idx in group)
                     {
                         cubes[idx].Direction = headDirection;
@@ -210,26 +242,58 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     continue;
                 }
                 
-                // Calculate geometric angle from head to tail
+                // Calculate geometric angle based on spatial positions
                 double angleRad = Math.Atan2(layerDiff, lineDiff);
                 double geometricAngle = (angleRad * 180.0 / Math.PI + 360.0) % 360.0;
                 
-                // Calculate reverse of geometric angle
+                // Calculate reverse angle
                 double reverseAngle = Mod(geometricAngle + 180, 360);
                 
-                // Determine which angle better matches the intended swing direction
-                // Compare both geometric and reverse to see which is in the same "hemisphere" as head direction
-                double diffGeometric = Math.Abs(Mod(geometricAngle - headDirection + 180, 360) - 180);
-                double diffReverse = Math.Abs(Mod(reverseAngle - headDirection + 180, 360) - 180);
+                // Default to geometric angle (head to tail)
+                double chosenAngle = geometricAngle;
                 
-                // Use the geometric angle in the direction that matches swing flow
-                // This ensures patterns are normalized to their actual geometric angle
-                double normalizedAngle = diffGeometric < diffReverse ? geometricAngle : reverseAngle;
+                // For both simultaneous and sequential patterns, consider parity alternation
+                if (groupIdx > 0)
+                {
+                    // Find the previous group's last note (tail of previous pattern or single note)
+                    var prevGroup = groups[groupIdx - 1];
+                    int prevTailIndex = prevGroup[prevGroup.Count - 1];
+                    double prevDirection = cubes[prevTailIndex].Direction;
+                    
+                    // Calculate angular distance from previous direction to both options
+                    double diffGeometric = Math.Abs(Mod(geometricAngle - prevDirection + 180, 360) - 180);
+                    double diffReverse = Math.Abs(Mod(reverseAngle - prevDirection + 180, 360) - 180);
+                    
+                    // Check if angles are roughly equidistant (within 30 degrees difference)
+                    double equidistanceThreshold = 30;
+                    bool roughlyEquidistant = Math.Abs(diffGeometric - diffReverse) < equidistanceThreshold;
+                    
+                    if (roughlyEquidistant)
+                    {
+                        // When equidistant, prefer the angle that alternates parity (different direction)
+                        // "Same direction" means within 67.5 degrees (matching IsSameDir threshold)
+                        bool geometricSameDir = diffGeometric < 67.5;
+                        bool reverseSameDir = diffReverse < 67.5;
+                        
+                        if (geometricSameDir && !reverseSameDir)
+                        {
+                            // Geometric is same direction, reverse is different -> prefer reverse for parity alternation
+                            chosenAngle = reverseAngle;
+                        }
+                        else if (!geometricSameDir && reverseSameDir)
+                        {
+                            // Reverse is same direction, geometric is different -> keep geometric for parity alternation
+                            chosenAngle = geometricAngle;
+                        }
+                        // If both same or both different, keep geometric (default)
+                    }
+                    // If not equidistant, keep geometric angle (head to tail is always primary)
+                }
                 
-                // Apply normalized geometric angle to ALL notes in the group
+                // Apply chosen angle to ALL notes in the group
                 foreach (int idx in group)
                 {
-                    cubes[idx].Direction = normalizedAngle;
+                    cubes[idx].Direction = chosenAngle;
                     cubes[idx].Pattern = true;
                 }
             }
