@@ -37,7 +37,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             }
 
             // Check if notes are simultaneous
-            bool isSimultaneous = Math.Abs(prev.Time - current.Time) < 0.001f;
+            bool isSimultaneous = Math.Abs(prev.Beat - current.Beat) < 0.001f;
             
             if (isSimultaneous)
             {
@@ -86,8 +86,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// </summary>
         private static double CalculateGeometricAngle(Cube first, Cube second)
         {
-            int lineDiff = second.Line - first.Line;
-            int layerDiff = second.Layer - first.Layer;
+            int lineDiff = second.X - first.X;
+            int layerDiff = second.Y - first.Y;
             
             double angleRad = Math.Atan2(layerDiff, lineDiff);
             double angleDeg = angleRad * 180.0 / Math.PI;
@@ -183,8 +183,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         private static bool ShouldReorderSimultaneousNotes(Cube first, Cube second, double swingDirection)
         {
             // Calculate which note is "earlier" in the swing path based on direction
-            int lineDiff = second.Line - first.Line;
-            int layerDiff = second.Layer - first.Layer;
+            int lineDiff = second.X - first.X;
+            int layerDiff = second.Y - first.Y;
 
             // Determine if the second note is "before" the first note in the swing direction
             // If so, they need to be swapped
@@ -229,10 +229,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             var groupIndices = new List<int> { startIndex };
             
             // Find all simultaneous notes
-            float baseTime = cubes[startIndex].Time;
+            float baseTime = cubes[startIndex].Beat;
             for (int i = startIndex + 1; i < cubes.Count; i++)
             {
-                if (Math.Abs(cubes[i].Time - baseTime) < 0.001f)
+                if (Math.Abs(cubes[i].Beat - baseTime) < 0.001f)
                 {
                     groupIndices.Add(i);
                 }
@@ -327,7 +327,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             
             // Project the note position onto the swing direction vector
             // This gives us how far along the swing path the note is
-            double projection = cube.Line * swingX + cube.Layer * swingY;
+            double projection = cube.X * swingX + cube.Y * swingY;
             
             // Negate because we want notes "before" in the swing to sort first
             return -projection;
@@ -356,13 +356,13 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             bool isLastInPattern = true;
             if (currentIndex + 1 < cubes.Count)
             {
-                float currentTime = cubes[currentIndex].Time;
+                float currentTime = cubes[currentIndex].Beat;
                 int currentType = cubes[currentIndex].Type;
                 
                 // Find all remaining simultaneous notes of the same type
                 for (int i = currentIndex + 1; i < cubes.Count; i++)
                 {
-                    if (Math.Abs(cubes[i].Time - currentTime) >= 0.001f)
+                    if (Math.Abs(cubes[i].Beat - currentTime) >= 0.001f)
                     {
                         // No more simultaneous notes
                         break;

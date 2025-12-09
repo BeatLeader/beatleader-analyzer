@@ -32,7 +32,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
                     neutralAngle = isRightHand ? RIGHT_BACKHAND_NEUTRAL : LEFT_BACKHAND_NEUTRAL;
                 }
 
-                double deviation = AngleDeviation(neutralAngle, swing.Angle);
+                double deviation = AngleDeviation(neutralAngle, swing.Direction);
                 double normalizedStrain = deviation / 180.0;
                 totalStrain += normalizedStrain * normalizedStrain;
             }

@@ -20,11 +20,11 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
         public static double Calculate3DDistance(Cube prev, Cube next, float bpm)
         {
-            double xDistance = (next.Line - prev.Line) * GRID_SPACING;
-            double yDistance = (next.Layer - prev.Layer) * GRID_SPACING;
+            double xDistance = (next.X - prev.X) * GRID_SPACING;
+            double yDistance = (next.Y - prev.Y) * GRID_SPACING;
 
-            double prevZ = CalculateZPosition(prev.Time, prev.Njs, bpm);
-            double nextZ = CalculateZPosition(next.Time, next.Njs, bpm);
+            double prevZ = CalculateZPosition(prev.Beat, prev.Njs, bpm);
+            double nextZ = CalculateZPosition(next.Beat, next.Njs, bpm);
             double zDistance = Math.Abs(nextZ - prevZ);
 
             return Math.Sqrt(xDistance * xDistance + yDistance * yDistance + zDistance * zDistance);
@@ -32,8 +32,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
         public static bool IsPositionAlignedWithDirection(Cube prev, Cube next, double direction, bool isSimultaneous = false)
         {
-            int xDiff = next.Line - prev.Line;
-            int yDiff = next.Layer - prev.Layer;
+            int xDiff = next.X - prev.X;
+            int yDiff = next.Y - prev.Y;
 
             if (xDiff == 0 && yDiff == 0)
             {
@@ -108,7 +108,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         public static bool IsMultiNoteHit(Cube prev, Cube next, float bpm)
         {
             // Check if notes are simultaneous (same time)
-            bool isSimultaneous = Math.Abs(prev.Time - next.Time) < 0.001f;
+            bool isSimultaneous = Math.Abs(prev.Beat - next.Beat) < 0.001f;
             
             if (isSimultaneous)
             {
@@ -123,8 +123,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             {
                 // For sequential notes (sliders, curved sliders),
                 // only check Z-distance (depth/time) to ensure they're close enough in time
-                double prevZ = CalculateZPosition(prev.Time, prev.Njs, bpm);
-                double nextZ = CalculateZPosition(next.Time, next.Njs, bpm);
+                double prevZ = CalculateZPosition(prev.Beat, prev.Njs, bpm);
+                double nextZ = CalculateZPosition(next.Beat, next.Njs, bpm);
                 double zDistance = Math.Abs(nextZ - prevZ);
                 
                 if (zDistance > MAX_Z_DISTANCE)
@@ -134,8 +134,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 
                 // Special case: Notes at the same position (dot spam)
                 // These should always be considered multi-note hits if close enough in time
-                int xDiff = next.Line - prev.Line;
-                int yDiff = next.Layer - prev.Layer;
+                int xDiff = next.X - prev.X;
+                int yDiff = next.Y - prev.Y;
                 if (xDiff == 0 && yDiff == 0 && prev.CutDirection == 8 && next.CutDirection == 8)
                 {
                     return true;
@@ -161,8 +161,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
         public static bool AreNotesCloseInDepth(Cube prev, Cube next, float bpm)
         {
-            double prevZ = CalculateZPosition(prev.Time, prev.Njs, bpm);
-            double nextZ = CalculateZPosition(next.Time, next.Njs, bpm);
+            double prevZ = CalculateZPosition(prev.Beat, prev.Njs, bpm);
+            double nextZ = CalculateZPosition(next.Beat, next.Njs, bpm);
             double zDistance = Math.Abs(nextZ - prevZ);
 
             return zDistance <= MAX_Z_DISTANCE;

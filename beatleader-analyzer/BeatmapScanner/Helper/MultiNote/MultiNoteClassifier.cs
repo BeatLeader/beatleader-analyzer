@@ -89,7 +89,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
                 string patternType = DetermineMultiNoteHitType(cubes, patternNotes);
 
-                if (cubeToSwing.TryGetValue(cubes[i].Time, out var swing))
+                if (cubeToSwing.TryGetValue(cubes[i].Beat, out var swing))
                 {
                     swing.PatternType = patternType;
                 }
@@ -136,7 +136,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 {
                     if (swingIndex < swingData.Count)
                     {
-                        cubeToSwing[cubes[i].Time] = swingData[swingIndex];
+                        cubeToSwing[cubes[i].Beat] = swingData[swingIndex];
                         swingIndex++;
                     }
                 }
@@ -157,8 +157,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             if (noteCount >= 2 && isSimultaneous)
             {
                 var firstNote = cubes[patternIndices[0]];
-                if ((Math.Abs(firstNote.Time - 196f) < 0.1f || Math.Abs(firstNote.Time - 197f) < 0.1f || 
-                     Math.Abs(firstNote.Time - 217f) < 0.1f || Math.Abs(firstNote.Time - 248f) < 0.1f) &&
+                if ((Math.Abs(firstNote.Beat - 196f) < 0.1f || Math.Abs(firstNote.Beat - 197f) < 0.1f || 
+                     Math.Abs(firstNote.Beat - 217f) < 0.1f || Math.Abs(firstNote.Beat - 248f) < 0.1f) &&
                     patternIndices.All(i => cubes[i].CutDirection == 8))
                 {
                     try
@@ -168,12 +168,12 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                         
                         using (var writer = new System.IO.StreamWriter(logPath, append: true))
                         {
-                            writer.WriteLine($"=== CLASSIFYING PATTERN at Time {firstNote.Time} ===");
+                            writer.WriteLine($"=== CLASSIFYING PATTERN at Time {firstNote.Beat} ===");
                             writer.WriteLine($"Note count: {noteCount}, Simultaneous: {isSimultaneous}");
                             for (int i = 0; i < patternIndices.Count; i++)
                             {
                                 var note = cubes[patternIndices[i]];
-                                writer.WriteLine($"  Note {i}: Line={note.Line}, Layer={note.Layer}, Direction={note.Direction:F2}");
+                                writer.WriteLine($"  Note {i}: Line={note.X}, Layer={note.Y}, Direction={note.Direction:F2}");
                             }
                             writer.WriteLine($"About to classify...");
                         }
@@ -192,8 +192,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 if (noteCount >= 2 && patternIndices.All(i => cubes[i].CutDirection == 8))
                 {
                     var firstNote = cubes[patternIndices[0]];
-                    if (Math.Abs(firstNote.Time - 196f) < 0.1f || Math.Abs(firstNote.Time - 197f) < 0.1f || 
-                        Math.Abs(firstNote.Time - 217f) < 0.1f || Math.Abs(firstNote.Time - 248f) < 0.1f)
+                    if (Math.Abs(firstNote.Beat - 196f) < 0.1f || Math.Abs(firstNote.Beat - 197f) < 0.1f || 
+                        Math.Abs(firstNote.Beat - 217f) < 0.1f || Math.Abs(firstNote.Beat - 248f) < 0.1f)
                     {
                         try
                         {
@@ -304,10 +304,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         {
             if (indices.Count < 2) return false;
 
-            float firstTime = cubes[indices[0]].Time;
+            float firstTime = cubes[indices[0]].Beat;
             for (int i = 1; i < indices.Count; i++)
             {
-                if (Math.Abs(cubes[indices[i]].Time - firstTime) > SIMULTANEOUS_TIME_TOLERANCE)
+                if (Math.Abs(cubes[indices[i]].Beat - firstTime) > SIMULTANEOUS_TIME_TOLERANCE)
                 {
                     return false;
                 }
@@ -326,8 +326,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             Cube note1 = cubes[indices[0]];
             Cube note2 = cubes[indices[1]];
 
-            int lineDiff = Math.Abs(note1.Line - note2.Line);
-            int layerDiff = Math.Abs(note1.Layer - note2.Layer);
+            int lineDiff = Math.Abs(note1.X - note2.X);
+            int layerDiff = Math.Abs(note1.Y - note2.Y);
 
             // Check for adjacency: orthogonal (h/v) or diagonal
             bool isOrthogonallyAdjacent = (lineDiff == 1 && layerDiff == 0) || (lineDiff == 0 && layerDiff == 1);
@@ -350,28 +350,28 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             Cube note2 = cubes[indices[1]];
             Cube note3 = cubes[indices[2]];
 
-            bool verticalLine = note1.Line == note2.Line && note2.Line == note3.Line;
-            bool horizontalLine = note1.Layer == note2.Layer && note2.Layer == note3.Layer;
+            bool verticalLine = note1.X == note2.X && note2.X == note3.X;
+            bool horizontalLine = note1.Y == note2.Y && note2.Y == note3.Y;
 
             if (verticalLine)
             {
-                var layers = new[] { note1.Layer, note2.Layer, note3.Layer };
+                var layers = new[] { note1.Y, note2.Y, note3.Y };
                 Array.Sort(layers);
                 return layers[1] - layers[0] == 1 && layers[2] - layers[1] == 1;
             }
 
             if (horizontalLine)
             {
-                var lines = new[] { note1.Line, note2.Line, note3.Line };
+                var lines = new[] { note1.X, note2.X, note3.X };
                 Array.Sort(lines);
                 return lines[1] - lines[0] == 1 && lines[2] - lines[1] == 1;
             }
 
             // Check for diagonal tower
-            int vec1X = note2.Line - note1.Line;
-            int vec1Y = note2.Layer - note1.Layer;
-            int vec2X = note3.Line - note2.Line;
-            int vec2Y = note3.Layer - note2.Layer;
+            int vec1X = note2.X - note1.X;
+            int vec1Y = note2.Y - note1.Y;
+            int vec2X = note3.X - note2.X;
+            int vec2Y = note3.Y - note2.Y;
 
             bool isCollinear = vec1X * vec2Y - vec1Y * vec2X == 0;
             bool isDiagonal1 = Math.Abs(vec1X) == 1 && Math.Abs(vec1Y) == 1;
@@ -395,8 +395,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             Cube note1 = cubes[indices[0]];
             Cube note2 = cubes[indices[1]];
 
-            int lineDiff = Math.Abs(note1.Line - note2.Line);
-            int layerDiff = Math.Abs(note1.Layer - note2.Layer);
+            int lineDiff = Math.Abs(note1.X - note2.X);
+            int layerDiff = Math.Abs(note1.Y - note2.Y);
 
             // Must have at least one gap (distance >= 2 in at least one direction)
             bool hasGap = lineDiff >= 2 && layerDiff == 0 ||
@@ -412,7 +412,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             if (HaveSameCutDirection(note1, note2))
             {
                 double snapAngle = CalculateSnapAngle(note1, note2);
-
+                
                 // Get the CutDirection's intended angle
                 double cutDirectionAngle = MathHelper.Helper.DirectionToDegree[note1.CutDirection] + note1.AngleOffset;
                 cutDirectionAngle = (cutDirectionAngle + 360.0) % 360.0;
@@ -421,16 +421,29 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 double angleDiff = Math.Abs(snapAngle - cutDirectionAngle);
                 if (angleDiff > 180) angleDiff = 360 - angleDiff;
 
-                // Slanted only if snap angle differs from CutDirection (not directly aligned)
-                bool isDirectlyAligned = angleDiff == 0;
+                // Check if snap angle is directly aligned with CutDirection
+                bool isDirectlyAligned = angleDiff < 5.0; // Small tolerance for floating point
+                
+                // Check if notes are at pure cardinal or diagonal positions
+                // Pure cardinal: exactly horizontal or vertical (one diff is 0)
+                // Pure diagonal: line diff equals layer diff (e.g., (0,0) to (2,2))
+                bool isCardinalOrPureDiagonal = (lineDiff == 0 || layerDiff == 0) ||  // Cardinal
+                                                (lineDiff == layerDiff);                // Pure diagonal
 
-                if (IsAlignedInSwingDirection(note1, note2, snapAngle))
+                // Slanted window: BOTH conditions must be true:
+                // 1. Snap angle differs from CutDirection (not directly aligned)
+                // 2. Notes are NOT at cardinal/pure diagonal positions
+                if (!isDirectlyAligned && !isCardinalOrPureDiagonal && IsAlignedInSwingDirection(note1, note2, note1.Direction))
                 {
-                    if (!isDirectlyAligned)
-                    {
-                        isSlanted = true;
-                        return true;
-                    }
+                    isSlanted = true;
+                    return true;
+                }
+                
+                // If at cardinal/diagonal positions OR directly aligned, it's a regular window (if aligned)
+                if (IsAlignedInSwingDirection(note1, note2, note1.Direction))
+                {
+                    isSlanted = false;
+                    return true;
                 }
             }
 
@@ -452,10 +465,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 Cube curr = cubes[indices[i]];
                 Cube next = cubes[indices[i + 1]];
 
-                int vec1X = curr.Line - prev.Line;
-                int vec1Y = curr.Layer - prev.Layer;
-                int vec2X = next.Line - curr.Line;
-                int vec2Y = next.Layer - curr.Layer;
+                int vec1X = curr.X - prev.X;
+                int vec1Y = curr.Y - prev.Y;
+                int vec2X = next.X - curr.X;
+                int vec2Y = next.Y - curr.Y;
 
                 int crossProduct = vec1X * vec2Y - vec1Y * vec2X;
                 if (crossProduct != 0)
@@ -490,8 +503,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// </summary>
         private static double CalculateSnapAngle(Cube note1, Cube note2)
         {
-            int lineDiff = note2.Line - note1.Line;
-            int layerDiff = note2.Layer - note1.Layer;
+            int lineDiff = note2.X - note1.X;
+            int layerDiff = note2.Y - note1.Y;
 
             double angleRadians = Math.Atan2(layerDiff, lineDiff);
             double angleDegrees = angleRadians * 180.0 / Math.PI;
@@ -519,8 +532,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 if (!alignedWithNote1 && !alignedWithNote2)
                 {
                     // Calculate geometric angle from note1 to note2
-                    int lineDiff = note2.Line - note1.Line;
-                    int layerDiff = note2.Layer - note1.Layer;
+                    int lineDiff = note2.X - note1.X;
+                    int layerDiff = note2.Y - note1.Y;
                     double angleRad = Math.Atan2(layerDiff, lineDiff);
                     double angleDeg = (angleRad * 180.0 / Math.PI + 360.0) % 360.0;
                     
@@ -542,8 +555,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// </summary>
         private static bool IsAlignedInSwingDirection(Cube note1, Cube note2, double direction)
         {
-            int lineDiff = note2.Line - note1.Line;
-            int layerDiff = note2.Layer - note1.Layer;
+            int lineDiff = note2.X - note1.X;
+            int layerDiff = note2.Y - note1.Y;
 
             return direction switch
             {
@@ -581,8 +594,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// </summary>
         private static bool IsPerpendicularToSwingDirection(Cube note1, Cube note2, double direction)
         {
-            int lineDiff = note2.Line - note1.Line;
-            int layerDiff = note2.Layer - note1.Layer;
+            int lineDiff = note2.X - note1.X;
+            int layerDiff = note2.Y - note1.Y;
 
             double radians = direction * Math.PI / 180.0;
             double swingDirX = Math.Cos(radians);

@@ -7,7 +7,6 @@ using beatleader_analyzer.BeatmapScanner.Data;
 using System.Runtime.InteropServices;
 using static beatleader_analyzer.BeatmapScanner.Helper.MultiNote.MultiNoteClassifier;
 using static beatleader_analyzer.BeatmapScanner.Helper.WallHelper.WallClassifier;
-using beatleader_analyzer.BeatmapScanner.Helper.Debug;
 using Parser.Map.Difficulty.V3.Grid;
 
 namespace Analyzer.BeatmapScanner.Algorithm
@@ -27,22 +26,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
             List<SwingData> blueSwingData = [];
             List<SwingData> combinedSwingData = [];
 
-            // Generate a session ID for this analysis run to group related logs
-            string sessionId = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fff");
-
             if (red.Count > 2)
             {
-                PreprocessNotes.Detect(red, bpm, false, bombs);
-                
-                // Debug: Log processed red cubes after flow detection
-                CubeDebugLogger.LogProcessedCubes(red, "Red", bpm, sessionId);
-                CubeDebugLogger.LogMultiNotePatterns(red, "Red", sessionId);
-                
-                redSwingData = SwingProcesser.Process(red, strictAngles);
+                PreprocessNotes.Detect(red, bpm, false);
+                ParityPredictor.Predict(red, false, bombs);
+                redSwingData = SwingProcesser.Process(red, false, strictAngles);
                 
                 if (redSwingData.Count > 0)
                 {
-                    ParityPredictor.Predict(redSwingData, false, bombs);
                     SwingCurve.Calc(redSwingData, false);
                     combinedSwingData.AddRange(redSwingData);
                 }
@@ -50,28 +41,17 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (blue.Count > 2)
             {
-                PreprocessNotes.Detect(blue, bpm, true, bombs);
-                
-                // Debug: Log processed blue cubes after flow detection
-                CubeDebugLogger.LogProcessedCubes(blue, "Blue", bpm, sessionId);
-                CubeDebugLogger.LogMultiNotePatterns(blue, "Blue", sessionId);
-                
-                blueSwingData = SwingProcesser.Process(blue, strictAngles);
+                PreprocessNotes.Detect(blue, bpm, true);
+                ParityPredictor.Predict(blue, true, bombs);
+                blueSwingData = SwingProcesser.Process(blue, true, strictAngles);
                 
                 if (blueSwingData.Count > 0)
                 {
-                    ParityPredictor.Predict(blueSwingData, true, bombs);
                     SwingCurve.Calc(blueSwingData, true);
                     combinedSwingData.AddRange(blueSwingData);
                 }
             }
             
-            // Debug: Log combined cubes to a single file for easy comparison
-            if (red.Count > 2 || blue.Count > 2)
-            {
-                CubeDebugLogger.LogProcessedCubesCombined(red, blue, bpm, sessionId);
-            }
-
             combinedSwingData.Sort((a, b) => a.Beat.CompareTo(b.Beat));
             double balancedPass = 0.0;
             double balancedTech = 0.0;

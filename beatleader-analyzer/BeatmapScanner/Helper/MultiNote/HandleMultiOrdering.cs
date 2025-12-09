@@ -5,7 +5,6 @@ using Analyzer.BeatmapScanner.Data;
 using System.Collections.Generic;
 using System;
 using System.Linq;
-using Analyzer.BeatmapScanner.Algorithm;
 
 namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 {
@@ -21,7 +20,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 return;
             }
 
-            var timeGroupedCubes = cubes.GroupBy(x => x.Time).ToDictionary(x => x.Key, x => x.ToArray());
+            var timeGroupedCubes = cubes.GroupBy(x => x.Beat).ToDictionary(x => x.Key, x => x.ToArray());
 
             int skipCount = 0;
 
@@ -35,9 +34,9 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
                 Cube currentCube = cubes[n];
                 
-                if (currentCube.Time == cubes[n + 1].Time)
+                if (currentCube.Beat == cubes[n + 1].Beat)
                 {
-                    Cube[] simultaneousNotes = timeGroupedCubes[currentCube.Time];
+                    Cube[] simultaneousNotes = timeGroupedCubes[currentCube.Beat];
                     skipCount = simultaneousNotes.Length - 1;
 
                     double entryDirection = DetermineSwingDirection(cubes, currentCube, n, bpm);
@@ -63,7 +62,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
         private static double DetermineSwingDirection(List<Cube> cubes, Cube currentCube, int currentIndex, float bpm)
         {
-            var timeGroupedCubes = cubes.Where(c => c.Time == currentCube.Time).ToArray();
+            var timeGroupedCubes = cubes.Where(c => c.Beat == currentCube.Beat).ToArray();
             Cube arrowNote = timeGroupedCubes.LastOrDefault(c => c.CutDirection != 8);
 
             if (arrowNote != null)
@@ -76,8 +75,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             var first = timeGroupedCubes[0];
             var last = timeGroupedCubes[timeGroupedCubes.Length - 1];
 
-            int lineDiff = last.Line - first.Line;
-            int layerDiff = last.Layer - first.Layer;
+            int lineDiff = last.X - first.X;
+            int layerDiff = last.Y - first.Y;
 
             if (lineDiff != 0 || layerDiff != 0)
             {
@@ -103,7 +102,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 {
                     // Reverse the direction for each note between the arrow and current group
                     // to predict what direction we should have at this group
-                    double predictedDirection = cubes[prevNoteIndex].Direction; ;
+                    double predictedDirection = cubes[prevNoteIndex].Direction;
                     for (int i = prevNoteIndex; i < currentIndex; i++)
                     {
                         // Check if notes are close enough in time to maintain flow direction
@@ -130,14 +129,14 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
             // No direction available - use default based on position
             // If no previous notes, assume entry from bottom-center
-            return cubes[currentIndex].Layer >= 2 ? 270 : 90; // Default to down if high, up if low
+            return cubes[currentIndex].Y >= 2 ? 270 : 90; // Default to down if high, up if low
         }
 
         private static (double x, double y) CalculateEntryPoint(List<Cube> cubes, int startIndex, double swingDirection)
         {
             if (startIndex > 0)
             {
-                return SimSwingPos(cubes[startIndex - 1].Line, cubes[startIndex - 1].Layer, swingDirection);
+                return SimSwingPos(cubes[startIndex - 1].X, cubes[startIndex - 1].Y, swingDirection);
             }
             else
             {
@@ -162,8 +161,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 
                 // Calculate distance from entry point along swing direction
                 // Notes closer to entry point get lower values (hit first)
-                double dx = cube.Line - entryPoint.x;
-                double dy = cube.Layer - entryPoint.y;
+                double dx = cube.X - entryPoint.x;
+                double dy = cube.Y - entryPoint.y;
                 
                 double radians = swingDirection * Math.PI / 180.0;
                 double swingX = Math.Cos(radians);
@@ -201,11 +200,11 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             while (i < cubes.Count)
             {
                 // Find groups of simultaneous notes
-                float currentTime = cubes[i].Time;
+                float currentTime = cubes[i].Beat;
                 int groupStart = i;
                 int groupCount = 1;
                 
-                while (i + 1 < cubes.Count && Math.Abs(cubes[i + 1].Time - currentTime) < 0.001f)
+                while (i + 1 < cubes.Count && Math.Abs(cubes[i + 1].Beat - currentTime) < 0.001f)
                 {
                     groupCount++;
                     i++;
@@ -263,8 +262,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 int firstIdx = largestGroup[0];
                 int lastIdx = largestGroup[largestGroup.Count - 1];
                 
-                int lineDiff = cubes[lastIdx].Line - cubes[firstIdx].Line;
-                int layerDiff = cubes[lastIdx].Layer - cubes[firstIdx].Layer;
+                int lineDiff = cubes[lastIdx].X - cubes[firstIdx].X;
+                int layerDiff = cubes[lastIdx].Y - cubes[firstIdx].Y;
                 
                 // If notes are at the same position, use the default direction
                 if (lineDiff == 0 && layerDiff == 0)
@@ -346,8 +345,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 int lastIdx = group[group.Count - 1];
                 
                 // Calculate angle FROM first TO last (swing direction)
-                int lineDiff = cubes[lastIdx].Line - cubes[firstIdx].Line;
-                int layerDiff = cubes[lastIdx].Layer - cubes[firstIdx].Layer;
+                int lineDiff = cubes[lastIdx].X - cubes[firstIdx].X;
+                int layerDiff = cubes[lastIdx].Y - cubes[firstIdx].Y;
                 
                 // Calculate geometric angle
                 double angleRadians = Math.Atan2(layerDiff, lineDiff);
