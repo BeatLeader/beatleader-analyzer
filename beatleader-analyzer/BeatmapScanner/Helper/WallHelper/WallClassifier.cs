@@ -209,41 +209,45 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
 
         private static bool IsCrouchWall(List<Wall> walls)
         {
-            // A crouch wall must have a wall at y=2 that covers both center positions (x=1 and x=2)
-            // Either a single wall covers both, or multiple walls combine to cover both
-            bool hasTopWallCoveringBothCenters = false;
+            // A crouch wall requires walls that COMBINED reach y=2 and cover both center positions (x=1 and x=2)
+            // Check if ANY walls (at any height) that extend to y=2 cover both positions
+            bool hasWallReachingTopAtX1 = false;
+            bool hasWallReachingTopAtX2 = false;
 
             foreach (var wall in walls)
             {
-                if (wall.y == 2)
+                // Check if this wall reaches the top layer (y=2)
+                // A wall at y position reaches y=2 if: y + height > 2
+                bool reachesTop = wall.y + wall.Height > 2;
+                
+                if (reachesTop)
                 {
-                    // Check if this top wall covers both center positions x=1 and x=2
+                    // Check if this wall covers center position x=1
                     bool coversX1 = wall.x <= 1 && wall.x + wall.Width > 1;
+                    // Check if this wall covers center position x=2
                     bool coversX2 = wall.x <= 2 && wall.x + wall.Width > 2;
 
-                    if (coversX1 && coversX2)
-                    {
-                        hasTopWallCoveringBothCenters = true;
-                        break;
-                    }
+                    if (coversX1) hasWallReachingTopAtX1 = true;
+                    if (coversX2) hasWallReachingTopAtX2 = true;
                 }
             }
 
-            // If there's no top wall covering both centers, it's not a crouch wall
-            if (!hasTopWallCoveringBothCenters)
+            // If the walls don't reach the top at BOTH center positions, it's not a crouch wall
+            if (!hasWallReachingTopAtX1 || !hasWallReachingTopAtX2)
             {
                 return false;
             }
 
-            // Now check if there are any lower walls that would make dodging impossible
-            // (i.e., walls that block the side positions where player could dodge instead of crouch)
+            // Now check if there are any lower walls that would make crouching impossible
+            // The player can crouch if AT LEAST ONE center position is NOT blocked from below
             bool hasBlockingWallAtX1 = false;
             bool hasBlockingWallAtX2 = false;
 
             foreach (var wall in walls)
             {
-                // Only walls from ground level (y=0 or y=1) that are tall enough block dodging
-                bool isTallEnough = wall.y <= 0 && wall.Height >= 3 || wall.y == 1 && wall.Height >= 2;
+                // Walls that start from ground level (y=0 or y=1) and are tall enough block crouching
+                // We need to check if they fill the entire space from ground to top
+                bool isTallEnough = (wall.y <= 0 && wall.Height >= 3) || (wall.y == 1 && wall.Height >= 2);
                 
                 if (isTallEnough)
                 {
@@ -255,23 +259,13 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                 }
             }
 
-            // If both center positions have blocking walls from below, it's definitely a crouch
+            // If BOTH center positions have blocking walls from below, crouching is impossible
+            // If at least one position is free, the player can crouch there
             if (hasBlockingWallAtX1 && hasBlockingWallAtX2)
             {
-                return true;
+                return false;
             }
 
-            // If only the top wall exists (no blocking walls below), it's still a crouch
-            // because the player must crouch to avoid it
-            if (!hasBlockingWallAtX1 && !hasBlockingWallAtX2)
-            {
-                return true;
-            }
-
-            // If there's only one blocking wall below and one side is free,
-            // the player could potentially dodge instead of crouch
-            // However, if the top wall is present, crouching is still the primary action
-            // so we consider it a crouch wall
             return true;
         }
     }
