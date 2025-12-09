@@ -39,12 +39,11 @@ namespace Benchmark
                 Console.WriteLine("  [1] Export Analysis (All Difficulties)");
                 Console.WriteLine("  [2] Export Detailed Swing Data");
                 Console.WriteLine("  [3] Export Difficulty Breakdown");
-                Console.WriteLine("  [4] Export SwingCurve Debug Data");
-                Console.WriteLine("  [5] Run Benchmark");
-                Console.WriteLine("  [6] Help & Documentation");
-                Console.WriteLine("  [7] Exit");
+                Console.WriteLine("  [4] Run Benchmark");
+                Console.WriteLine("  [5] Help & Documentation");
+                Console.WriteLine("  [6] Exit");
                 Console.WriteLine();
-                Console.Write("Select an option (1-7): ");
+                Console.Write("Select an option (1-6): ");
 
                 var choice = Console.ReadLine()?.Trim();
 
@@ -60,18 +59,15 @@ namespace Benchmark
                         RunExportDifficultyBreakdown();
                         break;
                     case "4":
-                        RunExportCurveDebug();
-                        break;
-                    case "5":
                         RunBenchmarkMenu();
                         break;
-                    case "6":
+                    case "5":
                         ShowExporterHelp();
                         Console.WriteLine();
                         Console.WriteLine("Press any key to return to menu...");
                         Console.ReadKey();
                         break;
-                    case "7":
+                    case "6":
                         return;
                     default:
                         Console.WriteLine("Invalid option. Press any key to continue...");
@@ -409,131 +405,6 @@ namespace Benchmark
                 {
                     exporter.ExportDetailedSwingData(input, characteristic, difficulty, string.IsNullOrEmpty(outputPath) ? null : outputPath);
                 }
-            }
-
-            Console.WriteLine();
-            Console.WriteLine("Press any key to return to menu...");
-            Console.ReadKey();
-        }
-
-        static void RunExportCurveDebug()
-        {
-            Console.Clear();
-            Console.WriteLine("╔════════════════════════════════════════════════╗");
-            Console.WriteLine("║   Export SwingCurve Debug Data                ║");
-            Console.WriteLine("╚════════════════════════════════════════════════╝");
-            Console.WriteLine();
-
-            Console.WriteLine("Enter map source:");
-            Console.WriteLine("  [1] BeatSaver URL");
-            Console.WriteLine("  [2] Local file path");
-            Console.Write("Select option (1-2): ");
-            string sourceChoice = Console.ReadLine()?.Trim();
-
-            string input;
-            bool isUrl = sourceChoice == "1";
-
-            if (isUrl)
-            {
-                Console.Write("Enter BeatSaver URL: ");
-                input = Console.ReadLine()?.Trim();
-            }
-            else
-            {
-                Console.Write("Enter path (zip file or extracted folder): ");
-                input = Console.ReadLine()?.Trim();
-            }
-
-            if (string.IsNullOrEmpty(input))
-            {
-                Console.WriteLine("Error: Input cannot be empty.");
-                Console.WriteLine("Press any key to return to menu...");
-                Console.ReadKey();
-                return;
-            }
-
-            Console.WriteLine();
-            Console.WriteLine("Available Characteristics:");
-            Console.WriteLine("  [1] Standard");
-            Console.WriteLine("  [2] OneSaber");
-            Console.WriteLine("  [3] NoArrows");
-            Console.WriteLine("  [4] 90Degree");
-            Console.WriteLine("  [5] 360Degree");
-            Console.WriteLine("  [6] Lawless");
-            Console.WriteLine();
-            Console.Write("Select Characteristic (1-6): ");
-            string charChoice = Console.ReadLine()?.Trim();
-
-            string characteristic = charChoice switch
-            {
-                "1" => "Standard",
-                "2" => "OneSaber",
-                "3" => "NoArrows",
-                "4" => "90Degree",
-                "5" => "360Degree",
-                "6" => "Lawless",
-                _ => null
-            };
-
-            if (characteristic == null)
-            {
-                Console.WriteLine("Error: Invalid characteristic selection.");
-                Console.WriteLine("Press any key to return to menu...");
-                Console.ReadKey();
-                return;
-            }
-
-            Console.WriteLine();
-            Console.WriteLine("Available Difficulties:");
-            Console.WriteLine("  [1] Easy");
-            Console.WriteLine("  [2] Normal");
-            Console.WriteLine("  [3] Hard");
-            Console.WriteLine("  [4] Expert");
-            Console.WriteLine("  [5] ExpertPlus");
-            Console.WriteLine();
-            Console.Write("Select Difficulty (1-5): ");
-            string diffChoice = Console.ReadLine()?.Trim();
-
-            string difficulty = diffChoice switch
-            {
-                "1" => "Easy",
-                "2" => "Normal",
-                "3" => "Hard",
-                "4" => "Expert",
-                "5" => "ExpertPlus",
-                _ => null
-            };
-
-            if (difficulty == null)
-            {
-                Console.WriteLine("Error: Invalid difficulty selection.");
-                Console.WriteLine("Press any key to return to menu...");
-                Console.ReadKey();
-                return;
-            }
-
-            Console.Write("Enter output path (or press Enter for auto-generated name): ");
-            string outputPath = Console.ReadLine()?.Trim();
-
-            Console.WriteLine();
-            Console.WriteLine("Generating SwingCurve debug data...");
-            Console.WriteLine();
-
-            try
-            {
-                var exporter = new AnalysisExporter();
-                if (isUrl)
-                {
-                    exporter.ExportCurveDebugDataFromUrl(input, characteristic, difficulty, string.IsNullOrEmpty(outputPath) ? null : outputPath);
-                }
-                else
-                {
-                    exporter.ExportCurveDebugData(input, characteristic, difficulty, string.IsNullOrEmpty(outputPath) ? null : outputPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: {ex.Message}");
             }
 
             Console.WriteLine();
