@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
 using Parser.Map.Difficulty.V3.Grid;
+using beatleader_parser.Timescale;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -23,7 +24,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private const double DODGE_WALL_BUFF = 1.01;
         private const double CROUCH_WALL_DURING_BUFF = 1.05;
 
-        public static void CalcSwingDiff(List<SwingData> swingData, double bpm, List<Wall> dodgeWalls = null, List<Wall> crouchWalls = null)
+        public static void CalcSwingDiff(List<SwingData> swingData, Timescale timescale, List<Wall> dodgeWalls = null, List<Wall> crouchWalls = null)
         {
             if (swingData.Count == 0)
             {
@@ -68,7 +69,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
 
-            double bps = bpm / 60.0;
+            // Swing is in BpmTime, so we don't have to worry about BPM changes here
+            timescale.SetCurrentBPM(0);
+            double bps = timescale.GetValue() / 60.0;
             int? previousHand = null;
 
             var wallBuffs = (dodgeWalls != null || crouchWalls != null) ? AnalyzeWallInfluence(swingData, dodgeWalls, crouchWalls) : new Dictionary<int, double>();

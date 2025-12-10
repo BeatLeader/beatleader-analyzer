@@ -9,7 +9,8 @@ namespace Analyzer.BeatmapScanner.Data
     /// </summary>
     public class Cube
     {
-        public float Beat { get; set; } = 0;
+        public float BpmTime { get; set; } = 0;
+        public float Seconds { get; set; } = 0;
         public int X { get; set; } = 0;
         public int Y { get; set; } = 0;
         public int Type { get; set; } = 0;
@@ -37,7 +38,8 @@ namespace Analyzer.BeatmapScanner.Data
 
         public Cube(Cube cube)
         {
-            Beat = cube.Beat;
+            BpmTime = cube.BpmTime;
+            Seconds = cube.Seconds;
             X = cube.X;
             Y = cube.Y;
             Type = cube.Type;
@@ -60,7 +62,8 @@ namespace Analyzer.BeatmapScanner.Data
 
         public Cube(Note note)
         {
-            Beat = note.BpmTime;
+            BpmTime = note.BpmTime;
+            Seconds = note.Seconds;
             X = note.x;
             Y = note.y;
             Type = note.Color;

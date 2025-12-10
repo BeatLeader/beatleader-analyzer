@@ -37,7 +37,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             }
 
             // Check if notes are simultaneous
-            bool isSimultaneous = Math.Abs(prev.Beat - current.Beat) < 0.001f;
+            bool isSimultaneous = Math.Abs(prev.BpmTime - current.BpmTime) < 0.001f;
             
             if (isSimultaneous)
             {
@@ -229,10 +229,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             var groupIndices = new List<int> { startIndex };
             
             // Find all simultaneous notes
-            float baseTime = cubes[startIndex].Beat;
+            float baseTime = cubes[startIndex].BpmTime;
             for (int i = startIndex + 1; i < cubes.Count; i++)
             {
-                if (Math.Abs(cubes[i].Beat - baseTime) < 0.001f)
+                if (Math.Abs(cubes[i].BpmTime - baseTime) < 0.001f)
                 {
                     groupIndices.Add(i);
                 }
@@ -356,13 +356,13 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             bool isLastInPattern = true;
             if (currentIndex + 1 < cubes.Count)
             {
-                float currentTime = cubes[currentIndex].Beat;
+                float currentTime = cubes[currentIndex].BpmTime;
                 int currentType = cubes[currentIndex].Type;
                 
                 // Find all remaining simultaneous notes of the same type
                 for (int i = currentIndex + 1; i < cubes.Count; i++)
                 {
-                    if (Math.Abs(cubes[i].Beat - currentTime) >= 0.001f)
+                    if (Math.Abs(cubes[i].BpmTime - currentTime) >= 0.001f)
                     {
                         // No more simultaneous notes
                         break;

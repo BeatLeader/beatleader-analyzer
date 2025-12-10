@@ -20,7 +20,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// Analyzes swing data and returns statistics with counts of each multi-note hit type.
         /// Also labels each swing with its pattern type.
         /// </summary>
-        public static Statistics CountMultiNoteHits(List<SwingData> swingData, float bpm)
+        public static Statistics CountMultiNoteHits(List<SwingData> swingData)
         {
             var stats = new Statistics();
 
@@ -45,7 +45,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// <summary>
         /// Assigns multi-note hit type labels to swings based on their constituent notes.
         /// </summary>
-        public static void LabelSwingMultiNoteHits(List<SwingData> swingData, float bpm)
+        public static void LabelSwingMultiNoteHits(List<SwingData> swingData)
         {
             if (swingData == null || swingData.Count == 0)
             {
@@ -171,10 +171,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         {
             if (swing.Notes.Count < 2) return false;
 
-            float firstTime = swing.Notes[0].Beat;
+            float firstTime = swing.Notes[0].BpmTime;
             for (int i = 1; i < swing.Notes.Count; i++)
             {
-                if (Math.Abs(swing.Notes[i].Beat - firstTime) > SIMULTANEOUS_TIME_TOLERANCE)
+                if (Math.Abs(swing.Notes[i].BpmTime - firstTime) > SIMULTANEOUS_TIME_TOLERANCE)
                 {
                     return false;
                 }

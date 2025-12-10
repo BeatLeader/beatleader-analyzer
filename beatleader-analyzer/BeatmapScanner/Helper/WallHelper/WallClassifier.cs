@@ -1,3 +1,4 @@
+using beatleader_parser.Timescale;
 using Parser.Map.Difficulty.V3.Grid;
 using System;
 using System.Collections.Generic;
@@ -10,7 +11,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
         private const float TIME_TOLERANCE = 0.1f;
         private const float DODGE_COOLDOWN_SECONDS = 1.0f; // Minimum time between dodges at same position
 
-        public static (List<Wall> dodgeWallsAll, List<Wall> crouchWallsAll, int dodgeWallsCount, int crouchWallsCount) ClassifyWalls(List<Wall> walls, float bpm = 120f)
+        public static (List<Wall> dodgeWallsAll, List<Wall> crouchWallsAll, int dodgeWallsCount, int crouchWallsCount) ClassifyWalls(List<Wall> walls, Timescale timescale)
         {
             var dodgeWallsList = new List<Wall>();
             var crouchWallsList = new List<Wall>();
@@ -23,7 +24,9 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
             }
 
             // Convert cooldown from seconds to beats
-            float cooldownBeats = DODGE_COOLDOWN_SECONDS * (bpm / 60f);
+            // We use wall BpmTime, so we can simply use the first BPM value
+            timescale.SetCurrentBPM(0);
+            float cooldownBeats = DODGE_COOLDOWN_SECONDS * (timescale.GetValue() / 60f);
 
             // Sort walls by time to group simultaneous walls
             var wallsByTime = walls

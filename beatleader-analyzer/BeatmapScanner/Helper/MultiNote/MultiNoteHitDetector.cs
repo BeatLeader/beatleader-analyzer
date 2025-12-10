@@ -23,8 +23,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             double xDistance = (next.X - prev.X) * GRID_SPACING;
             double yDistance = (next.Y - prev.Y) * GRID_SPACING;
 
-            double prevZ = CalculateZPosition(prev.Beat, prev.Njs, bpm);
-            double nextZ = CalculateZPosition(next.Beat, next.Njs, bpm);
+            double prevZ = CalculateZPosition(prev.BpmTime, prev.Njs, bpm);
+            double nextZ = CalculateZPosition(next.BpmTime, next.Njs, bpm);
             double zDistance = Math.Abs(nextZ - prevZ);
 
             return Math.Sqrt(xDistance * xDistance + yDistance * yDistance + zDistance * zDistance);
@@ -108,7 +108,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         public static bool IsMultiNoteHit(Cube prev, Cube next, float bpm)
         {
             // Check if notes are simultaneous (same time)
-            bool isSimultaneous = Math.Abs(prev.Beat - next.Beat) < 0.001f;
+            bool isSimultaneous = Math.Abs(prev.BpmTime - next.BpmTime) < 0.001f;
             
             if (isSimultaneous)
             {
@@ -123,8 +123,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             {
                 // For sequential notes (sliders, curved sliders),
                 // only check Z-distance (depth/time) to ensure they're close enough in time
-                double prevZ = CalculateZPosition(prev.Beat, prev.Njs, bpm);
-                double nextZ = CalculateZPosition(next.Beat, next.Njs, bpm);
+                double prevZ = CalculateZPosition(prev.BpmTime, prev.Njs, bpm);
+                double nextZ = CalculateZPosition(next.BpmTime, next.Njs, bpm);
                 double zDistance = Math.Abs(nextZ - prevZ);
                 
                 if (zDistance > MAX_Z_DISTANCE)
@@ -161,8 +161,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
         public static bool AreNotesCloseInDepth(Cube prev, Cube next, float bpm)
         {
-            double prevZ = CalculateZPosition(prev.Beat, prev.Njs, bpm);
-            double nextZ = CalculateZPosition(next.Beat, next.Njs, bpm);
+            double prevZ = CalculateZPosition(prev.BpmTime, prev.Njs, bpm);
+            double nextZ = CalculateZPosition(next.BpmTime, next.Njs, bpm);
             double zDistance = Math.Abs(nextZ - prevZ);
 
             return zDistance <= MAX_Z_DISTANCE;

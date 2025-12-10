@@ -85,7 +85,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             for (int i = 1; i < cubes.Count; i++)
             {
-                var currentBeat = cubes[i].Beat;
+                var currentBeat = cubes[i].BpmTime;
 
                 if (!cubes[i].Pattern || cubes[i].Head)
                 {

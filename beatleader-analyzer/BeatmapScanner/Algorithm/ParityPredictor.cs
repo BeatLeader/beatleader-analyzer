@@ -205,7 +205,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             // Get ALL bombs between previous swing's tail and current swing's head
             var bombsBetween = bombs
-                .Where(b => b.BpmTime > prevSwingTailCube.Beat && b.BpmTime < currentCube.Beat)
+                .Where(b => b.BpmTime > prevSwingTailCube.BpmTime && b.BpmTime < currentCube.BpmTime)
                 .OrderBy(b => b.BpmTime)
                 .ToList();
 

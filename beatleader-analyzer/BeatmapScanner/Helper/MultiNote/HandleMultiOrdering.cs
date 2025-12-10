@@ -20,7 +20,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 return;
             }
 
-            var timeGroupedCubes = cubes.GroupBy(x => x.Beat).ToDictionary(x => x.Key, x => x.ToArray());
+            var timeGroupedCubes = cubes.GroupBy(x => x.BpmTime).ToDictionary(x => x.Key, x => x.ToArray());
 
             int skipCount = 0;
 
@@ -34,9 +34,9 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
                 Cube currentCube = cubes[n];
                 
-                if (currentCube.Beat == cubes[n + 1].Beat)
+                if (currentCube.BpmTime == cubes[n + 1].BpmTime)
                 {
-                    Cube[] simultaneousNotes = timeGroupedCubes[currentCube.Beat];
+                    Cube[] simultaneousNotes = timeGroupedCubes[currentCube.BpmTime];
                     skipCount = simultaneousNotes.Length - 1;
 
                     double entryDirection = DetermineSwingDirection(cubes, currentCube, n, bpm);
@@ -62,7 +62,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
         private static double DetermineSwingDirection(List<Cube> cubes, Cube currentCube, int currentIndex, float bpm)
         {
-            var timeGroupedCubes = cubes.Where(c => c.Beat == currentCube.Beat).ToArray();
+            var timeGroupedCubes = cubes.Where(c => c.BpmTime == currentCube.BpmTime).ToArray();
             Cube arrowNote = timeGroupedCubes.LastOrDefault(c => c.CutDirection != 8);
 
             if (arrowNote != null)
@@ -200,11 +200,11 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             while (i < cubes.Count)
             {
                 // Find groups of simultaneous notes
-                float currentTime = cubes[i].Beat;
+                float currentTime = cubes[i].BpmTime;
                 int groupStart = i;
                 int groupCount = 1;
                 
-                while (i + 1 < cubes.Count && Math.Abs(cubes[i + 1].Beat - currentTime) < 0.001f)
+                while (i + 1 < cubes.Count && Math.Abs(cubes[i + 1].BpmTime - currentTime) < 0.001f)
                 {
                     groupCount++;
                     i++;

@@ -39,7 +39,7 @@ namespace Analyzer.BeatmapScanner.Data
         {
             var start = cubes[0];
             Notes = cubes;
-            Beat = start.Beat;
+            Beat = start.BpmTime;
             Direction = start.Direction;
             Forehand = start.Forehand;
             ParityErrors = start.ParityErrors;

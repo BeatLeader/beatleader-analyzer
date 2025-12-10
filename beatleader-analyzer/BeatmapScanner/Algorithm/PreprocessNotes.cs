@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
 using static beatleader_analyzer.BeatmapScanner.Helper.Grid.FindAngleViaPosition;
+using beatleader_parser.Timescale;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -17,10 +18,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
         /// Detects multi-note patterns and sets swing directions.
         /// Groups notes by proximity and validates/corrects angles based on geometry.
         /// </summary>
-        public static void Detect(List<Cube> cubes, List<Bomb> bombs, float bpm, bool isRightHand)
+        public static void Detect(List<Cube> cubes, List<Bomb> bombs, bool isRightHand, Timescale timescale)
         {
             // Step 1: Create groups of notes that are close together in time (can be singular too)
-            var groups = CreateNoteGroups(cubes, bpm);
+            var groups = CreateNoteGroups(cubes, timescale);
             
             // Step 2: Set initial direction for all HEAD notes only
             SetInitialDirections(cubes, groups, bombs, isRightHand);
@@ -33,7 +34,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         /// Creates groups of notes that are close together in time.
         /// Groups can contain simultaneous notes or notes very close in depth.
         /// </summary>
-        private static List<List<int>> CreateNoteGroups(List<Cube> cubes, float bpm)
+        private static List<List<int>> CreateNoteGroups(List<Cube> cubes, Timescale timescale)
         {
             var groups = new List<List<int>>();
             int i = 0;
@@ -47,10 +48,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     // Get the previous note in the group (last added note)
                     int prevIndex = group[group.Count - 1];
-                    float prevTime = cubes[prevIndex].Beat;
-                    float prevNjs = cubes[prevIndex].Njs;
-                    
-                    float timeDiff = cubes[j].Beat - prevTime;
+                    float prevTime = cubes[prevIndex].BpmTime;
+                    float timeDiff = cubes[j].BpmTime - prevTime;
                     
                     // Check if simultaneous (same time)
                     if (Math.Abs(timeDiff) < 0.001f)
@@ -58,15 +57,16 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         group.Add(j);
                         continue;
                     }
-                    
-                    // Check if very close in depth (multi-note hit range)
-                    // Compare PREVIOUS note to CURRENT note (not first note to current)
-                    float z1 = CalculateZPosition(prevTime, prevNjs, bpm);
-                    float z2 = CalculateZPosition(cubes[j].Beat, cubes[j].Njs, bpm);
-                    float depthDiff = Math.Abs(z2 - z1);
-                    
-                    // If within multi-note hit range (~0.5 meters), add to group
-                    if (depthDiff < 0.3f)
+
+                    // Check if very close using beat difference (need to take into account BPM changes)
+                    // 1/5 of a beat is a good value to not catch 1/4 jumps.
+                    // Will create false positive if there's sliders slower than this, but it's not rankable.
+                    // Initial idea was to use NJS and BPM to calculate meters, but for some cases it would completely fail
+                    // We need a catch-all, even if it creates some false positives in rare cases.
+                    float prevBeat = timescale.ToBeatTime(cubes[prevIndex].Seconds, true);
+                    float currBeat = timescale.ToBeatTime(cubes[j].Seconds, true);
+                    float beatDiff = Math.Abs(currBeat - prevBeat);
+                    if (beatDiff <= 0.2f && ValidateSliders(cubes[prevIndex], cubes[j]))
                     {
                         group.Add(j);
                     }
@@ -83,18 +83,81 @@ namespace Analyzer.BeatmapScanner.Algorithm
             
             return groups;
         }
-        
-        /// <summary>
-        /// Calculates Z position (depth) of a note based on time, NJS, and BPM.
-        /// </summary>
-        private static float CalculateZPosition(float time, float njs, float bpm)
+
+        private static bool ValidateSliders(Cube previous, Cube current)
         {
-            // Convert beat time to seconds
-            float timeInSeconds = time * 60f / bpm;
-            // Z position = NJS * time (simplified, actual game has more complex formula)
-            return njs * timeInSeconds;
+            // Both are dots - always valid, direction will be calculated from geometry
+            // This might allow some false positives, such as inline dots, but those are rare and acceptable
+            if (previous.CutDirection == 8 && current.CutDirection == 8)
+            {
+                return true;
+            }
+
+            // Calculate geometric angle from previous to current note position
+            int lineDiff = current.X - previous.X;
+            int layerDiff = current.Y - previous.Y;
+            
+            // If notes are at the same position, not a valid slider
+            if (lineDiff == 0 && layerDiff == 0)
+            {
+                return false;
+            }
+
+            double geometricAngle = Math.Atan2(layerDiff, lineDiff) * (180.0 / Math.PI);
+            if (geometricAngle < 0)
+            {
+                geometricAngle += 360.0;
+            }
+
+            // Threshold for "similar direction" - within 67.5 degrees (matching IsSameDir threshold)
+            const double DIRECTION_TOLERANCE = 67.5;
+
+            // Case 1: Previous is arrow, current is dot
+            // Verify current's position is in a similar direction to previous arrow
+            if (previous.CutDirection != 8 && current.CutDirection == 8)
+            {
+                double previousArrowAngle = Mod(DirectionToDegree[previous.CutDirection] + previous.AngleOffset, 360);
+                double angleDiff = Math.Abs(Mod(geometricAngle - previousArrowAngle + 180, 360) - 180);
+                
+                return angleDiff <= DIRECTION_TOLERANCE;
+            }
+
+            // Case 2: Previous is dot, current is arrow
+            // Verify current arrow is in a similar direction to the geometric path
+            if (previous.CutDirection == 8 && current.CutDirection != 8)
+            {
+                double currentArrowAngle = Mod(DirectionToDegree[current.CutDirection] + current.AngleOffset, 360);
+                double angleDiff = Math.Abs(Mod(geometricAngle - currentArrowAngle + 180, 360) - 180);
+                
+                return angleDiff <= DIRECTION_TOLERANCE;
+            }
+
+            // Case 3: Both are arrows
+            // Verify both arrows are similar to each other AND to the geometric path
+            if (previous.CutDirection != 8 && current.CutDirection != 8)
+            {
+                double previousArrowAngle = Mod(DirectionToDegree[previous.CutDirection] + previous.AngleOffset, 360);
+                double currentArrowAngle = Mod(DirectionToDegree[current.CutDirection] + current.AngleOffset, 360);
+                
+                // Check if arrows are similar to each other
+                double arrowDiff = Math.Abs(Mod(currentArrowAngle - previousArrowAngle + 180, 360) - 180);
+                if (arrowDiff > DIRECTION_TOLERANCE)
+                {
+                    return false;
+                }
+                
+                // Check if geometric path is similar to the arrow directions
+                double geomToPrevDiff = Math.Abs(Mod(geometricAngle - previousArrowAngle + 180, 360) - 180);
+                double geomToCurrDiff = Math.Abs(Mod(geometricAngle - currentArrowAngle + 180, 360) - 180);
+                
+                // At least one arrow should align with the geometric path
+                return geomToPrevDiff <= DIRECTION_TOLERANCE || geomToCurrDiff <= DIRECTION_TOLERANCE;
+            }
+
+            // Fallback - should not reach here
+            return true;
         }
-        
+
         /// <summary>
         /// Sets initial direction for HEAD notes only (first note in each group).
         /// Non-head notes inherit from head during validation phase.
@@ -203,20 +266,20 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // This handles cases where notes might not be in perfect chronological order
                 int actualHeadIndex = group[0];
                 int actualTailIndex = group[0];
-                double minBeat = cubes[group[0]].Beat;
-                double maxBeat = cubes[group[0]].Beat;
+                double minBeat = cubes[group[0]].BpmTime;
+                double maxBeat = cubes[group[0]].BpmTime;
                 
                 for (int i = 1; i < group.Count; i++)
                 {
                     int idx = group[i];
-                    if (cubes[idx].Beat < minBeat)
+                    if (cubes[idx].BpmTime < minBeat)
                     {
-                        minBeat = cubes[idx].Beat;
+                        minBeat = cubes[idx].BpmTime;
                         actualHeadIndex = idx;
                     }
-                    if (cubes[idx].Beat > maxBeat)
+                    if (cubes[idx].BpmTime > maxBeat)
                     {
-                        maxBeat = cubes[idx].Beat;
+                        maxBeat = cubes[idx].BpmTime;
                         actualTailIndex = idx;
                     }
                 }

@@ -8,19 +8,20 @@ using System.Runtime.InteropServices;
 using static beatleader_analyzer.BeatmapScanner.Helper.MultiNote.MultiNoteClassifier;
 using static beatleader_analyzer.BeatmapScanner.Helper.WallHelper.WallClassifier;
 using Parser.Map.Difficulty.V3.Grid;
+using beatleader_parser.Timescale;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
     /// <summary>
-    /// Main difficulty calculation algorithm (LackWiz Algorithm).
+    /// Main difficulty calculation algorithm.
     /// </summary>
-    internal class Analyze
+    internal class AnalyzeMap
     {
         private const double PASS_CALIBRATION_FACTOR = 0.8;
         private const double ONE_SABER_NERF = 0.35;
         private const double BALANCED_TECH_SCALER = 10.0;
 
-        public static Ratings UseLackWizAlgorithm(List<Cube> red, List<Cube> blue, float bpm, List<Wall> walls = null, List<Bomb> bombs = null, bool strictAngles = false)
+        public static Ratings UseAlgorithm(List<Cube> red, List<Cube> blue, Modifiers modifiers, List<Wall> walls = null, List<Bomb> bombs = null)
         {
             List<SwingData> redSwingData = [];
             List<SwingData> blueSwingData = [];
@@ -28,9 +29,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (red.Count > 2)
             {
-                PreprocessNotes.Detect(red, bombs, bpm, false);
+                PreprocessNotes.Detect(red, bombs, false, modifiers.timescale);
                 ParityPredictor.Predict(red, false, bombs);
-                redSwingData = SwingProcesser.Process(red, false, strictAngles);
+                redSwingData = SwingProcesser.Process(red, false, modifiers.strictAngles);
                 
                 if (redSwingData.Count > 0)
                 {
@@ -41,9 +42,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (blue.Count > 2)
             {
-                PreprocessNotes.Detect(blue, bombs, bpm, true);
+                PreprocessNotes.Detect(blue, bombs, true, modifiers.timescale);
                 ParityPredictor.Predict(blue, true, bombs);
-                blueSwingData = SwingProcesser.Process(blue, true, strictAngles);
+                blueSwingData = SwingProcesser.Process(blue, true, modifiers.strictAngles);
                 
                 if (blueSwingData.Count > 0)
                 {
@@ -58,13 +59,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             // Classify all walls (for difficulty calculation) and count unique dodge actions (for statistics)
             var (dodgeWallsAll, crouchWallsAll, dodgeWallsCount, crouchWallsCount) = walls != null 
-                ? ClassifyWalls(walls, bpm) 
+                ? ClassifyWalls(walls, modifiers.timescale) 
                 : (new List<Wall>(), new List<Wall>(), 0, 0);
 
             if (combinedSwingData.Count > 0)
             {
                 // Use all classified walls for difficulty calculation
-                DiffToPass.CalcSwingDiff(combinedSwingData, bpm, dodgeWallsAll, crouchWallsAll);
+                DiffToPass.CalcSwingDiff(combinedSwingData, modifiers.timescale, dodgeWallsAll, crouchWallsAll);
                 
                 redSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 0).ToList();
                 blueSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 1).ToList();
@@ -118,17 +119,17 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * BALANCED_TECH_SCALER;
             }
 
-            var redMultiNotes = redSwingData.Count > 0 ? CountMultiNoteHits(redSwingData, bpm) : new Statistics();
-            var blueMultiNotes = blueSwingData.Count > 0 ? CountMultiNoteHits(blueSwingData, bpm) : new Statistics();
+            var redMultiNotes = redSwingData.Count > 0 ? CountMultiNoteHits(redSwingData) : new Statistics();
+            var blueMultiNotes = blueSwingData.Count > 0 ? CountMultiNoteHits(blueSwingData) : new Statistics();
 
             // Label multi-note hit types for each swing
             if (redSwingData.Count > 0)
             {
-                LabelSwingMultiNoteHits(redSwingData, bpm);
+                LabelSwingMultiNoteHits(redSwingData);
             }
             if (blueSwingData.Count > 0)
             {
-                LabelSwingMultiNoteHits(blueSwingData, bpm);
+                LabelSwingMultiNoteHits(blueSwingData);
             }
 
             // Use the counted walls (respecting cooldown) for statistics

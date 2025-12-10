@@ -4,30 +4,27 @@ using System.Collections.Generic;
 using Parser.Map.Difficulty.V3.Grid;
 using System.Linq;
 using beatleader_analyzer.BeatmapScanner.Data;
-
 namespace Analyzer.BeatmapScanner
 {
     internal class BeatmapScanner
     {
-        public static Ratings Analyzer(List<Note> notes, List<Chain> chains, List<Bomb> bombs, List<Wall> walls, float bpm, float timescale, float njsMult = 1, bool strictAngles = false)
+        public static Ratings Analyzer(List<Note> notes, List<Chain> chains, List<Bomb> bombs, List<Wall> walls, Modifiers modifiers)
         {
-            Ratings ratings;
             List<Cube> cubes = [];
-
-            bpm *= timescale;
             
             foreach (var note in notes)
             {
                 var cube = new Cube(note);
-                cube.Njs *= timescale * njsMult;
+                // NJS is affected by both speed modifier and njs modifier
+                cube.Njs *= modifiers.speedMult * modifiers.njsMult;
                 cubes.Add(cube);
             }
 
-            cubes = cubes.OrderBy(c => c.Beat).ToList();
+            cubes = cubes.OrderBy(c => c.BpmTime).ToList();
 
             foreach (var chain in chains)
             {
-                var found = cubes.FirstOrDefault(x => x.Beat == chain.BpmTime && x.Type == chain.Color && x.X == chain.x && x.Y == chain.y && x.CutDirection == chain.CutDirection);
+                var found = cubes.FirstOrDefault(x => x.BpmTime == chain.BpmTime && x.Type == chain.Color && x.X == chain.x && x.Y == chain.y && x.CutDirection == chain.CutDirection);
                 if (found != null)
                 {
                     found.Chain = true;
@@ -41,7 +38,7 @@ namespace Analyzer.BeatmapScanner
             var red = cubes.Where(c => c.Type == 0).ToList();
             var blue = cubes.Where(c => c.Type == 1).ToList();
 
-            return Analyze.UseLackWizAlgorithm(red, blue, bpm, walls, bombs, strictAngles);
+            return AnalyzeMap.UseAlgorithm(red, blue, modifiers, walls, bombs);
         }
     }
 }
