@@ -4,7 +4,6 @@ using static beatleader_analyzer.BeatmapScanner.Helper.Grid.FindAngleViaPosition
 using static beatleader_analyzer.BeatmapScanner.Helper.Grid.GridPositionHelper;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.AngleTolerance;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
-using static beatleader_parser.VNJS.Easings;
 
 namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
 {
@@ -90,21 +89,29 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
             );
         }
 
-        public static void CalcEntryExitWithMemory(
-            SwingData previous,
-            SwingData current)
+        public static void CalcEntryExit(SwingData current, Cube tail = null)
         {
-            Cube cube = current.Notes[0];
-            (double centerX, double centerY) = GridToMeters(cube.X, cube.Y);
+            Cube headCube = current.Notes[0];
+            (double headCenterX, double headCenterY) = GridToMeters(headCube.X, headCube.Y);
 
-            double swingAngle = cube.Direction;
+            double swingAngle = headCube.Direction;
 
             double angleRad = ConvertDegreesToRadians(swingAngle);
             double cos = Math.Cos(angleRad);
             double sin = Math.Sin(angleRad);
 
-            current.EntryPosition = (centerX - cos * NOTE_SIZE, centerY - sin * NOTE_SIZE);
-            current.ExitPosition = (centerX + cos * NOTE_SIZE, centerY + sin * NOTE_SIZE);
+            current.EntryPosition = (headCenterX - cos * NOTE_SIZE, headCenterY - sin * NOTE_SIZE);
+            
+            // If tail exists, use tail position for exit; otherwise use head position
+            if (tail != null)
+            {
+                (double tailCenterX, double tailCenterY) = GridToMeters(tail.X, tail.Y);
+                current.ExitPosition = (tailCenterX + cos * NOTE_SIZE, tailCenterY + sin * NOTE_SIZE);
+            }
+            else
+            {
+                current.ExitPosition = (headCenterX + cos * NOTE_SIZE, headCenterY + sin * NOTE_SIZE);
+            }
         }
 
         public static void NormalizeAngle(SwingData previous, SwingData current, bool strictAngles)

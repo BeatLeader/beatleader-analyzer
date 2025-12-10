@@ -17,39 +17,26 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         private const float SIMULTANEOUS_TIME_TOLERANCE = 0.001f;
 
         /// <summary>
-        /// Analyzes cubes and returns statistics with counts of each multi-note hit type.
+        /// Analyzes swing data and returns statistics with counts of each multi-note hit type.
+        /// Also labels each swing with its pattern type.
         /// </summary>
-        public static Statistics CountMultiNoteHits(List<Cube> cubes, float bpm)
+        public static Statistics CountMultiNoteHits(List<SwingData> swingData, float bpm)
         {
             var stats = new Statistics();
 
-            if (cubes.Count < 2)
+            if (swingData == null || swingData.Count == 0)
             {
                 return stats;
             }
 
-            var processed = new HashSet<int>();
-
-            for (int i = 0; i < cubes.Count; i++)
+            foreach (var swing in swingData)
             {
-                if (processed.Contains(i) || !cubes[i].Head)
+                if (swing.Notes.Count < 2)
                 {
                     continue;
                 }
 
-                var patternNotes = CollectPatternNotes(cubes, i);
-
-                if (patternNotes.Count < 2)
-                {
-                    continue;
-                }
-
-                foreach (int idx in patternNotes)
-                {
-                    processed.Add(idx);
-                }
-
-                ClassifyAndCountMultiNoteHit(cubes, patternNotes, stats);
+                ClassifyAndCountMultiNoteHit(swing, stats);
             }
 
             return stats;
@@ -58,158 +45,38 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// <summary>
         /// Assigns multi-note hit type labels to swings based on their constituent notes.
         /// </summary>
-        public static void LabelSwingMultiNoteHits(List<Cube> cubes, List<SwingData> swingData, float bpm)
+        public static void LabelSwingMultiNoteHits(List<SwingData> swingData, float bpm)
         {
-            if (cubes.Count < 2 || swingData.Count == 0)
+            if (swingData == null || swingData.Count == 0)
             {
                 return;
             }
 
-            var cubeToSwing = BuildCubeToSwingMap(cubes, swingData);
-            var processed = new HashSet<int>();
-
-            for (int i = 0; i < cubes.Count; i++)
+            foreach (var swing in swingData)
             {
-                if (processed.Contains(i) || !cubes[i].Head)
+                if (swing.Notes.Count < 2)
                 {
+                    swing.PatternType = "Single";
                     continue;
                 }
 
-                var patternNotes = CollectPatternNotes(cubes, i);
-
-                if (patternNotes.Count < 2)
-                {
-                    continue;
-                }
-
-                foreach (int idx in patternNotes)
-                {
-                    processed.Add(idx);
-                }
-
-                string patternType = DetermineMultiNoteHitType(cubes, patternNotes);
-
-                if (cubeToSwing.TryGetValue(cubes[i].Beat, out var swing))
-                {
-                    swing.PatternType = patternType;
-                }
+                swing.PatternType = DetermineMultiNoteHitType(swing);
             }
-        }
-
-        /// <summary>
-        /// Collects all notes in a multi-note hit pattern starting from the given index.
-        /// </summary>
-        private static List<int> CollectPatternNotes(List<Cube> cubes, int startIndex)
-        {
-            var patternNotes = new List<int> { startIndex };
-            
-            for (int j = startIndex + 1; j < cubes.Count; j++)
-            {
-                if (cubes[j].Pattern && !cubes[j].Head)
-                {
-                    patternNotes.Add(j);
-                    if (cubes[j].Tail)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            return patternNotes;
-        }
-
-        /// <summary>
-        /// Builds a map from cube time to swing data for labeling.
-        /// </summary>
-        private static Dictionary<float, SwingData> BuildCubeToSwingMap(List<Cube> cubes, List<SwingData> swingData)
-        {
-            var cubeToSwing = new Dictionary<float, SwingData>();
-            int swingIndex = 0;
-
-            for (int i = 0; i < cubes.Count; i++)
-            {
-                if (!cubes[i].Pattern || cubes[i].Head)
-                {
-                    if (swingIndex < swingData.Count)
-                    {
-                        cubeToSwing[cubes[i].Beat] = swingData[swingIndex];
-                        swingIndex++;
-                    }
-                }
-            }
-
-            return cubeToSwing;
         }
 
         /// <summary>
         /// Classifies a multi-note hit and increments the appropriate statistics counter.
         /// </summary>
-        private static void ClassifyAndCountMultiNoteHit(List<Cube> cubes, List<int> patternIndices, Statistics stats)
+        private static void ClassifyAndCountMultiNoteHit(SwingData swing, Statistics stats)
         {
-            int noteCount = patternIndices.Count;
-            bool isSimultaneous = AreNotesSimultaneous(cubes, patternIndices);
-
-            // DEBUG: Log problematic patterns
-            if (noteCount >= 2 && isSimultaneous)
-            {
-                var firstNote = cubes[patternIndices[0]];
-                if ((Math.Abs(firstNote.Beat - 196f) < 0.1f || Math.Abs(firstNote.Beat - 197f) < 0.1f || 
-                     Math.Abs(firstNote.Beat - 217f) < 0.1f || Math.Abs(firstNote.Beat - 248f) < 0.1f) &&
-                    patternIndices.All(i => cubes[i].CutDirection == 8))
-                {
-                    try
-                    {
-                        string logPath = "C:\\Temp\\classification_debug.txt";
-                        System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(logPath));
-                        
-                        using (var writer = new System.IO.StreamWriter(logPath, append: true))
-                        {
-                            writer.WriteLine($"=== CLASSIFYING PATTERN at Time {firstNote.Beat} ===");
-                            writer.WriteLine($"Note count: {noteCount}, Simultaneous: {isSimultaneous}");
-                            for (int i = 0; i < patternIndices.Count; i++)
-                            {
-                                var note = cubes[patternIndices[i]];
-                                writer.WriteLine($"  Note {i}: Line={note.X}, Layer={note.Y}, Direction={note.Direction:F2}");
-                            }
-                            writer.WriteLine($"About to classify...");
-                        }
-                    }
-                    catch { }
-                }
-            }
+            int noteCount = swing.Notes.Count;
+            bool isSimultaneous = AreNotesSimultaneous(swing);
 
             if (isSimultaneous)
             {
-                bool isWindow = IsWindow(cubes, patternIndices, out bool isSlanted);
-                bool isTower = IsTower(cubes, patternIndices);
-                bool isStack = IsStack(cubes, patternIndices);
-                
-                // DEBUG: Log classification results
-                if (noteCount >= 2 && patternIndices.All(i => cubes[i].CutDirection == 8))
-                {
-                    var firstNote = cubes[patternIndices[0]];
-                    if (Math.Abs(firstNote.Beat - 196f) < 0.1f || Math.Abs(firstNote.Beat - 197f) < 0.1f || 
-                        Math.Abs(firstNote.Beat - 217f) < 0.1f || Math.Abs(firstNote.Beat - 248f) < 0.1f)
-                    {
-                        try
-                        {
-                            string logPath = "C:\\Temp\\classification_debug.txt";
-                            using (var writer = new System.IO.StreamWriter(logPath, append: true))
-                            {
-                                writer.WriteLine($"Classification checks:");
-                                writer.WriteLine($"  IsWindow: {isWindow} (slanted: {isSlanted})");
-                                writer.WriteLine($"  IsTower: {isTower}");
-                                writer.WriteLine($"  IsStack: {isStack}");
-                                writer.WriteLine();
-                            }
-                        }
-                        catch { }
-                    }
-                }
+                bool isWindow = IsWindow(swing, out bool isSlanted);
+                bool isTower = IsTower(swing);
+                bool isStack = IsStack(swing);
                 
                 if (isWindow)
                 {
@@ -235,7 +102,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             {
                 if (noteCount >= 2)
                 {
-                    if (IsCurvedSlider(cubes, patternIndices))
+                    if (IsCurvedSlider(swing))
                     {
                         stats.CurvedSliders++;
                     }
@@ -250,27 +117,27 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// <summary>
         /// Determines the specific multi-note hit type and returns its string label.
         /// </summary>
-        private static string DetermineMultiNoteHitType(List<Cube> cubes, List<int> patternIndices)
+        private static string DetermineMultiNoteHitType(SwingData swing)
         {
-            int noteCount = patternIndices.Count;
-            bool isSimultaneous = AreNotesSimultaneous(cubes, patternIndices);
+            int noteCount = swing.Notes.Count;
+            bool isSimultaneous = AreNotesSimultaneous(swing);
 
             if (isSimultaneous)
             {
                 if (noteCount == 2)
                 {
-                    if (IsStack(cubes, patternIndices))
+                    if (IsStack(swing))
                     {
                         return "Stack";
                     }
-                    else if (IsWindow(cubes, patternIndices, out bool isSlanted))
+                    else if (IsWindow(swing, out bool isSlanted))
                     {
                         return isSlanted ? "Slanted Window" : "Window";
                     }
                 }
                 else if (noteCount >= 3)
                 {
-                    if (IsTower(cubes, patternIndices))
+                    if (IsTower(swing))
                     {
                         return "Tower";
                     }
@@ -281,7 +148,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             {
                 if (noteCount >= 2)
                 {
-                    if (IsCurvedSlider(cubes, patternIndices))
+                    if (IsCurvedSlider(swing))
                     {
                         return "Curved Slider";
                     }
@@ -298,16 +165,16 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         #region Classification Methods
 
         /// <summary>
-        /// Checks if all notes occur at the same time (within tolerance).
+        /// Checks if all notes in a swing occur at the same time (within tolerance).
         /// </summary>
-        private static bool AreNotesSimultaneous(List<Cube> cubes, List<int> indices)
+        private static bool AreNotesSimultaneous(SwingData swing)
         {
-            if (indices.Count < 2) return false;
+            if (swing.Notes.Count < 2) return false;
 
-            float firstTime = cubes[indices[0]].Beat;
-            for (int i = 1; i < indices.Count; i++)
+            float firstTime = swing.Notes[0].Beat;
+            for (int i = 1; i < swing.Notes.Count; i++)
             {
-                if (Math.Abs(cubes[indices[i]].Beat - firstTime) > SIMULTANEOUS_TIME_TOLERANCE)
+                if (Math.Abs(swing.Notes[i].Beat - firstTime) > SIMULTANEOUS_TIME_TOLERANCE)
                 {
                     return false;
                 }
@@ -319,12 +186,12 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// Checks if two adjacent notes form a Stack (aligned in swing direction).
         /// Includes orthogonally adjacent (horizontal/vertical) and diagonally adjacent notes.
         /// </summary>
-        private static bool IsStack(List<Cube> cubes, List<int> indices)
+        private static bool IsStack(SwingData swing)
         {
-            if (indices.Count != 2) return false;
+            if (swing.Notes.Count != 2) return false;
 
-            Cube note1 = cubes[indices[0]];
-            Cube note2 = cubes[indices[1]];
+            Cube note1 = swing.Notes[0];
+            Cube note2 = swing.Notes[1];
 
             int lineDiff = Math.Abs(note1.X - note2.X);
             int layerDiff = Math.Abs(note1.Y - note2.Y);
@@ -336,19 +203,19 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
             if (!isAdjacent) return false;
 
-            return IsAlignedInSwingDirection(note1, note2);
+            return IsAlignedInSwingDirection(note1, note2, swing.Direction);
         }
 
         /// <summary>
         /// Checks if three consecutive notes form a Tower (vertical, horizontal, or diagonal line).
         /// </summary>
-        private static bool IsTower(List<Cube> cubes, List<int> indices)
+        private static bool IsTower(SwingData swing)
         {
-            if (indices.Count != 3) return false;
+            if (swing.Notes.Count != 3) return false;
 
-            Cube note1 = cubes[indices[0]];
-            Cube note2 = cubes[indices[1]];
-            Cube note3 = cubes[indices[2]];
+            Cube note1 = swing.Notes[0];
+            Cube note2 = swing.Notes[1];
+            Cube note3 = swing.Notes[2];
 
             bool verticalLine = note1.X == note2.X && note2.X == note3.X;
             bool horizontalLine = note1.Y == note2.Y && note2.Y == note3.Y;
@@ -386,14 +253,14 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         /// Regular windows: Notes directly aligned with their CutDirection or with similar directions.
         /// Slanted windows: Notes with same CutDirection but snap angle differs from CutDirection.
         /// </summary>
-        private static bool IsWindow(List<Cube> cubes, List<int> indices, out bool isSlanted)
+        private static bool IsWindow(SwingData swing, out bool isSlanted)
         {
             isSlanted = false;
 
-            if (indices.Count != 2) return false;
+            if (swing.Notes.Count != 2) return false;
 
-            Cube note1 = cubes[indices[0]];
-            Cube note2 = cubes[indices[1]];
+            Cube note1 = swing.Notes[0];
+            Cube note2 = swing.Notes[1];
 
             int lineDiff = Math.Abs(note1.X - note2.X);
             int layerDiff = Math.Abs(note1.Y - note2.Y);
@@ -433,14 +300,14 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 // Slanted window: BOTH conditions must be true:
                 // 1. Snap angle differs from CutDirection (not directly aligned)
                 // 2. Notes are NOT at cardinal/pure diagonal positions
-                if (!isDirectlyAligned && !isCardinalOrPureDiagonal && IsAlignedInSwingDirection(note1, note2, note1.Direction))
+                if (!isDirectlyAligned && !isCardinalOrPureDiagonal && IsAlignedInSwingDirection(note1, note2, swing.Direction))
                 {
                     isSlanted = true;
                     return true;
                 }
                 
                 // If at cardinal/diagonal positions OR directly aligned, it's a regular window (if aligned)
-                if (IsAlignedInSwingDirection(note1, note2, note1.Direction))
+                if (IsAlignedInSwingDirection(note1, note2, swing.Direction))
                 {
                     isSlanted = false;
                     return true;
@@ -449,21 +316,21 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
             // Regular window - check if directions are similar (within tolerance)
             isSlanted = false;
-            return IsAlignedInSwingDirection(note1, note2);
+            return IsAlignedInSwingDirection(note1, note2, swing.Direction);
         }
 
         /// <summary>
         /// Checks if a slider is curved (not all notes are collinear).
         /// </summary>
-        private static bool IsCurvedSlider(List<Cube> cubes, List<int> indices)
+        private static bool IsCurvedSlider(SwingData swing)
         {
-            if (indices.Count < 3) return false;
+            if (swing.Notes.Count < 3) return false;
 
-            for (int i = 1; i < indices.Count - 1; i++)
+            for (int i = 1; i < swing.Notes.Count - 1; i++)
             {
-                Cube prev = cubes[indices[i - 1]];
-                Cube curr = cubes[indices[i]];
-                Cube next = cubes[indices[i + 1]];
+                Cube prev = swing.Notes[i - 1];
+                Cube curr = swing.Notes[i];
+                Cube next = swing.Notes[i + 1];
 
                 int vec1X = curr.X - prev.X;
                 int vec1Y = curr.Y - prev.Y;
@@ -513,45 +380,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
         }
 
         /// <summary>
-        /// Checks if notes are aligned in swing direction (order-independent).
-        /// </summary>
-        private static bool IsAlignedInSwingDirection(Cube note1, Cube note2)
-        {
-            // We still don't know the direction, so we can just assume that it's fine if there's a dot note
-            if (note1.CutDirection == 8 || note2.CutDirection == 8) return true;
-
-            // For notes with different CutDirections, they form a valid window if swingable
-            // Check if aligned with either direction OR if they're in a reasonable position
-            if (note1.CutDirection != note2.CutDirection)
-            {
-                bool alignedWithNote1 = IsAlignedInSwingDirection(note1, note2, note1.Direction);
-                bool alignedWithNote2 = IsAlignedInSwingDirection(note1, note2, note2.Direction);
-                
-                // Also check if the geometric angle between them is reasonable for a window
-                // (not perpendicular to both arrows)
-                if (!alignedWithNote1 && !alignedWithNote2)
-                {
-                    // Calculate geometric angle from note1 to note2
-                    int lineDiff = note2.X - note1.X;
-                    int layerDiff = note2.Y - note1.Y;
-                    double angleRad = Math.Atan2(layerDiff, lineDiff);
-                    double angleDeg = (angleRad * 180.0 / Math.PI + 360.0) % 360.0;
-                    
-                    // Check if geometric angle is within 90° of either note's direction
-                    double diff1 = Math.Abs((angleDeg - note1.Direction + 180.0) % 360.0 - 180.0);
-                    double diff2 = Math.Abs((angleDeg - note2.Direction + 180.0) % 360.0 - 180.0);
-                    
-                    return diff1 <= 90 || diff2 <= 90;
-                }
-                
-                return alignedWithNote1 || alignedWithNote2;
-            }
-
-            return IsAlignedInSwingDirection(note1, note2, note1.Direction);
-        }
-
-        /// <summary>
         /// Checks if notes are aligned in the given swing direction (order-independent).
+        /// For dot notes or uncertain cases, returns true (lenient).
         /// </summary>
         private static bool IsAlignedInSwingDirection(Cube note1, Cube note2, double direction)
         {
@@ -587,24 +417,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
                 _ => false
             };
-        }
-
-        /// <summary>
-        /// Checks if note2 is perpendicular to the swing direction.
-        /// </summary>
-        private static bool IsPerpendicularToSwingDirection(Cube note1, Cube note2, double direction)
-        {
-            int lineDiff = note2.X - note1.X;
-            int layerDiff = note2.Y - note1.Y;
-
-            double radians = direction * Math.PI / 180.0;
-            double swingDirX = Math.Cos(radians);
-            double swingDirY = Math.Sin(radians);
-
-            double dotProduct = swingDirX * lineDiff + swingDirY * layerDiff;
-
-            const double tolerance = 0.5;
-            return Math.Abs(dotProduct) < tolerance;
         }
 
         #endregion

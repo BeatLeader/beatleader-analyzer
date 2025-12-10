@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.CalculateEntryExit;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.SwingAngleStrain;
+using static beatleader_analyzer.BeatmapScanner.Helper.Grid.GridPositionHelper;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -76,7 +78,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
             };
 
             // Calculate entry and exit positions for first note
-            CalcEntryExitWithMemory(null, swingData[^1]);
+            Cube firstTail = groups[0].Count > 1 ? groups[0].Find(c => c.Tail) : null;
+            CalcEntryExit(swingData[^1], firstTail);
 
             int groupIndex = 0;
 
@@ -96,7 +99,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swingData.Add(new SwingData(groups[groupIndex]));
 
                     // Calculate entry and exit positions
-                    CalcEntryExitWithMemory(swingData[^2], swingData[^1]);
+                    Cube groupTail = groups[groupIndex].Count > 1 ? groups[groupIndex].Find(c => c.Tail) : null;
+                    CalcEntryExit(swingData[^1], groupTail);
 
                     if (cubes[i].Chain)
                     {
@@ -111,6 +115,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     CalcMultiNoteExit(swingData[^1], cubes[i], headCube, strictAngles);
                 }
             }
+
+            // Second pass: verify that direction match geometry for multi-note swings
+            VerifyMultiNotes(swingData);
 
             // Normalize angles between swings if within tolerance angle
             // Only for fast sections (< 1 beat) and single notes
@@ -136,9 +143,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 NormalizeAngle(swingData[i - 1], swingData[i], strictAngles);
             }
 
-            // Second pass: verify that direction match geometry for multi-note swings with only dots
-            VerifyMultiNotes(swingData);
-
             for (int i = 0; i < swingData.Count; i++)
             {
                 swingData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[i] }, isRightHand) * 4;
@@ -150,49 +154,77 @@ namespace Analyzer.BeatmapScanner.Algorithm
         public static void VerifyMultiNotes(List<SwingData> swingData)
         {
             // Calculate geometric direction for multi-note swings
-            for(int i = 0; i < swingData.Count; i++)
+            for (int i = 0; i < swingData.Count; i++)
             {
                 var swing = swingData[i];
-                if(swing.Notes.Count <= 1 || !swing.Notes.All(x => x.CutDirection == 8))
+                if (swing.Notes.Count <= 1)
                 {
                     continue;
                 }
 
-                var entry = swing.Notes[0];
-                var exit = swing.Notes.Last();
-                var deltaX = exit.X - entry.X;
-                var deltaY = exit.Y - entry.Y;
-                var geometricAngle = Math.Atan2(deltaY, deltaX) * (180.0 / Math.PI);
-                if (geometricAngle < 0)
+                if(swing.Notes.All(x => x.CutDirection == 8))
                 {
-                    geometricAngle += 360.0;
+                    var entry = swing.Notes[0];
+                    var exit = swing.Notes.Last();
+                    var deltaX = exit.X - entry.X;
+                    var deltaY = exit.Y - entry.Y;
+                    var geometricAngle = Math.Atan2(deltaY, deltaX) * (180.0 / Math.PI);
+                    if (geometricAngle < 0)
+                    {
+                        geometricAngle += 360.0;
+                    }
+
+                    // Calculate the reverse of the geometric angle
+                    var reverseGeometricAngle = (geometricAngle + 180.0) % 360.0;
+
+                    // Check if head note direction is closest to geometric angle or its reverse
+                    var headDirection = entry.Direction;
+
+                    // Calculate angular distance to geometric angle
+                    var diffToGeometric = Math.Abs(geometricAngle - headDirection);
+                    if (diffToGeometric > 180)
+                    {
+                        diffToGeometric = 360 - diffToGeometric;
+                    }
+
+                    // Calculate angular distance to reverse geometric angle
+                    var diffToReverse = Math.Abs(reverseGeometricAngle - headDirection);
+                    if (diffToReverse > 180)
+                    {
+                        diffToReverse = 360 - diffToReverse;
+                    }
+
+                    // Use the angle that is closest to the head direction
+                    swing.Direction = diffToGeometric <= diffToReverse ? geometricAngle : reverseGeometricAngle;
+                    swing.Notes.ForEach(n => n.Direction = swing.Direction);
                 }
 
-                // Calculate the reverse of the geometric angle
-                var reverseGeometricAngle = (geometricAngle + 180.0) % 360.0;
-                
-                // Check if head note direction is closest to geometric angle or its reverse
-                var headDirection = entry.Direction;
-                
-                // Calculate angular distance to geometric angle
-                var diffToGeometric = Math.Abs(geometricAngle - headDirection);
-                if (diffToGeometric > 180)
-                {
-                    diffToGeometric = 360 - diffToGeometric;
-                }
-                
-                // Calculate angular distance to reverse geometric angle
-                var diffToReverse = Math.Abs(reverseGeometricAngle - headDirection);
-                if (diffToReverse > 180)
-                {
-                    diffToReverse = 360 - diffToReverse;
-                }
-                
-                // Use the angle that is closest to the head direction
-                double finalAngle = diffToGeometric <= diffToReverse ? geometricAngle : reverseGeometricAngle;
+                // Reorder notes based on their projection along the swing direction
+                // Calculate direction vector
+                double directionRadians = swing.Direction * Math.PI / 180.0;
+                double dirX = Math.Cos(directionRadians);
+                double dirY = Math.Sin(directionRadians);
 
-                swing.Notes.ForEach(n => n.Direction = finalAngle);
-                swing.Direction = finalAngle;
+                // Calculate projection of each note onto the direction vector
+                var notesWithProjection = swing.Notes.Select(note => new
+                {
+                    Note = note,
+                    Projection = note.X * dirX + note.Y * dirY
+                }).OrderBy(x => x.Projection).ToList();
+
+                // Reorder the notes list
+                swing.Notes.Clear();
+                swing.Notes.AddRange(notesWithProjection.Select(x => x.Note));
+
+                // Update Head and Tail markers
+                for (int j = 0; j < swing.Notes.Count; j++)
+                {
+                    swing.Notes[j].Head = j == 0;
+                    swing.Notes[j].Tail = j == swing.Notes.Count - 1;
+                }
+
+                // Recalculate entry and exit positions based on swing direction and all notes of the group positions
+                CalcEntryExit(swing, swing.Notes.Last());
             }
         }
     }

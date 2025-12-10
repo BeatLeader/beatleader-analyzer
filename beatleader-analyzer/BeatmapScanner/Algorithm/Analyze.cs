@@ -118,17 +118,17 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * BALANCED_TECH_SCALER;
             }
 
-            var redMultiNotes = red.Count > 2 ? CountMultiNoteHits(red, bpm) : new Statistics();
-            var blueMultiNotes = blue.Count > 2 ? CountMultiNoteHits(blue, bpm) : new Statistics();
+            var redMultiNotes = redSwingData.Count > 0 ? CountMultiNoteHits(redSwingData, bpm) : new Statistics();
+            var blueMultiNotes = blueSwingData.Count > 0 ? CountMultiNoteHits(blueSwingData, bpm) : new Statistics();
 
-            // Label multi-note hit types for each swing using the MultiNoteHitLabeler helper
-            if (red.Count > 2)
+            // Label multi-note hit types for each swing
+            if (redSwingData.Count > 0)
             {
-                LabelSwingMultiNoteHits(red, redSwingData, bpm);
+                LabelSwingMultiNoteHits(redSwingData, bpm);
             }
-            if (blue.Count > 2)
+            if (blueSwingData.Count > 0)
             {
-                LabelSwingMultiNoteHits(blue, blueSwingData, bpm);
+                LabelSwingMultiNoteHits(blueSwingData, bpm);
             }
 
             // Use the counted walls (respecting cooldown) for statistics

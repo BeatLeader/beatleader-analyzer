@@ -13,7 +13,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class ParityPredictor
     {
-        private const double MISMATCH_PENALTY = 10.0;
+        private const double MISMATCH_PENALTY = 15.0;
         private const double BOMB_REPOSITIONING_COST = 2.0;
         private const double LEFT_FOREHAND_NEUTRAL = 292.5;
         private const double RIGHT_FOREHAND_NEUTRAL = 247.5;
@@ -338,7 +338,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             double deviation = 180.0 - Math.Abs(diff - 180.0);
 
             double normalizedStrain = deviation / 180.0;
-            return normalizedStrain * normalizedStrain;
+            return normalizedStrain * normalizedStrain * 0.5;
         }
     }
 }
