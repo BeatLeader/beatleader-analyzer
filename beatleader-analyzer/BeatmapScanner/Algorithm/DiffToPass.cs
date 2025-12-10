@@ -96,6 +96,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 
                 double speedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
                 double stressMultiplier = stress / (stress + STRESS_FALLOFF) + 1.0;
+
                 // Store intermediate values on the swing for debugging/export
                 swing.DistanceDiff = distanceDiff;
                 swing.SwingSpeed = swingSpeed;
@@ -118,13 +119,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swing.StreamBonusApplied = true;
                 }
                 previousHand = currentHand;
-                double wallBuffUsed = 1.0;
+
                 if (wallBuffs.TryGetValue(i, out double wallBuff))
                 {
-                    wallBuffUsed = wallBuff;
-                    swing.SwingDiff *= wallBuffUsed;
+                    swing.SwingDiff *= wallBuff;
+                    swing.WallBuff = wallBuff;
                 }
-                swing.WallBuff = wallBuffUsed;
             }
         }
 
@@ -155,11 +155,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 foreach (var wall in crouchWalls)
                 {
-                    float wallStart = wall.BpmTime;
-                    float wallDuration = wall.DurationInBeats;
+                    float wallStart = wall.Seconds;
+                    float wallDuration = wall.DurationInSeconds;
                     float wallEnd = wallStart + wallDuration;
 
-                    if (swing.BpmTime >= wallStart && swing.BpmTime <= wallEnd)
+                    if (swing.Notes[0].Seconds >= wallStart && swing.Notes[0].Seconds <= wallEnd)
                     {
                         maxBuff = Math.Max(maxBuff, CROUCH_WALL_DURING_BUFF);
                     }
@@ -176,9 +176,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
         private static bool IsSwingDuringWall(SwingData swing, Wall wall)
         {
-            float wallDuration = wall.DurationInBeats;
-            float wallEnd = wall.BpmTime + wallDuration;
-            return swing.BpmTime >= wall.BpmTime && swing.BpmTime <= wallEnd;
+            float wallDuration = wall.DurationInSeconds;
+            float wallEnd = wall.Seconds + wallDuration;
+            return swing.Notes[0].Seconds >= wall.Seconds && swing.Notes[0].Seconds <= wallEnd;
         }
 
         public static List<PerSwing> CalcAverage(List<SwingData> swingData, int WINDOW)

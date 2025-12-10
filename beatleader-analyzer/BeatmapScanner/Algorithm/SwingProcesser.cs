@@ -195,7 +195,29 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     }
 
                     // Use the angle that is closest to the head direction
-                    swing.Direction = diffToGeometric <= diffToReverse ? geometricAngle : reverseGeometricAngle;
+                    double selectedAngle = diffToGeometric <= diffToReverse ? geometricAngle : reverseGeometricAngle;
+                    
+                    // Check if this angle is too similar to the previous swing's angle
+                    // If so, use the reverse angle instead
+                    if (i > 0)
+                    {
+                        double previousAngle = swingData[i - 1].Direction;
+                        double angleDiffToPrevious = Math.Abs(selectedAngle - previousAngle);
+                        if (angleDiffToPrevious > 180)
+                        {
+                            angleDiffToPrevious = 360 - angleDiffToPrevious;
+                        }
+                        
+                        // If the selected angle is within 45 degrees of the previous swing, use the reverse
+                        const double SIMILARITY_THRESHOLD = 45.0;
+                        if (angleDiffToPrevious < SIMILARITY_THRESHOLD)
+                        {
+                            // Use the opposite direction
+                            selectedAngle = selectedAngle == geometricAngle ? reverseGeometricAngle : geometricAngle;
+                        }
+                    }
+                    
+                    swing.Direction = selectedAngle;
                     swing.Notes.ForEach(n => n.Direction = swing.Direction);
                 }
 

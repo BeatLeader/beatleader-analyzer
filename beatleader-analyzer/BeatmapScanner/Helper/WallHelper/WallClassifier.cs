@@ -8,7 +8,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
 {
     internal class WallClassifier
     {
-        private const float TIME_TOLERANCE = 0.1f;
+        private const float TIME_TOLERANCE = 1f;
         private const float DODGE_COOLDOWN_SECONDS = 1.0f; // Minimum time between dodges at same position
 
         public static (List<Wall> dodgeWallsAll, List<Wall> crouchWallsAll, int dodgeWallsCount, int crouchWallsCount) ClassifyWalls(List<Wall> walls, Timescale timescale)
@@ -22,11 +22,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
             {
                 return (dodgeWallsList, crouchWallsList, 0, 0);
             }
-
-            // Convert cooldown from seconds to beats
-            // We use wall BpmTime, so we can simply use the first BPM value
-            timescale.ResetCurrentBPM();
-            float cooldownBeats = DODGE_COOLDOWN_SECONDS * (timescale.GetValue() / 60f);
 
             // Sort walls by time to group simultaneous walls
             var wallsByTime = walls
@@ -69,7 +64,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                 // Group walls that occur at the same time (within tolerance)
                 for (int j = i + 1; j < wallsByTime.Count; j++)
                 {
-                    if (Math.Abs(wallsByTime[j].BpmTime - currentWall.BpmTime) <= TIME_TOLERANCE)
+                    var start = wallsByTime[j].Seconds - (currentWall.Seconds);
+                    var end = wallsByTime[j].Seconds - (currentWall.Seconds + currentWall.DurationInSeconds);
+                    var duration = Math.Min(start, end);
+                    if (duration <= TIME_TOLERANCE)
                     {
                         simultaneousWalls.Add(wallsByTime[j]);
                         processed.Add(j);
@@ -83,45 +81,70 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                 // Classify the simultaneous wall group (crouch walls take priority)
                 if (IsCrouchWall(simultaneousWalls))
                 {
-                    // Check if enough time has passed since player could stand up from last crouch
-                    float timeSinceLastCrouch = currentWall.BpmTime - lastCrouchEndTime;
-                    
-                    if (timeSinceLastCrouch >= cooldownBeats)
+                    // Filter to only include walls at y=2 that actually cover the center columns
+                    // This prevents walls at y=2 but outside center from being counted
+                    var actualCrouchWalls = simultaneousWalls.Where(w =>
                     {
-                        // This is a new crouch action - add only the walls at y=2 that force crouching
-                        var crouchWalls = simultaneousWalls.Where(w => w.y == 2).ToList();
-                        if (crouchWalls.Count > 0)
-                        {
-                            crouchWallsList.AddRange(crouchWalls);
-                            crouchWallsCount++;
-                            
-                            // Track the wall with longest duration for potential extension
-                            lastCrouchWall = crouchWalls.OrderByDescending(w => w.DurationInBeats).First();
-                            lastCrouchEndTime = lastCrouchWall.BpmTime + lastCrouchWall.DurationInBeats;
-                        }
+                        if (w.y != 2) return false;
+                        bool coversX1 = w.x <= 1 && w.x + w.Width > 1;
+                        bool coversX2 = w.x <= 2 && w.x + w.Width > 2;
+                        return coversX1 || coversX2;
+                    }).ToList();
+
+                    if (actualCrouchWalls.Count == 0)
+                    {
+                        // No walls at y=2 actually cover the center - skip this group
+                        continue;
                     }
-                    else if (lastCrouchWall != null)
+
+                    // Check if this wall should be merged with the previous crouch wall
+                    // Merge if the current wall starts before or shortly after the previous wall ends
+                    float timeSinceLastCrouch = actualCrouchWalls[0].Seconds - lastCrouchEndTime;
+                    
+                    if (timeSinceLastCrouch < DODGE_COOLDOWN_SECONDS && lastCrouchWall != null)
                     {
                         // Player is still crouched - extend the duration of the previous wall
-                        var crouchWalls = simultaneousWalls.Where(w => w.y == 2).ToList();
-                        if (crouchWalls.Count > 0)
-                        {
-                            float currentWallEnd = crouchWalls.Max(w => w.BpmTime + w.DurationInBeats);
-                            float newDuration = currentWallEnd - lastCrouchWall.BpmTime;
-                            lastCrouchWall.DurationInBeats = newDuration;
-                            lastCrouchEndTime = currentWallEnd;
-                        }
+                        float currentWallEnd = actualCrouchWalls.Max(w => w.Seconds + w.DurationInSeconds);
+                        float newDuration = currentWallEnd - lastCrouchWall.Seconds;
+                        lastCrouchWall.DurationInSeconds = newDuration;
+                        lastCrouchEndTime = currentWallEnd;
                         
                         // Don't add this wall separately - it's merged with the previous one
+                    }
+                    else
+                    {
+                        // This is a new crouch action - add only the first wall as representative
+                        // (simultaneous walls are part of the same crouch action)
+                        crouchWallsList.Add(actualCrouchWalls[0]);
+                        crouchWallsCount++;
+                        
+                        // Track the wall with longest duration for potential extension
+                        lastCrouchWall = actualCrouchWalls.OrderByDescending(w => w.Seconds + w.DurationInSeconds).First();
+                        lastCrouchEndTime = lastCrouchWall.Seconds + lastCrouchWall.DurationInSeconds;
                     }
                 }
                 else if (IsDodgeWall(simultaneousWalls))
                 {
+                    // Filter to only include walls that actually cover the center columns (x=1 or x=2)
+                    // This prevents non-dodge walls from being included just because they're simultaneous
+                    var actualDodgeWalls = simultaneousWalls.Where(w =>
+                    {
+                        bool coversX1 = w.x <= 1 && w.x + w.Width > 1;
+                        bool coversX2 = w.x <= 2 && w.x + w.Width > 2;
+                        return coversX1 || coversX2;
+                    }).ToList();
+
+                    if (actualDodgeWalls.Count == 0)
+                    {
+                        // No walls actually cover the center - skip this group
+                        continue;
+                    }
+
                     // Determine which side(s) this dodge wall covers
                     bool coversLeft = false;
                     bool coversRight = false;
                     
-                    foreach (var wall in simultaneousWalls)
+                    foreach (var wall in actualDodgeWalls)
                     {
                         bool coversX1 = wall.x <= 1 && wall.x + wall.Width > 1;
                         bool coversX2 = wall.x <= 2 && wall.x + wall.Width > 2;
@@ -130,53 +153,127 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                         if (coversX2) coversRight = true;
                     }
 
-                    string coverageKey;
+                    // Check if this wall should be merged with any previous dodge wall
+                    // We check all possible coverage areas and merge if ANY of them are within tolerance
+                    bool merged = false;
+                    Wall mergeTarget = null;
+                    float currentWallEnd = actualDodgeWalls.Max(w => w.Seconds + w.DurationInSeconds);
+                    var firstDodgeWall = actualDodgeWalls[0];
+                    
+                    // Priority order: check specific sides first, then "both"
+                    var keysToCheck = new List<string>();
                     if (coversLeft && coversRight)
                     {
-                        coverageKey = "both";
+                        // This wall covers both sides - check if either side has a recent dodge
+                        keysToCheck.Add("left");
+                        keysToCheck.Add("right");
+                        keysToCheck.Add("both");
                     }
                     else if (coversLeft)
                     {
-                        coverageKey = "left";
+                        keysToCheck.Add("left");
+                        keysToCheck.Add("both"); // Left-only wall can extend a "both" wall
                     }
-                    else
+                    else if (coversRight)
                     {
-                        coverageKey = "right";
+                        keysToCheck.Add("right");
+                        keysToCheck.Add("both"); // Right-only wall can extend a "both" wall
                     }
 
-                    // Check if enough time has passed since last dodge in this area
-                    float timeSinceLastDodge = currentWall.BpmTime - lastDodgeTime[coverageKey];
-                    
-                    if (timeSinceLastDodge >= cooldownBeats)
+                    // Find the most recent previous wall that we should merge with
+                    float mostRecentTime = float.MinValue;
+                    foreach (var key in keysToCheck)
                     {
-                        // This is a new dodge action - add it as a separate wall
-                        dodgeWallsList.AddRange(simultaneousWalls);
-                        dodgeWallsCount++;
+                        if (lastDodgeWall[key] == null)
+                            continue;
+                            
+                        float timeSinceLastDodge = firstDodgeWall.Seconds - lastDodgeTime[key];
                         
-                        // Track this wall for potential duration extension
-                        lastDodgeWall[coverageKey] = currentWall;
-                        lastDodgeTime[coverageKey] = currentWall.BpmTime;
-                        
-                        // Also update "both" if we covered a specific side
-                        if (coverageKey != "both")
+                        if (timeSinceLastDodge < TIME_TOLERANCE)
                         {
-                            // If covering both sides separately in quick succession, track that too
-                            float otherSideTime = coverageKey == "left" ? lastDodgeTime["right"] : lastDodgeTime["left"];
-                            if (currentWall.BpmTime - otherSideTime < cooldownBeats)
+                            // This previous wall is within merge range
+                            // Choose the wall with the most recent end time
+                            if (mergeTarget == null || lastDodgeTime[key] > mostRecentTime)
                             {
-                                lastDodgeTime["both"] = currentWall.BpmTime;
+                                mergeTarget = lastDodgeWall[key];
+                                mostRecentTime = lastDodgeTime[key];
+                                merged = true;
                             }
                         }
                     }
-                    else if (lastDodgeWall[coverageKey] != null)
+                    
+                    if (merged && mergeTarget != null)
                     {
-                        // Player is already dodged - extend the duration of the previous wall
-                        float currentWallEnd = currentWall.BpmTime + currentWall.DurationInBeats;
-                        float newDuration = currentWallEnd - lastDodgeWall[coverageKey].BpmTime;
-                        lastDodgeWall[coverageKey].DurationInBeats = newDuration;
-                        lastDodgeTime[coverageKey] = currentWallEnd;
+                        // Extend the duration of the merge target wall
+                        float newDuration = currentWallEnd - mergeTarget.Seconds;
+                        mergeTarget.DurationInSeconds = newDuration;
+                        
+                        // Update all relevant tracking for the areas this wall covers
+                        if (coversLeft && coversRight)
+                        {
+                            lastDodgeWall["both"] = mergeTarget;
+                            lastDodgeTime["both"] = currentWallEnd;
+                            lastDodgeWall["left"] = mergeTarget;
+                            lastDodgeTime["left"] = currentWallEnd;
+                            lastDodgeWall["right"] = mergeTarget;
+                            lastDodgeTime["right"] = currentWallEnd;
+                        }
+                        else if (coversLeft)
+                        {
+                            lastDodgeWall["left"] = mergeTarget;
+                            lastDodgeTime["left"] = currentWallEnd;
+                        }
+                        else if (coversRight)
+                        {
+                            lastDodgeWall["right"] = mergeTarget;
+                            lastDodgeTime["right"] = currentWallEnd;
+                        }
                         
                         // Don't add this wall separately - it's merged with the previous one
+                    }
+                    else
+                    {
+                        // This is a new dodge action - add only the first wall as representative
+                        // (simultaneous walls are part of the same dodge action)
+                        dodgeWallsList.Add(firstDodgeWall);
+                        dodgeWallsCount++;
+                        
+                        // Track this wall for all affected coverage areas
+                        if (coversLeft && coversRight)
+                        {
+                            lastDodgeWall["both"] = firstDodgeWall;
+                            lastDodgeTime["both"] = currentWallEnd;
+                            lastDodgeWall["left"] = firstDodgeWall;
+                            lastDodgeTime["left"] = currentWallEnd;
+                            lastDodgeWall["right"] = firstDodgeWall;
+                            lastDodgeTime["right"] = currentWallEnd;
+                        }
+                        else if (coversLeft)
+                        {
+                            lastDodgeWall["left"] = firstDodgeWall;
+                            lastDodgeTime["left"] = currentWallEnd;
+                            
+                            // Check if right side was recently covered - if so, update "both"
+                            float otherSideTime = lastDodgeTime["right"];
+                            if (firstDodgeWall.Seconds - otherSideTime < TIME_TOLERANCE)
+                            {
+                                lastDodgeTime["both"] = currentWallEnd;
+                                lastDodgeWall["both"] = firstDodgeWall;
+                            }
+                        }
+                        else if (coversRight)
+                        {
+                            lastDodgeWall["right"] = firstDodgeWall;
+                            lastDodgeTime["right"] = currentWallEnd;
+                            
+                            // Check if left side was recently covered - if so, update "both"
+                            float otherSideTime = lastDodgeTime["left"];
+                            if (firstDodgeWall.Seconds - otherSideTime < TIME_TOLERANCE)
+                            {
+                                lastDodgeTime["both"] = currentWallEnd;
+                                lastDodgeWall["both"] = firstDodgeWall;
+                            }
+                        }
                     }
                 }
             }
@@ -188,17 +285,15 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
         {
             foreach (var wall in walls)
             {
+                // Only check walls that cover the center columns (x=1 or x=2)
                 bool coversX1 = wall.x <= 1 && wall.x + wall.Width > 1;
                 bool coversX2 = wall.x <= 2 && wall.x + wall.Width > 2;
 
                 if (coversX1 || coversX2)
                 {
-                    // Walls at y=0 or y=1 with sufficient height are dodge walls
-                    // Walls at y=2 (crouch height) are also dodge walls if they don't fully cover both center columns
-                    // (partial width high walls are dodged, not crouched)
-                    bool validHeight = wall.y <= 0 && wall.Height >= 3 || 
-                                      wall.y == 1 && wall.Height >= 2 ||
-                                      wall.y == 2 && wall.Height >= 3;
+                    bool validHeight = (wall.y == 0 && wall.Height >= 3) || 
+                                      (wall.y == 1 && wall.Height >= 2) ||
+                                      (wall.y >= 2 && wall.Height >= 1);
 
                     if (validHeight)
                     {
