@@ -259,7 +259,7 @@ namespace Benchmark
                 {
                     DodgeWalls = rating.DodgeWalls.Select(w => new
                     {
-                        Time = Math.Round(w.BpmTime, 3),
+                        Time = Math.Round(w.Beats, 3),
                         Duration = Math.Round(w.DurationInBeats, 3),
                         X = w.x,
                         Y = w.y,
@@ -268,7 +268,7 @@ namespace Benchmark
                     }).ToList(),
                     CrouchWalls = rating.CrouchWalls.Select(w => new
                     {
-                        Time = Math.Round(w.BpmTime, 3),
+                        Time = Math.Round(w.Beats, 3),
                         Duration = Math.Round(w.DurationInBeats, 3),
                         X = w.x,
                         Y = w.y,
@@ -283,7 +283,7 @@ namespace Benchmark
                     .Select((s, index) => new
                     {
                         Rank = index + 1,
-                        Time = Math.Round(s.Beat, 3),
+                        Time = Math.Round(s.Notes[0].JsonTime, 3),
                         Difficulty = Math.Round(s.SwingDiff, 3),
                         Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
                         Angle = Math.Round(s.Direction, 1),
@@ -918,7 +918,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 Swings = rating.SwingData.Select((s, index) => new
                 {
                     Index = index,
-                    Time = Math.Round(s.Beat, 3),
+                    Time = Math.Round(s.Notes[0].JsonTime, 3),
                     Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
                     Position = new
                     {
@@ -1080,7 +1080,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             var swingDataJson = JsonConvert.SerializeObject(rating.SwingData.Select((s, index) => new
             {
                 Index = index,
-                Time = Math.Round(s.Beat, 3),
+                Time = Math.Round(s.Notes[0].JsonTime, 3),
                 Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
                 Line = s.Notes[0].X,
                 Layer = s.Notes[0].Y,
@@ -1729,7 +1729,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 Swings = diff.rating.SwingData.Select((s, index) => new
                 {
                     Index = index,
-                    Time = Math.Round(s.Beat, 3),
+                    Time = Math.Round(s.Notes[0].JsonTime, 3),
                     Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
                     Line = s.Notes[0].X,
                     Layer = s.Notes[0].Y,
@@ -2296,7 +2296,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             var swingDataJson = JsonConvert.SerializeObject(rating.SwingData.Select((s, index) => new
             {
                 Index = index,
-                Time = Math.Round(s.Beat, 3),
+                Time = Math.Round(s.Notes[0].JsonTime, 3),
                 Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
                 Line = s.Notes[0].X,
                 Layer = s.Notes[0].Y,

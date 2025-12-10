@@ -125,7 +125,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             // Skip notes with bomb avoidance as they have special direction calculation
             for (int i = 1; i < swingData.Count; i++)
             {
-                if (swingData[i].Beat - swingData[i - 1].Beat >= 1.0)
+                if (swingData[i].BpmTime - swingData[i - 1].BpmTime >= 1.0)
                 {
                     continue;
                 }

@@ -266,7 +266,7 @@ namespace Benchmark
 
                 html.AppendLine("                    <tr>");
                 html.AppendLine($"                        <td>{i + 1}</td>");
-                html.AppendLine($"                        <td>{swing.Beat:F2}</td>");
+                html.AppendLine($"                        <td>{swing.Notes[0].JsonTime:F2}</td>");
                 html.AppendLine($"                        <td class=\"{handClass}\">{(swing.Notes[0].Type == 0 ? "Red" : "Blue")}</td>");
                 html.AppendLine($"                        <td>{swing.PatternType}</td>");
                 html.AppendLine($"                        <td>{swing.SwingFrequency:F3}</td>");

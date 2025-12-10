@@ -61,7 +61,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Calculate frequency using only same-hand swings
                 if (prevSameHandIndex >= 0 && nextSameHandIndex >= 0)
                 {
-                    swingData[i].SwingFrequency = 2 / (swingData[nextSameHandIndex].Beat - swingData[prevSameHandIndex].Beat);
+                    swingData[i].SwingFrequency = 2 / (swingData[nextSameHandIndex].BpmTime - swingData[prevSameHandIndex].BpmTime);
                 }
                 else
                 {
@@ -70,7 +70,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
 
             // Swing is in BpmTime, so we don't have to worry about BPM changes here
-            timescale.SetCurrentBPM(0);
+            timescale.ResetCurrentBPM();
             double bps = timescale.GetValue() / 60.0;
             int? previousHand = null;
 
@@ -159,7 +159,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     float wallDuration = wall.DurationInBeats;
                     float wallEnd = wallStart + wallDuration;
 
-                    if (swing.Beat >= wallStart && swing.Beat <= wallEnd)
+                    if (swing.BpmTime >= wallStart && swing.BpmTime <= wallEnd)
                     {
                         maxBuff = Math.Max(maxBuff, CROUCH_WALL_DURING_BUFF);
                     }
@@ -178,7 +178,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         {
             float wallDuration = wall.DurationInBeats;
             float wallEnd = wall.BpmTime + wallDuration;
-            return swing.Beat >= wall.BpmTime && swing.Beat <= wallEnd;
+            return swing.BpmTime >= wall.BpmTime && swing.BpmTime <= wallEnd;
         }
 
         public static List<PerSwing> CalcAverage(List<SwingData> swingData, int WINDOW)
@@ -198,11 +198,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (i >= WINDOW)
                 {
                     var windowDiff = Average(qDiff.Buffer);
-                    difficultyIndex.Add(new(swingData[i].Beat, windowDiff, swingData[i].AngleStrain + swingData[i].PathStrain));
+                    difficultyIndex.Add(new(swingData[i].BpmTime, windowDiff, swingData[i].AngleStrain + swingData[i].PathStrain));
                 }
                 else
                 {
-                    difficultyIndex.Add(new(swingData[i].Beat, 0, swingData[i].AngleStrain + swingData[i].PathStrain));
+                    difficultyIndex.Add(new(swingData[i].BpmTime, 0, swingData[i].AngleStrain + swingData[i].PathStrain));
                 }
             }
 

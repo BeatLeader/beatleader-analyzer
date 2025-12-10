@@ -53,7 +53,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
             
-            combinedSwingData.Sort((a, b) => a.Beat.CompareTo(b.Beat));
+            combinedSwingData.Sort((a, b) => a.BpmTime.CompareTo(b.BpmTime));
             double balancedPass = 0.0;
             double balancedTech = 0.0;
 
@@ -154,7 +154,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 BombAvoidances = bombAvoidanceCount
             };
 
-            combinedSwingData.Sort((x, y) => x.Beat.CompareTo(y.Beat));
+            combinedSwingData.Sort((x, y) => x.BpmTime.CompareTo(y.BpmTime));
 
             Ratings ratings = new Ratings
             {

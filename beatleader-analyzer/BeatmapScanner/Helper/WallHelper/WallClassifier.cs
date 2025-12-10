@@ -25,7 +25,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
 
             // Convert cooldown from seconds to beats
             // We use wall BpmTime, so we can simply use the first BPM value
-            timescale.SetCurrentBPM(0);
+            timescale.ResetCurrentBPM();
             float cooldownBeats = DODGE_COOLDOWN_SECONDS * (timescale.GetValue() / 60f);
 
             // Sort walls by time to group simultaneous walls
