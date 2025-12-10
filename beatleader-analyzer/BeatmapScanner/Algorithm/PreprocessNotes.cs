@@ -39,9 +39,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
             var groups = new List<List<int>>();
             int i = 0;
 
-            // We use BpmTime, so we don't need to use bpm changes.
+            // We use seconds, so we don't need to use bpm changes.
             timescale.ResetCurrentBPM();
-
             while (i < cubes.Count)
             {
                 var group = new List<int> { i };
@@ -51,23 +50,20 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     // Get the previous note in the group (last added note)
                     int prevIndex = group[group.Count - 1];
-                    float prevTime = cubes[prevIndex].BpmTime;
+                    float prevTime = cubes[prevIndex].Seconds;
                     float prevNjs = cubes[prevIndex].Njs;
-                    float timeDiff = cubes[j].BpmTime - prevTime;
+                    float timeDiff = Math.Abs(cubes[j].Seconds - prevTime);
                     
                     // Check if simultaneous (same time)
-                    if (Math.Abs(timeDiff) < 0.001f)
+                    if (timeDiff < 0.001f)
                     {
                         group.Add(j);
                         continue;
                     }
 
-                    float z1 = CalculateZPosition(prevTime, prevNjs, timescale.GetValue());
-                    float z2 = CalculateZPosition(cubes[j].BpmTime, cubes[j].Njs, timescale.GetValue());
-                    float depthDiff = Math.Abs(z2 - z1);
-
-                    // If within multi-note hit range (~0.5 meters), add to group
-                    if (depthDiff < 0.5f && ValidateSliders(cubes[prevIndex], cubes[j]))
+                    float distance = timeDiff * cubes[j].Njs;
+                    
+                    if (distance < 1f && ValidateSliders(cubes[prevIndex], cubes[j]))
                     {
                         group.Add(j);
                     }
@@ -85,16 +81,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return groups;
         }
 
-        /// <summary>
-        /// Calculates Z position (depth) of a note based on time, NJS, and BPM.
-        /// </summary>
-        private static float CalculateZPosition(float time, float njs, float bpm)
-        {
-            // Convert beat time to seconds
-            float timeInSeconds = time * 60f / bpm;
-            // Z position = NJS * time (simplified, actual game has more complex formula)
-            return njs * timeInSeconds;
-        }
         private static bool ValidateSliders(Cube previous, Cube current)
         {
             // We want to consider dot spam as sliders
