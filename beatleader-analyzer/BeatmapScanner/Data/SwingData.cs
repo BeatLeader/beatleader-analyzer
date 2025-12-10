@@ -33,6 +33,7 @@ namespace Analyzer.BeatmapScanner.Data
         public double WallBuff { get; set; } = 1.0;
         public bool StreamBonusApplied { get; set; } = false;
         public double SwingDiff { get; set; } = 0;
+        public double SwingTech { get; set; } = 0;
         public string PatternType { get; set; } = "Single";
 
         public SwingData(List<Cube> cubes)

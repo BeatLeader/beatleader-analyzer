@@ -112,6 +112,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     double buff = NjsBuff.CalculateNjsBuff(swing.Notes[0].Njs);
                     swing.AngleStrain *= buff;
                     swing.PathStrain *= buff;
+                    swing.SwingTech = swing.AngleStrain + swing.PathStrain;
                 }
 
                 combinedSwingData.Sort(CompareAngleAndPathStrain);

@@ -1650,6 +1650,73 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
             }
         }
+
+        public void ExportSwingTechDataFromFile(string zipPath, string characteristic, string difficulty, string outputPath = null)
+        {
+            outputPath ??= "swing_tech.html";
+
+            Console.WriteLine($"Loading map from file: {zipPath}");
+            
+            if (!File.Exists(zipPath) && !Directory.Exists(zipPath))
+            {
+                Console.WriteLine($"Error: Path not found: {zipPath}");
+                return;
+            }
+
+            try
+            {
+                var parser = new Parse();
+                BeatmapV3 map = null;
+
+                if (zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    using (var fileStream = File.OpenRead(zipPath))
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        fileStream.CopyTo(memoryStream);
+                        memoryStream.Position = 0;
+                        
+                        var maps = parser.TryLoadZip(memoryStream);
+                        map = maps?.LastOrDefault();
+                    }
+                }
+                else
+                {
+                    map = parser.TryLoadPath(zipPath);
+                }
+
+                if (map == null)
+                {
+                    Console.WriteLine("Failed to load map from file!");
+                    return;
+                }
+
+                var ratings = analyzer.GetRating(map, characteristic);
+                var rating = ratings?.FirstOrDefault(r => r.Difficulty == difficulty);
+
+                if (rating == null)
+                {
+                    Console.WriteLine($"Could not find difficulty: {characteristic} - {difficulty}");
+                    return;
+                }
+
+                Console.WriteLine($"\nExporting swing tech data for: {characteristic} - {difficulty}");
+                Console.WriteLine($"Total swings: {rating.SwingData.Count}");
+
+                var html = GenerateSwingTechHtml(map, characteristic, difficulty, rating);
+
+                File.WriteAllText(outputPath, html);
+                Console.WriteLine($"✓ Swing tech data exported to: {outputPath}");
+                
+                OpenInBrowser(outputPath);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading map: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+        }
+
         private string GenerateMultiDifficultySwingHtml(BeatmapV3 map, List<(string characteristic, string difficulty, Ratings rating)> difficulties)
         {
             // Create a comprehensive data structure for all difficulties
@@ -2219,6 +2286,515 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         }}
         
         createDifficultyButtons();
+    </script>
+</body>
+</html>";
+        }
+
+        private string GenerateSwingTechHtml(BeatmapV3 map, string characteristic, string difficulty, Ratings rating)
+        {
+            var swingDataJson = JsonConvert.SerializeObject(rating.SwingData.Select((s, index) => new
+            {
+                Index = index,
+                Time = Math.Round(s.Beat, 3),
+                Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
+                Line = s.Notes[0].X,
+                Layer = s.Notes[0].Y,
+                Angle = Math.Round(s.Direction, 1),
+                Direction = Benchmark.AngleToDirection(s.Direction),
+                Parity = s.Forehand ? "Forehand" : "Backhand",
+                PatternType = s.PatternType,
+                // Tech components
+                AngleStrain = Math.Round(s.AngleStrain, 3),
+                PathStrain = Math.Round(s.PathStrain, 3),
+                // PathStrain components
+                CurveComplexity = Math.Round(s.CurveComplexity, 3),
+                AnglePathStrain = Math.Round(s.AnglePathStrain, 3),
+                PositionComplexity = Math.Round(s.PositionComplexity, 3),
+                // Final values
+                SwingTech = Math.Round(s.SwingTech, 3),
+                NjsBuff = Math.Round(s.NjsBuff, 3),
+                PreviousDistance = Math.Round(s.PreviousDistance, 3),
+                EntryX = Math.Round(s.EntryPosition.x, 3),
+                EntryY = Math.Round(s.EntryPosition.y, 3),
+                ExitX = Math.Round(s.ExitPosition.x, 3),
+                ExitY = Math.Round(s.ExitPosition.y, 3)
+            }).ToList());
+
+            return $@"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Swing Tech Analysis - {map.Info._songName}</title>
+    <script src=""https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js""></script>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }}
+        
+        .container {{
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }}
+        
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }}
+        
+        .header h1 {{
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }}
+        
+        .header .subtitle {{
+            font-size: 1.2em;
+            opacity: 0.9;
+        }}
+        
+        .content {{
+            padding: 40px;
+        }}
+        
+        .info-panel {{
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }}
+        
+        .info-panel h3 {{
+            color: #667eea;
+            margin-bottom: 15px;
+        }}
+        
+        .info-panel p {{
+            margin: 8px 0;
+            line-height: 1.6;
+        }}
+        
+        .info-panel code {{
+            background: #e3f2fd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }}
+        
+        .controls {{
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }}
+        
+        .controls input, .controls select {{
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }}
+        
+        .controls button {{
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }}
+        
+        .controls button:hover {{
+            background: #764ba2;
+            transform: translateY(-2px);
+        }}
+        
+        .chart-section {{
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }}
+        
+        .table-container {{
+            overflow-x: auto;
+            margin-top: 20px;
+        }}
+        
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }}
+        
+        th {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 10px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 0.9em;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+        }}
+        
+        th:hover {{
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }}
+        
+        th.sortable {{
+            position: relative;
+            padding-right: 25px;
+        }}
+        
+        th.sortable::after {{
+            content: '⇅';
+            position: absolute;
+            right: 8px;
+            opacity: 0.5;
+        }}
+        
+        th.sorted-asc::after {{
+            content: '▲';
+            opacity: 1;
+        }}
+        
+        th.sorted-desc::after {{
+            content: '▼';
+            opacity: 1;
+        }}
+        
+        td {{
+            padding: 12px 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9em;
+        }}
+        
+        tr:hover {{
+            background: #f8f9fa;
+        }}
+        
+        .badge {{
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            display: inline-block;
+        }}
+        
+        .badge-red {{ background: #ffcdd2; color: #c62828; }}
+        .badge-blue {{ background: #bbdefb; color: #1565c0; }}
+        .badge-forehand {{ background: #c8e6c9; color: #2e7d32; }}
+        .badge-backhand {{ background: #fff9c4; color: #f57f17; }}
+        
+        .value-tech {{
+            font-weight: bold;
+            color: #667eea;
+        }}
+        
+        .value-angle {{
+            color: #f44336;
+        }}
+        
+        .value-path {{
+            color: #4caf50;
+        }}
+        
+        .value-buff {{
+            color: #ff9800;
+        }}
+        
+        h2 {{
+            color: #333;
+            margin: 30px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>⚡ Swing Tech Analysis</h1>
+            <div class=""subtitle"">{map.Info._songName} • {characteristic} - {difficulty}</div>
+            <div style=""margin-top: 10px;"">Total Swings: {rating.SwingData.Count}</div>
+        </div>
+        
+        <div class=""content"">
+            <div class=""info-panel"">
+                <h3>📘 Understanding Swing Tech</h3>
+                <p><strong>Swing Tech</strong> measures the technical difficulty of each swing based on angle strain and path complexity.</p>
+                <p><strong>Formula:</strong> <code>SwingTech = AngleStrain + PathStrain</code> (after NJS buff is applied)</p>
+                <p><strong>Components:</strong></p>
+                <ul style=""margin-left: 20px; margin-top: 10px;"">
+                    <li><strong>AngleStrain:</strong> Difficulty from angular changes between swings</li>
+                    <li><strong>PathStrain:</strong> Difficulty from spatial movement and positioning
+                        <ul style=""margin-left: 20px; margin-top: 5px;"">
+                            <li><strong>CurveComplexity:</strong> Curve difficulty from the swing path</li>
+                            <li><strong>AnglePathStrain:</strong> Angular strain along the path</li>
+                            <li><strong>PositionComplexity:</strong> Positional movement complexity</li>
+                        </ul>
+                    </li>
+                    <li><strong>NJS Buff:</strong> Multiplier based on Note Jump Speed (NJS > 24 increases difficulty)</li>
+                </ul>
+            </div>
+            
+            <div class=""controls"">
+                <input type=""text"" id=""searchBox"" placeholder=""Search..."">
+                <select id=""filterHand"">
+                    <option value="""">All Hands</option>
+                    <option value=""Red"">Red Hand</option>
+                    <option value=""Blue"">Blue Hand</option>
+                </select>
+                <select id=""filterParity"">
+                    <option value="""">All Parities</option>
+                    <option value=""Forehand"">Forehand</option>
+                    <option value=""Backhand"">Backhand</option>
+                </select>
+                <select id=""filterPattern"">
+                    <option value="""">All Pattern Types</option>
+                    <option value=""Multi-Notes"">Multi-Notes Only</option>
+                    <option value=""Single"">Single</option>
+                    <option value=""Stack"">Stack</option>
+                    <option value=""Tower"">Tower</option>
+                    <option value=""Window"">Window</option>
+                    <option value=""Slanted Window"">Slanted Window</option>
+                    <option value=""Slider"">Slider</option>
+                    <option value=""Curved Slider"">Curved Slider</option>
+                </select>
+                <button onclick=""resetFilters()"">Reset Filters</button>
+            </div>
+            
+            <div class=""chart-section"">
+                <h2>📊 Tech Distribution</h2>
+                <canvas id=""techChart""></canvas>
+            </div>
+            
+            <h2>🎯 Swing Tech Details</h2>
+            <div class=""table-container"">
+                <table id=""swingTable"">
+                    <thead>
+                        <tr>
+                            <th class=""sortable"" data-column=""Index"" data-type=""number"">#</th>
+                            <th class=""sortable"" data-column=""Time"" data-type=""number"">Beat</th>
+                            <th class=""sortable"" data-column=""Hand"" data-type=""string"">Hand</th>
+                            <th class=""sortable"" data-column=""Position"" data-type=""string"">Pos</th>
+                            <th class=""sortable"" data-column=""Angle"" data-type=""number"">Angle</th>
+                            <th class=""sortable"" data-column=""Direction"" data-type=""string"">Direction</th>
+                            <th class=""sortable"" data-column=""Parity"" data-type=""string"">Parity</th>
+                            <th class=""sortable"" data-column=""PatternType"" data-type=""string"">Pattern</th>
+                            <th class=""sortable"" data-column=""AngleStrain"" data-type=""number"" title=""Angular difficulty"">Angle Strain</th>
+                            <th class=""sortable"" data-column=""PathStrain"" data-type=""number"" title=""Movement difficulty (sum of components)"">Path Strain</th>
+                            <th class=""sortable"" data-column=""CurveComplexity"" data-type=""number"" title=""Curve difficulty from swing path"">Curve</th>
+                            <th class=""sortable"" data-column=""AnglePathStrain"" data-type=""number"" title=""Angular strain along path"">Path Angle</th>
+                            <th class=""sortable"" data-column=""PositionComplexity"" data-type=""number"" title=""Positional movement complexity"">Position</th>
+                            <th class=""sortable"" data-column=""NjsBuff"" data-type=""number"" title=""NJS multiplier"">NJS Buff</th>
+                            <th class=""sortable"" data-column=""SwingTech"" data-type=""number"" title=""Total tech difficulty"">Swing Tech</th>
+                            <th class=""sortable"" data-column=""PreviousDistance"" data-type=""number"" title=""Distance from previous swing"">Prev Dist</th>
+                        </tr>
+                    </thead>
+                    <tbody id=""swingTableBody""></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const swingData = {swingDataJson};
+        let filteredData = [...swingData];
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+        
+        function renderTable() {{
+            const tbody = document.getElementById('swingTableBody');
+            tbody.innerHTML = filteredData.map(swing => `
+                <tr>
+                    <td>${{swing.Index + 1}}</td>
+                    <td>${{swing.Time}}</td>
+                    <td><span class=""badge badge-${{swing.Hand.toLowerCase()}}"">${{swing.Hand}}</span></td>
+                    <td>(${{swing.Line}},${{swing.Layer}})</td>
+                    <td>${{swing.Angle}}°</td>
+                    <td>${{swing.Direction}}</td>
+                    <td><span class=""badge badge-${{swing.Parity.toLowerCase()}}"">${{swing.Parity}}</span></td>
+                    <td>${{swing.PatternType}}</td>
+                    <td class=""value-angle"">${{swing.AngleStrain}}</td>
+                    <td class=""value-path"">${{swing.PathStrain}}</td>
+                    <td>${{swing.CurveComplexity}}</td>
+                    <td>${{swing.AnglePathStrain}}</td>
+                    <td>${{swing.PositionComplexity}}</td>
+                    <td class=""value-buff"">${{swing.NjsBuff}}</td>
+                    <td class=""value-tech""><strong>${{swing.SwingTech}}</strong></td>
+                    <td>${{swing.PreviousDistance}}</td>
+                </tr>
+            `).join('');
+        }}
+        
+        function applyFilters() {{
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const handFilter = document.getElementById('filterHand').value;
+            const parityFilter = document.getElementById('filterParity').value;
+            const patternFilter = document.getElementById('filterPattern').value;
+            
+            filteredData = swingData.filter(swing => {{
+                if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
+                if (handFilter && swing.Hand !== handFilter) return false;
+                if (parityFilter && swing.Parity !== parityFilter) return false;
+                if (patternFilter) {{
+                    if (patternFilter === 'Multi-Notes') {{
+                        if (swing.PatternType === 'Single') return false;
+                    }} else {{
+                        if (swing.PatternType !== patternFilter) return false;
+                    }}
+                }}
+                return true;
+            }});
+            
+            renderTable();
+        }}
+        
+        function resetFilters() {{
+            document.getElementById('searchBox').value = '';
+            document.getElementById('filterHand').value = '';
+            document.getElementById('filterParity').value = '';
+            document.getElementById('filterPattern').value = '';
+            applyFilters();
+        }}
+        
+        document.getElementById('searchBox').addEventListener('input', applyFilters);
+        document.getElementById('filterHand').addEventListener('change', applyFilters);
+        document.getElementById('filterParity').addEventListener('change', applyFilters);
+        document.getElementById('filterPattern').addEventListener('change', applyFilters);
+        
+        function sortTable(column, type) {{
+            if (currentSortColumn === column) {{
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            }} else {{
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }}
+            
+            filteredData.sort((a, b) => {{
+                let aVal, bVal;
+                
+                if (type === 'number') {{
+                    aVal = a[column];
+                    bVal = b[column];
+                }} else {{
+                    aVal = String(a[column]).toLowerCase();
+                    bVal = String(b[column]).toLowerCase();
+                }}
+                
+                let comparison = 0;
+                if (aVal < bVal) comparison = -1;
+                if (aVal > bVal) comparison = 1;
+                
+                return currentSortDirection === 'asc' ? comparison : -comparison;
+            }});
+            
+            document.querySelectorAll('th.sortable').forEach(th => {{
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            }});
+            
+            const activeHeader = document.querySelector('th[data-column=""' + column + '""]');
+            if (activeHeader) {{
+                activeHeader.classList.add('sorted-' + currentSortDirection);
+            }}
+            
+            renderTable();
+        }}
+        
+        document.querySelectorAll('th.sortable').forEach(th => {{
+            th.addEventListener('click', () => {{
+                const column = th.getAttribute('data-column');
+                const type = th.getAttribute('data-type');
+                sortTable(column, type);
+            }});
+        }});
+        
+        // Create tech chart
+        const ctx = document.getElementById('techChart').getContext('2d');
+        const buckets = 20;
+        const maxTech = Math.max(...swingData.map(s => s.SwingTech));
+        const bucketSize = maxTech / buckets;
+        const histogram = new Array(buckets).fill(0);
+        
+        swingData.forEach(swing => {{
+            const bucket = Math.min(Math.floor(swing.SwingTech / bucketSize), buckets - 1);
+            histogram[bucket]++;
+        }});
+        
+        new Chart(ctx, {{
+            type: 'line',
+            data: {{
+                labels: Array.from({{ length: buckets }}, (_, i) => (i * bucketSize).toFixed(1)),
+                datasets: [{{
+                    label: 'Number of Swings',
+                    data: histogram,
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                plugins: {{
+                    legend: {{
+                        display: true
+                    }},
+                    title: {{
+                        display: true,
+                        text: 'Swing Tech Distribution'
+                    }}
+                }},
+                scales: {{
+                    x: {{
+                        title: {{
+                            display: true,
+                            text: 'Tech Range'
+                        }}
+                    }},
+                    y: {{
+                        title: {{
+                            display: true,
+                            text: 'Count'
+                        }},
+                        beginAtZero: true
+                    }}
+                }}
+            }}
+        }});
+        
+        renderTable();
     </script>
 </body>
 </html>";
