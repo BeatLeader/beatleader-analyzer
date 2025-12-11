@@ -30,7 +30,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
             foreach (var wall in wallsByTime)
             {
                 // Classify wall based on what it blocks
-                bool coversCenter = (wall.x <= 1 && wall.x + wall.Width > 1) || (wall.x <= 2 && wall.x + wall.Width > 2);
+                bool coversCenter = (wall.x <= 1 && wall.x + wall.Width > 1) || (wall.x == 2 && wall.Width >= 1);
                 
                 if (!coversCenter)
                 {
@@ -39,10 +39,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                 }
 
                 // Check if this is an overhead wall (crouch wall)
-                bool isOverhead = wall.y + wall.Height > 2;
-                
+                bool isOverhead = wall.y + wall.Height > 2 && wall.y == 2;
+
                 // Check if this blocks at standing height (dodge wall)
-                bool blocksStanding = (wall.y <= 1 && wall.Height >= 2) || (wall.y == 0 && wall.Height >= 3);
+                bool blocksStanding = wall.Height + wall.y >= 3;
 
                 if (isOverhead && !blocksStanding)
                 {
@@ -59,7 +59,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                             Beats = lastCrouchWall.Beats,
                             Seconds = lastCrouchWall.Seconds,
                             BpmTime = lastCrouchWall.BpmTime,
-                            DurationInSeconds = lastCrouchWall.DurationInSeconds + newDuration,
+                            DurationInSeconds = newDuration,
                             x = lastCrouchWall.x,
                             y = lastCrouchWall.y,
                             Width = lastCrouchWall.Width,
@@ -80,7 +80,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                 else if (blocksStanding)
                 {
                     // Dodge wall (blocks at standing height)
-                    if (lastDodgeWall != null && wall.Seconds - lastDodgeWall.Seconds < TIME_TOLERANCE)
+                    if (lastDodgeWall != null && wall.Seconds - (lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds) < TIME_TOLERANCE)
                     {
                         // Extend previous dodge by creating a new wall with extended duration
                         float wallEnd = wall.Seconds + wall.DurationInSeconds;
@@ -92,7 +92,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                             Beats = lastDodgeWall.Beats,
                             Seconds = lastDodgeWall.Seconds,
                             BpmTime = lastDodgeWall.BpmTime,
-                            DurationInSeconds = lastDodgeWall.DurationInSeconds + newDuration,
+                            DurationInSeconds = newDuration,
                             x = lastDodgeWall.x,
                             y = lastDodgeWall.y,
                             Width = lastDodgeWall.Width,
