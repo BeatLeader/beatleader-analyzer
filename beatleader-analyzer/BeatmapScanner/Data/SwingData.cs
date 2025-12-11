@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Analyzer.BeatmapScanner.Data
 {
@@ -43,6 +44,17 @@ namespace Analyzer.BeatmapScanner.Data
             BpmTime = start.BpmTime;
             Direction = start.Direction;
             Forehand = start.Forehand;
+            ParityErrors = start.ParityErrors;
+            if (cubes.Any(x => x.BombAvoidance)) BombAvoidance = true;
+        }
+
+        public SwingData(List<Cube> cubes, double direction, bool forehand)
+        {
+            var start = cubes[0];
+            Notes = cubes;
+            BpmTime = start.BpmTime;
+            Direction = direction;
+            Forehand = forehand;
             ParityErrors = start.ParityErrors;
             BombAvoidance = start.BombAvoidance;
         }

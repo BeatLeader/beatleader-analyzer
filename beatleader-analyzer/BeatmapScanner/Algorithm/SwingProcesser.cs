@@ -200,26 +200,28 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     // Calculate the reverse of the geometric angle
                     var reverseGeometricAngle = (geometricAngle + 180.0) % 360.0;
 
-                    // Check if head note direction is closest to geometric angle or its reverse
-                    var headDirection = entry.Direction;
+                    // Use angle strain based on parity to decide
+                    bool isRightHand = entry.Type == 1; // 0 = red/left, 1 = blue/right
+                    bool currentParity = swing.Forehand;
 
-                    // Calculate angular distance to geometric angle
-                    var diffToGeometric = Math.Abs(geometricAngle - headDirection);
-                    if (diffToGeometric > 180)
-                    {
-                        diffToGeometric = 360 - diffToGeometric;
-                    }
+                    SwingData previousSwing = i > 0 ? swingData[i - 1] : null;
 
-                    // Calculate angular distance to reverse geometric angle
-                    var diffToReverse = Math.Abs(reverseGeometricAngle - headDirection);
-                    if (diffToReverse > 180)
-                    {
-                        diffToReverse = 360 - diffToReverse;
-                    }
+                    // Test geometric angle
+                    var tempSwingGeometric = new SwingData(swing.Notes, geometricAngle, currentParity);
+                    double strainGeometric = SwingAngleStrainCalc(tempSwingGeometric, previousSwing, isRightHand);
 
-                    // Use the angle that is closest to the head direction
-                    double selectedAngle = diffToGeometric <= diffToReverse ? geometricAngle : reverseGeometricAngle;
-                    
+                    // Test reverse angle
+                    var tempSwingReverse = new SwingData(swing.Notes, reverseGeometricAngle, currentParity);
+                    double strainReverse= SwingAngleStrainCalc(tempSwingReverse, previousSwing, isRightHand);
+
+                    // Find which combination has the lowest strain
+                    double minStrain = Math.Min(strainGeometric, strainReverse);
+
+                    double selectedAngle;
+
+                    if (minStrain == strainGeometric) selectedAngle = geometricAngle;
+                    else selectedAngle = reverseGeometricAngle;
+
                     // Check if this angle is too similar to the previous swing's angle
                     // If so, use the reverse angle instead
                     if (i > 0)

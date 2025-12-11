@@ -190,6 +190,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     // Arrow: use literal direction
                     headCube.Direction = Mod(DirectionToDegree[headCube.CutDirection] + headCube.AngleOffset, 360);
+
+                    // Check for bomb avoidance
+                    FlagBombAvoidance(cubes, previousCubeIndex, headIndex, bombs);
                 }
                 else
                 {
@@ -198,12 +201,15 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     {
                         // First note: use position-based
                         headCube.Direction = GetInitialPosition(headCube.X, headCube.Y, isRightHand);
+
+                        // Check for bomb avoidance
+                        FlagBombAvoidance(cubes, previousCubeIndex, headIndex, bombs);
                     }
                     else
                     {
                         // Check for bomb avoidance
-                        var bombInfluence = AnalyzeBombInfluence(cubes, previousCubeIndex, headIndex, bombs);
-                        
+                        var bombInfluence = FlagBombAvoidance(cubes, previousCubeIndex, headIndex, bombs);
+
                         // If bomb avoidance occurred, calculate direction from player's new position
                         if (bombInfluence.hasBombs && bombInfluence.playerX >= 0)
                         {
@@ -255,6 +261,21 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
         }
         
+        private static (bool hasBombs, bool parityFlip, double playerX, double playerY) FlagBombAvoidance(List<Cube> cubes, int previousIndex, int currentIndex, List<Bomb> bombs)
+        {
+            // Check for bomb avoidance
+            var bombInfluence = AnalyzeBombInfluence(cubes, previousIndex, currentIndex, bombs);
+
+            // If bomb avoidance occurred
+            if (bombInfluence.hasBombs && bombInfluence.playerX >= 0)
+            {
+                // Mark bomb avoidance
+                cubes[currentIndex].BombAvoidance = true;
+            }
+
+            return bombInfluence;
+        }
+
         /// <summary>
         /// For each group with 2+ notes, calculate geometric angle from head to tail.
         /// For sliders and patterns, the direction is always from the lowest beat (head) to highest beat (tail).

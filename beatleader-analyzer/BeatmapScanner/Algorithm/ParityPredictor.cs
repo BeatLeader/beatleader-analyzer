@@ -65,25 +65,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         var currSwing = CreateSwingData(cubes, currIdx, currIdx, isForehand);
 
                         // Calculate angle strain cost
-                        double strainCost = SwingAngleStrain.SwingAngleStrainCalc(currSwing, prevSwing, isRightHand);
+                        double strainCost = SwingAngleStrain.ParityAngleStrainCalc(currSwing, prevSwing, isRightHand);
 
-                        // Adjust cost based on direction changes and parity rules
-                        bool sameDirection = IsSameDir(cubes[prevTailIdx].Direction, cubes[currIdx].Direction);
-                        if (sameDirection && prevParity == currParity)
-                        {
-                            // Same direction, same parity = parity error, add small penalty
-                            strainCost += 0.8;
-                        }
-                        else if (sameDirection && prevParity != currParity)
-                        {
-                            // Same direction, flipping parity = harder on wrist, add larger penalty
-                            strainCost += 1;
-                        }
-                        else if (!sameDirection && prevParity == currParity)
-                        {
-                            // Different direction, keeping same parity = more awkward, add highest penalty
-                            strainCost += 1.5;
-                        }
 
                         double totalCost = cost[i - 1, prevParity] + strainCost;
 
@@ -125,9 +108,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     int prevIdx = swingIndices[i - 1];
                     int prevTailIdx = GetTailIndex(cubes, prevIdx, n);
-                    bool sameDirection = IsSameDir(cubes[prevTailIdx].Direction, cubes[noteIdx].Direction);
-                    
-                    // Mark as parity error if same parity is kept (either same or different direction)
+
+                    // Mark as parity error if same parity is kept
                     if (optimalParity[i] == optimalParity[i - 1])
                     {
                         parityError = true;
