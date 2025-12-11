@@ -1,10 +1,12 @@
 ﻿using Analyzer.BeatmapScanner.Data;
+using beatleader_parser.Timescale;
 using Parser.Map.Difficulty.V3.Grid;
 using System;
 using System.Collections.Generic;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.Grid.FindAngleViaPosition;
-using beatleader_parser.Timescale;
+using static beatleader_analyzer.BeatmapScanner.Helper.Grid.GridPositionHelper;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -200,13 +202,15 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     else
                     {
                         // Check for bomb avoidance
-                        var bombInfluence = ParityPredictor.AnalyzeBombInfluence(cubes, previousCubeIndex, headIndex, bombs);
+                        var bombInfluence = AnalyzeBombInfluence(cubes, previousCubeIndex, headIndex, bombs);
                         
                         // If bomb avoidance occurred, calculate direction from player's new position
                         if (bombInfluence.hasBombs && bombInfluence.playerX >= 0)
                         {
-                            double deltaX = headCube.X - bombInfluence.playerX;
-                            double deltaY = headCube.Y - bombInfluence.playerY;
+                            // Convert both positions to meters for consistent calculation
+                            var (headMeterX, headMeterY) = GridToMeters(headCube.X, headCube.Y);
+                            double deltaX = headMeterX - bombInfluence.playerX;
+                            double deltaY = headMeterY - bombInfluence.playerY;
                             
                             if (Math.Abs(deltaX) > 0.01 || Math.Abs(deltaY) > 0.01)
                             {
@@ -418,6 +422,124 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     _ => 270.0        // Default DOWN
                 };
             }
+        }
+
+        public static (bool hasBombs, bool parityFlip, double playerX, double playerY) AnalyzeBombInfluence(List<Cube> cubes, int prevSwingHeadIndex, int currentSwingHeadIndex, List<Bomb> bombs)
+        {
+            if (bombs == null || bombs.Count == 0)
+            {
+                return (false, false, -1, -1);
+            }
+
+            // Get the tail of the previous swing (for patterns) or the head itself (for single notes)
+            var prevSwingTailCube = cubes[prevSwingHeadIndex];
+            if (cubes[prevSwingHeadIndex].Pattern && cubes[prevSwingHeadIndex].Head)
+            {
+                // Find the tail of the pattern
+                for (int i = prevSwingHeadIndex + 1; i < cubes.Count && cubes[i].Pattern && !cubes[i].Head; i++)
+                {
+                    if (cubes[i].Tail)
+                    {
+                        prevSwingTailCube = cubes[i];
+                        break;
+                    }
+                }
+            }
+
+            var currentCube = cubes[currentSwingHeadIndex];
+
+            // Get ALL bombs between previous swing's tail and current swing's head
+            var bombsBetween = bombs
+                .Where(b => b.BpmTime > prevSwingTailCube.BpmTime && b.BpmTime < currentCube.BpmTime)
+                .OrderBy(b => b.BpmTime)
+                .ToList();
+
+            var allRelevantBombs = bombsBetween.ToList();
+
+            if (allRelevantBombs.Count == 0)
+            {
+                return (false, false, -1, -1);
+            }
+
+            // Calculate player's position after previous swing in meter-based coordinates
+            // Convert previous swing tail position to meters
+            var (prevMeterX, prevMeterY) = GridToMeters(prevSwingTailCube.X, prevSwingTailCube.Y);
+            
+            double prevAngleRadians = prevSwingTailCube.Direction * Math.PI / 180.0;
+            double prevDirX = Math.Cos(prevAngleRadians);
+            double prevDirY = Math.Sin(prevAngleRadians);
+
+            // Calculate target position in swing direction (large distance to ensure beyond grid edge)
+            // Using 6 meters (10 grid units * 0.6m) to ensure we reach the edge
+            double targetX = prevMeterX + prevDirX * 6.0;
+            double targetY = prevMeterY + prevDirY * 6.0;
+
+            // Clamp to grid bounds in meters: X [-0.9, 0.9], Y [0, 1.05]
+            double playerX = Math.Clamp(targetX, GridXToMeters(0), GridXToMeters(3));
+            double playerY = Math.Clamp(targetY, GridYToMeters(0), GridYToMeters(2));
+
+            bool encounteredBomb = false;
+            int reversalCount = 0;
+            bool parityFlip = false;
+
+            // Simulate player trying to recover from swing and encountering bombs
+            foreach (var bomb in allRelevantBombs)
+            {
+                // Convert bomb position to meters for consistent comparison
+                var (bombMeterX, bombMeterY) = GridToMeters(bomb.x, bomb.y);
+                
+                // Check if bomb is at or very close to player's current position (within 0.48 meters = 0.8 grid units)
+                double toBombX = bombMeterX - playerX;
+                double toBombY = bombMeterY - playerY;
+                double distToBomb = Math.Sqrt(toBombX * toBombX + toBombY * toBombY);
+
+                if (distToBomb < 0.48)
+                {
+                    // Bomb is at player's position! Player must avoid it
+                    reversalCount++;
+                    encounteredBomb = true;
+                    parityFlip = !parityFlip;
+
+                    // Player moves maximum 2 grid spaces away from bomb (1.2 meters)
+                    // Determine if bomb is in a corner or edge
+                    double leftEdge = GridXToMeters(0);
+                    double rightEdge = GridXToMeters(3);
+                    double bottomEdge = GridYToMeters(0);
+                    double topEdge = GridYToMeters(2);
+                    double centerX = GridXToMeters(1.5);
+                    double centerY = GridYToMeters(1.0);
+                    
+                    bool bombInHorizontalEdge = bombMeterX <= leftEdge + 0.01 || bombMeterX >= rightEdge - 0.01;
+                    bool bombInVerticalEdge = bombMeterY <= bottomEdge + 0.01 || bombMeterY >= topEdge - 0.01;
+                    bool bombInCorner = bombInHorizontalEdge && bombInVerticalEdge;
+
+                    if (bombInCorner)
+                    {
+                        // Bomb in corner: move 2 spaces (1.2m) in both directions
+                        playerX = bombMeterX <= centerX ? bombMeterX + 1.2 : bombMeterX - 1.2;
+                        playerY = bombMeterY <= centerY ? bombMeterY + 1.1 : bombMeterY - 1.1; // Y spacing varies slightly
+                    }
+                    else if (bombInHorizontalEdge)
+                    {
+                        // Bomb at left/right edge: move 2 spaces horizontally only
+                        playerX = bombMeterX <= centerX ? bombMeterX + 1.2 : bombMeterX - 1.2;
+                        // Keep Y position (stay at same row)
+                    }
+                    else if (bombInVerticalEdge)
+                    {
+                        // Bomb at top/bottom edge: move 2 spaces vertically only
+                        playerY = bombMeterY <= centerY ? bombMeterY + 1.1 : bombMeterY - 1.1;
+                        // Keep X position (stay at same column)
+                    }
+
+                    // Clamp to valid grid bounds in meters
+                    playerX = Math.Clamp(playerX, leftEdge, rightEdge);
+                    playerY = Math.Clamp(playerY, bottomEdge, topEdge);
+                }
+            }
+
+            // Return player position after bomb avoidance (or -1,-1 if no bombs encountered)
+            return (encounteredBomb, parityFlip, encounteredBomb ? playerX : -1, encounteredBomb ? playerY : -1);
         }
     }
 }

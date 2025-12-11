@@ -16,8 +16,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         private const double STREAM_BONUS = 1.05;
         private const double PARITY_ERROR_MULTIPLIER = 2.0;
-        private const double DISTANCE_FALLOFF = 3.0;
-        private const double HIT_DISTANCE_FALLOFF = 2.0;
+        private const double DISTANCE_FALLOFF = 4.68;
         private const double ANGLE_STRAIN_WEIGHT = 0.1;
         private const double SPEED_FALLOFF_BASE = 1.4;
         private const double STRESS_FALLOFF = 2.0;
@@ -79,7 +78,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             for (int i = 0; i < swingData.Count; i++)
             {
                 var swing = swingData[i];
-                double distanceDiff = swing.PreviousDistance / (swing.PreviousDistance + DISTANCE_FALLOFF) + 1;
+                double distanceDiff = swing.BezierCurveDistance / (swing.BezierCurveDistance + DISTANCE_FALLOFF) + 1;
                 
                 double swingSpeed = swing.SwingFrequency * distanceDiff * bps;
                 if (swing.ParityErrors)
@@ -90,7 +89,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double xHitDist = swing.EntryPosition.x - swing.ExitPosition.x;
                 double yHitDist = swing.EntryPosition.y - swing.ExitPosition.y;
                 double hitDistance = Math.Sqrt(xHitDist * xHitDist + yHitDist * yHitDist);
-                double hitDiff = hitDistance / (hitDistance + HIT_DISTANCE_FALLOFF) + 1.0;
+                double hitDiff = hitDistance / (hitDistance + DISTANCE_FALLOFF) + 1.0;
                 
                 double stress = (swing.AngleStrain * ANGLE_STRAIN_WEIGHT + swing.PathStrain) * hitDiff;
                 

@@ -12,7 +12,7 @@ namespace Benchmark
     /// </summary>
     public static class DifficultyBreakdownHtmlExporter
     {
-        private const double PASS_CALIBRATION_FACTOR = 0.3;
+        private const double PASS_CALIBRATION_FACTOR = 0.8;
         private const double ONE_SABER_NERF = 0.35;
         private const double BALANCED_TECH_SCALER = 10.0;
 
@@ -244,9 +244,9 @@ namespace Benchmark
             html.AppendLine("                        <th rowspan=\"2\">Final<br/>SwingDiff</th>");
             html.AppendLine("                    </tr>");
             html.AppendLine("                    <tr>");
-            html.AppendLine("                        <th>Freq</th>");
-            html.AppendLine("                        <th>Excess<br/>Dist</th>");
-            html.AppendLine("                        <th>Dist<br/>Diff</th>");
+            html.AppendLine("                        <th>Frequency</th>");
+            html.AppendLine("                        <th>Hit<br/>Distance</th>");
+            html.AppendLine("                        <th>Distance<br/>Difficulty</th>");
             html.AppendLine("                        <th>Speed</th>");
             html.AppendLine("                        <th>Angle<br/>Strain</th>");
             html.AppendLine("                        <th>Path<br/>Strain</th>");
@@ -270,7 +270,7 @@ namespace Benchmark
                 html.AppendLine($"                        <td class=\"{handClass}\">{(swing.Notes[0].Type == 0 ? "Red" : "Blue")}</td>");
                 html.AppendLine($"                        <td>{swing.PatternType}</td>");
                 html.AppendLine($"                        <td>{swing.SwingFrequency:F3}</td>");
-                html.AppendLine($"                        <td>{swing.PreviousDistance:F3}</td>");
+                html.AppendLine($"                        <td>{swing.BezierCurveDistance:F3}</td>");
                 html.AppendLine($"                        <td>{swing.DistanceDiff:F3}</td>");
                 html.AppendLine($"                        <td>{swing.SwingSpeed:F3}</td>");
                 html.AppendLine($"                        <td>{swing.AngleStrain:F3}</td>");
@@ -292,7 +292,7 @@ namespace Benchmark
             html.AppendLine("                <h4>Calculation Formulas:</h4>");
             html.AppendLine("                <ul>");
             html.AppendLine("                    <li><strong>SwingFrequency:</strong> 2 / (nextBeat - prevBeat)</li>");
-            html.AppendLine("                    <li><strong>DistanceDiff:</strong> ExcessDistance / (ExcessDistance + 1.8) + 1.0</li>");
+            html.AppendLine("                    <li><strong>DistanceDiff:</strong> HitDistance / (HitDistance + 1.8) + 1.0</li>");
             html.AppendLine("                    <li><strong>SwingSpeed:</strong> SwingFrequency × DistanceDiff × (BPM / 60)</li>");
             html.AppendLine("                    <li><strong>Stress:</strong> (AngleStrain × 0.1 + PathStrain) × HitDiff</li>");
             html.AppendLine("                    <li><strong>SpeedFalloff:</strong> 1.0 - 1.4<sup>-SwingSpeed</sup></li>");

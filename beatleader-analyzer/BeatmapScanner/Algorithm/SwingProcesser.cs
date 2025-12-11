@@ -3,9 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.CalculateEntryExit;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.SwingAngleStrain;
-using static beatleader_analyzer.BeatmapScanner.Helper.Grid.GridPositionHelper;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.SwingAngleStrain;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -143,9 +142,29 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 NormalizeAngle(swingData[i - 1], swingData[i], strictAngles);
             }
 
-            for (int i = 0; i < swingData.Count; i++)
+            swingData[0].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[0] }, isRightHand) * 4;
+
+            for (int i = 1; i < swingData.Count; i++)
             {
                 swingData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[i] }, isRightHand) * 4;
+
+                // Check if it's linear
+                double target = ReverseCutDirection(swingData[i - 1].Direction);
+                double dirDiff = Math.Abs(((target - swingData[i].Direction + 540) % 360) - 180);
+                bool directionMatches = dirDiff < 22.5;
+                var prevPos = swingData[i - 1].Notes.Last();
+                var currPos = swingData[i].Notes[0];
+                double dx = currPos.X - prevPos.X;
+                double dy = currPos.Y - prevPos.Y;
+                double geometricAngle = Math.Atan2(dy, dx) * 180.0 / Math.PI;
+                if (geometricAngle < 0) geometricAngle += 360;
+                double geoDiff = Math.Abs(((target - geometricAngle + 540) % 360) - 180);
+                bool movementMatchesDirection = geoDiff < 22.5;
+                if (directionMatches && movementMatchesDirection)
+                {
+                    // Can be considered linear movement, reduce strain
+                    swingData[i].AngleStrain *= 0.25;
+                }
             }
 
             return swingData;

@@ -17,9 +17,8 @@ namespace Analyzer.BeatmapScanner.Data
         public bool BombAvoidance { get; set; } = false;
         public double AngleStrain { get; set; } = 0;
         public double PathStrain { get; set; } = 0;
-        public double AnglePathStrain { get; set; } = 0;
-        public double PreviousDistance { get; set; } = 0;
-        public double PositionComplexity { get; set; } = 0;
+        public double BezierCurveDistance { get; set; } = 0;
+        public double RepositioningDistance { get; set; } = 0;
         public double CurveComplexity { get; set; } = 0;
         public double SwingFrequency { get; set; } = 0;
         public double DistanceDiff { get; set; } = 0;

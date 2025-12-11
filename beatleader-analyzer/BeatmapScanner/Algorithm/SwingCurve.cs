@@ -21,7 +21,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
         public static bool UseParallel { get; set; } = true;
 
         // Maximum reasonable distance in meters squared (full grid diagonal ~3m, squared = 9m²)
-        // Using 4.68m² (sqrt(4.68) ≈ 2.16m) as practical maximum for position complexity
         private const double MAX_GRID_DISTANCE_SQUARED = 4.68;
 
         public static void Calc(List<SwingData> swingData, bool isRightHand)
@@ -56,7 +55,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 Span<Point> controlPoints = stackalloc Point[4] { point0, point1, point2, point3 };
                 var point = BezierCurveDirect(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3]);
 
-                double positionComplexity = 0;
+                double repositioningDistance = 0;
                 
                 const int maxPoints = 25;
                 Span<double> angleList = stackalloc double[maxPoints];
@@ -64,7 +63,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 int angleCount = 0;
                 int angleChangeCount = 0;
                 
-                double distance = 0;
+                double bezierDistance = 0;
 
                 double dx = point3.X - point0.X;
                 double dy = point3.Y - point0.Y;
@@ -77,7 +76,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     double angle = Mod(ConvertRadiansToDegrees(Math.Atan2(deltaY, deltaX)), 360);
                     angleList[angleCount] = angle;
 
-                    distance += Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+                    bezierDistance += Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
 
                     if (angleCount > 0)
                     {
@@ -89,36 +88,34 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     angleCount++;
                 }
 
-                double distanceBeforeOffset = distance;
-                distance -= 0.75;
+                bezierDistance -= 0.75;
 
-                double rawPositionComplexity = 0;
-                (double x, double y) simHandCurPos = (0, 0);
-                (double x, double y) simHandPrePos = (0, 0);
+                (double x, double y) currentSwingPosition = (0, 0);
+                (double x, double y) previousSwingPosition = (0, 0);
 
                 if (i > 1)
                 {
-                    simHandCurPos = swingData[i].EntryPosition;
+                    currentSwingPosition = swingData[i].EntryPosition;
 
-                    if (!swingData[i].ParityErrors && !swingData[i - 1].ParityErrors)
+                    // Positional difference between 2 swings ago and now
+                    // unless parity errors, then use previous swing instead
+                    if (!swingData[i].ParityErrors)
                     {
-                        simHandPrePos = swingData[i - 2].EntryPosition;
+                        previousSwingPosition = swingData[i - 2].EntryPosition;
                     }
                     else
                     {
-                        simHandPrePos = swingData[i - 1].EntryPosition;
-                    }
-
-                    double deltaX = simHandCurPos.x - simHandPrePos.x;
-                    double deltaY = simHandCurPos.y - simHandPrePos.y;
-                    rawPositionComplexity = deltaX * deltaX + deltaY * deltaY;
-
-                    if (rawPositionComplexity > MAX_GRID_DISTANCE_SQUARED)
-                    {
-                        rawPositionComplexity = MAX_GRID_DISTANCE_SQUARED;
+                        previousSwingPosition = swingData[i - 1].EntryPosition;
                     }
                     
-                    positionComplexity = rawPositionComplexity;
+                    double deltaX = currentSwingPosition.x - previousSwingPosition.x;
+                    double deltaY = currentSwingPosition.y - previousSwingPosition.y;
+                    repositioningDistance = deltaX * deltaX + deltaY * deltaY;
+                    // Quickly reduce repositioning distance value over time
+                    double timeDiff = Math.Abs(swingData[i].Notes[0].Seconds - swingData[i - 1].Notes[0].Seconds);
+                    repositioningDistance *= Math.Exp(-2.0 * timeDiff);
+                    // Clamp to max grid distance squared
+                    repositioningDistance = repositioningDistance / (repositioningDistance + MAX_GRID_DISTANCE_SQUARED);
                 }
 
                 double first, last, pathLookback;
@@ -161,11 +158,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     }
                 }
 
-                swingData[i].PreviousDistance = distance;
-                swingData[i].PositionComplexity = positionComplexity;
+                swingData[i].BezierCurveDistance = bezierDistance;
+                swingData[i].RepositioningDistance = repositioningDistance;
                 swingData[i].CurveComplexity = curveComplexity;
-                swingData[i].AnglePathStrain = pathAngleStrain;
-                swingData[i].PathStrain = curveComplexity + pathAngleStrain + positionComplexity;
+                swingData[i].PathStrain = curveComplexity + pathAngleStrain + repositioningDistance;
             }
 
             // Disable parallel processing when capturing debug data to maintain correct order
