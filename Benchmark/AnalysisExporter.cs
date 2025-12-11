@@ -1125,7 +1125,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
         }}
         
         .header {{
@@ -1191,17 +1190,17 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         }}
         
         .table-container {{
-            overflow-x: auto;
+            max-height: 800px;
+            overflow: auto;
             margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }}
         
         table {{
             width: 100%;
             border-collapse: collapse;
             background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
         }}
         
         th {{
@@ -1223,14 +1222,12 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         }}
         
         th.sortable {{
-            position: relative;
             padding-right: 30px;
         }}
         
         th.sortable::after {{
             content: '⇅';
-            position: absolute;
-            right: 10px;
+            margin-left: 10px;
             opacity: 0.5;
         }}
         
@@ -1777,7 +1774,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
         }}
         
         .header {{
@@ -1891,17 +1887,17 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         }}
         
         .table-container {{
-            overflow-x: auto;
+            max-height: 800px;
+            overflow: auto;
             margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }}
         
         table {{
             width: 100%;
             border-collapse: collapse;
             background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
         }}
         
         th {{
@@ -1923,14 +1919,12 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         }}
         
         th.sortable {{
-            position: relative;
             padding-right: 30px;
         }}
         
         th.sortable::after {{
             content: '⇅';
-            position: absolute;
-            right: 10px;
+            margin-left: 10px;
             opacity: 0.5;
         }}
         
@@ -2349,7 +2343,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
         }}
         
         .header {{
@@ -2439,17 +2432,17 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         }}
         
         .table-container {{
-            overflow-x: auto;
+            max-height: 800px;
+            overflow: auto;
             margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }}
         
         table {{
             width: 100%;
             border-collapse: collapse;
             background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
         }}
         
         th {{
@@ -2472,14 +2465,12 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         }}
         
         th.sortable {{
-            position: relative;
             padding-right: 25px;
         }}
         
         th.sortable::after {{
             content: '⇅';
-            position: absolute;
-            right: 8px;
+            margin-left: 8px;
             opacity: 0.5;
         }}
         
@@ -2801,5 +2792,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         }
     }
 }
+
 
 

@@ -497,6 +497,10 @@ namespace Benchmark
             text-align: center;
             font-weight: 600;
             border: 1px solid #5568d3;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         table td {
@@ -519,12 +523,18 @@ namespace Benchmark
         }
 
         .table-container {
-            overflow-x: auto;
+            max-height: 800px;
+            overflow: auto;
             margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
         .detailed-table {
             font-size: 0.85em;
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
         }
 
         .detailed-table th {
