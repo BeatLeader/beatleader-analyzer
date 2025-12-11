@@ -59,7 +59,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
                             Beats = lastCrouchWall.Beats,
                             Seconds = lastCrouchWall.Seconds,
                             BpmTime = lastCrouchWall.BpmTime,
-                            DurationInSeconds = lastDodgeWall.DurationInSeconds + newDuration,
+                            DurationInSeconds = lastCrouchWall.DurationInSeconds + newDuration,
                             x = lastCrouchWall.x,
                             y = lastCrouchWall.y,
                             Width = lastCrouchWall.Width,
