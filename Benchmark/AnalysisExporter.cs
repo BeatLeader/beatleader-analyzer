@@ -260,7 +260,7 @@ namespace Benchmark
                     DodgeWalls = rating.DodgeWalls.Select(w => new
                     {
                         Time = Math.Round(w.Beats, 3),
-                        Duration = Math.Round(w.DurationInBeats, 3),
+                        Duration = Math.Round(w.DurationInSeconds, 3),
                         X = w.x,
                         Y = w.y,
                         Width = w.Width,
@@ -269,7 +269,7 @@ namespace Benchmark
                     CrouchWalls = rating.CrouchWalls.Select(w => new
                     {
                         Time = Math.Round(w.Beats, 3),
-                        Duration = Math.Round(w.DurationInBeats, 3),
+                        Duration = Math.Round(w.DurationInSeconds, 3),
                         X = w.x,
                         Y = w.y,
                         Width = w.Width,
@@ -750,7 +750,7 @@ namespace Benchmark
                                         <span class=""value"">${{wall.Time}}</span>
                                     </div>
                                     <div class=""property"">
-                                        <span class=""label"">Duration (beats)</span>
+                                        <span class=""label"">Duration (seconds)</span>
                                         <span class=""value"">${{wall.Duration}}</span>
                                     </div>
                                     <div class=""property"">
@@ -783,7 +783,7 @@ namespace Benchmark
                                         <span class=""value"">${{wall.Time}}</span>
                                     </div>
                                     <div class=""property"">
-                                        <span class=""label"">Duration (beats)</span>
+                                        <span class=""label"">Duration (seconds)</span>
                                         <span class=""value"">${{wall.Duration}}</span>
                                     </div>
                                     <div class=""property"">
