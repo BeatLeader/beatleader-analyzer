@@ -31,41 +31,41 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return;
             }
 
+            SwingData previousRed = null;
+            SwingData previousBlue = null;
+            SwingData previousSwing = null;
+
             // Calculate swing frequency per hand (red and blue separately)
             for (int i = 0; i < swingData.Count; i++)
             {
                 int currentHand = swingData[i].Notes[0].Type;
-                
-                // Find previous swing of the same hand
-                int prevSameHandIndex = -1;
-                for (int j = i - 1; j >= 0; j--)
+
+                if (currentHand == 0)
                 {
-                    if (swingData[j].Notes[0].Type == currentHand)
-                    {
-                        prevSameHandIndex = j;
-                        break;
-                    }
+                    previousSwing = previousRed;
                 }
-                
-                // Find next swing of the same hand
-                int nextSameHandIndex = -1;
-                for (int j = i + 1; j < swingData.Count; j++)
+                else
                 {
-                    if (swingData[j].Notes[0].Type == currentHand)
-                    {
-                        nextSameHandIndex = j;
-                        break;
-                    }
+                    previousSwing = previousBlue;
                 }
-                
+
                 // Calculate frequency using only same-hand swings
-                if (prevSameHandIndex >= 0 && nextSameHandIndex >= 0)
+                if (previousSwing != null)
                 {
-                    swingData[i].SwingFrequency = 2 / (swingData[nextSameHandIndex].BpmTime - swingData[prevSameHandIndex].BpmTime);
+                    swingData[i].SwingFrequency = 1 / (swingData[i].BpmTime - previousSwing.BpmTime);
                 }
                 else
                 {
                     swingData[i].SwingFrequency = 0;
+                }
+
+                if (currentHand == 0)
+                {
+                    previousRed = swingData[i];
+                }
+                else
+                {
+                    previousBlue = swingData[i];
                 }
             }
 
