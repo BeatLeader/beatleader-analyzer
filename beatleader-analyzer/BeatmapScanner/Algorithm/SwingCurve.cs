@@ -112,7 +112,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     double deltaY = currentSwingPosition.y - previousSwingPosition.y;
                     repositioningDistance = deltaX * deltaX + deltaY * deltaY;
                     // Quickly reduce repositioning distance value over time
-                    double timeDiff = Math.Abs(swingData[i].Notes[0].Seconds - swingData[i - 1].Notes[0].Seconds);
+                    double timeDiff = Math.Abs(swingData[i].Notes[0].Seconds - swingData[i - 1].Notes[^1].Seconds);
+                    // In seconds: 0 = 1, 0.3 = 0.549, 0.5 = 0.368, 1 = 0.135
                     repositioningDistance *= Math.Exp(-2.0 * timeDiff);
                     // Clamp to max grid distance squared
                     repositioningDistance = repositioningDistance / (repositioningDistance + MAX_GRID_DISTANCE_SQUARED);

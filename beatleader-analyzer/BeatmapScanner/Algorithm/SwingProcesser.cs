@@ -1,6 +1,7 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.CalculateEntryExit;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
@@ -142,17 +143,18 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 NormalizeAngle(swingData[i - 1], swingData[i], strictAngles);
             }
 
-            swingData[0].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[0] }, isRightHand) * 4;
+            swingData[0].AngleStrain = SwingAngleStrainCalc(swingData[0], null, isRightHand) * 4;
+            bool isLinear = false;
 
             for (int i = 1; i < swingData.Count; i++)
             {
-                swingData[i].AngleStrain = SwingAngleStrainCalc(new List<SwingData> { swingData[i] }, isRightHand) * 4;
+                swingData[i].AngleStrain = SwingAngleStrainCalc(swingData[i], swingData[i - 1], isRightHand) * 4;
 
                 // Check if it's linear
                 double target = ReverseCutDirection(swingData[i - 1].Direction);
                 double dirDiff = Math.Abs(((target - swingData[i].Direction + 540) % 360) - 180);
                 bool directionMatches = dirDiff < 22.5;
-                var prevPos = swingData[i - 1].Notes.Last();
+                var prevPos = swingData[i - 1].Notes[^1];
                 var currPos = swingData[i].Notes[0];
                 double dx = currPos.X - prevPos.X;
                 double dy = currPos.Y - prevPos.Y;
@@ -163,8 +165,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (directionMatches && movementMatchesDirection)
                 {
                     // Can be considered linear movement, reduce strain
-                    swingData[i].AngleStrain *= 0.25;
+                    if (isLinear) swingData[i].AngleStrain *= 0.25;
+                    isLinear = true;
                 }
+                else isLinear = false;
             }
 
             return swingData;
@@ -184,7 +188,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if(swing.Notes.All(x => x.CutDirection == 8))
                 {
                     var entry = swing.Notes[0];
-                    var exit = swing.Notes.Last();
+                    var exit = swing.Notes[^1];
                     var deltaX = exit.X - entry.X;
                     var deltaY = exit.Y - entry.Y;
                     var geometricAngle = Math.Atan2(deltaY, deltaX) * (180.0 / Math.PI);
@@ -265,7 +269,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
 
                 // Recalculate entry and exit positions based on swing direction and all notes of the group positions
-                CalcEntryExit(swing, swing.Notes.Last());
+                CalcEntryExit(swing, swing.Notes[^1]);
             }
         }
     }

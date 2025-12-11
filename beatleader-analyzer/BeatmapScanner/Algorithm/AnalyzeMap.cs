@@ -117,6 +117,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 combinedSwingData.Sort(CompareAngleAndPathStrain);
                 double tech = AverageAnglePath(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
+                
                 balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * BALANCED_TECH_SCALER;
             }
 

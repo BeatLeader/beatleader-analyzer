@@ -1,6 +1,7 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
 {
@@ -11,33 +12,36 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
         const double LEFT_BACKHAND_NEUTRAL = 112.5;
         const double RIGHT_BACKHAND_NEUTRAL = 67.5;
 
-        public static double SwingAngleStrainCalc(List<SwingData> swingData, bool isRightHand)
+        public static double SwingAngleStrainCalc(SwingData current, SwingData previous, bool isRightHand)
         {
-            if (swingData.Count == 0)
+            // First swing can be considered to have no strain
+            if (previous == null) return 0;
+
+            double swingStrain = 0;
+
+            double neutralAngle;
+            if (current.Forehand)
             {
-                return 0;
+                neutralAngle = isRightHand ? RIGHT_FOREHAND_NEUTRAL : LEFT_FOREHAND_NEUTRAL;
+            }
+            else
+            {
+                neutralAngle = isRightHand ? RIGHT_BACKHAND_NEUTRAL : LEFT_BACKHAND_NEUTRAL;
             }
 
-            double totalStrain = 0;
+            double deviation = AngleDeviation(neutralAngle, current.Direction);
+            double normalizedStrain = deviation / 180.0;
+            swingStrain += normalizedStrain * normalizedStrain;
 
-            foreach (var swing in swingData)
+            // Add falloff based on delta time between swings in seconds
+            double deltaTime = Math.Abs(current.Notes[0].Seconds - previous.Notes[^1].Seconds);
+            if (deltaTime >= 0.25)
             {
-                double neutralAngle;
-                if (swing.Forehand)
-                {
-                    neutralAngle = isRightHand ? RIGHT_FOREHAND_NEUTRAL : LEFT_FOREHAND_NEUTRAL;
-                }
-                else
-                {
-                    neutralAngle = isRightHand ? RIGHT_BACKHAND_NEUTRAL : LEFT_BACKHAND_NEUTRAL;
-                }
-
-                double deviation = AngleDeviation(neutralAngle, swing.Direction);
-                double normalizedStrain = deviation / 180.0;
-                totalStrain += normalizedStrain * normalizedStrain;
+                // In seconds: 0.25 = 1, 0.5 = 0.707, 1 = 0.3535
+                swingStrain *= Math.Exp((0.25 - deltaTime) * Math.Log(4.0)); 
             }
 
-            return totalStrain / swingData.Count;
+            return swingStrain;
         }
 
         public static double BezierAngleTotalStrain(Span<double> angleData, bool forehand, bool isRightHand)

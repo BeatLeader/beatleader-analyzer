@@ -1,5 +1,7 @@
 ﻿using Analyzer.BeatmapScanner.Data;
+using beatleader_analyzer.BeatmapScanner.Helper.MathHelper;
 using Parser.Map.Difficulty.V3.Grid;
+using System;
 using System.Collections.Generic;
 using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
 
@@ -13,24 +15,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static void Predict(List<Cube> cubes, bool isRightHand, List<Bomb> bombs = null)
         {
-            if (cubes == null || cubes.Count == 0)
-            {
-                return;
-            }
-
-            SimpleParity(cubes, isRightHand, bombs);
-        }
-
-        private static void SimpleParity(List<Cube> cubes, bool isRightHand, List<Bomb> bombs)
-        {
             int n = cubes.Count;
             if (n == 0) return;
 
-            // Build list of pattern group head indices (includes single notes and head notes of patterns)
+            // Build list of swing indices
             var swingIndices = new List<int>();
             for (int i = 0; i < n; i++)
             {
-                // Include note if it's NOT part of a pattern, OR if it's the HEAD of a pattern
                 if (!cubes[i].Pattern || cubes[i].Head)
                 {
                     swingIndices.Add(i);
@@ -38,85 +29,163 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
 
             int numSwings = swingIndices.Count;
-            if (numSwings == 0) return;
+            if (numSwings <= 1) return;
 
-            // Start with forehand
-            bool currentParity = true;
+            // DP arrays: cost[i][parity] = minimum cost to reach swing i with given parity (false=backhand, true=forehand)
+            double[,] cost = new double[numSwings, 2];
+            bool[,] parentParity = new bool[numSwings, 2];
 
-            // First swing
-            int firstNoteIdx = swingIndices[0];
-            cubes[firstNoteIdx].Forehand = currentParity;
-            cubes[firstNoteIdx].ParityErrors = false;
-            cubes[firstNoteIdx].BombAvoidance = false;
+            // Initialize first swing (start with forehand)
+            cost[0, 0] = double.MaxValue; // backhand start is not preferred
+            cost[0, 1] = 0; // forehand start
 
-            // Apply parity to all notes in first pattern group
-            if (cubes[firstNoteIdx].Pattern && cubes[firstNoteIdx].Head)
+            // Forward pass: calculate minimum cost for each swing with each parity
+            for (int i = 1; i < numSwings; i++)
             {
-                for (int i = firstNoteIdx + 1; i < n && cubes[i].Pattern && !cubes[i].Head; i++)
-                {
-                    cubes[i].Forehand = currentParity;
-                    cubes[i].ParityErrors = false;
-                    cubes[i].BombAvoidance = false;
-                }
-            }
+                int currIdx = swingIndices[i];
+                int prevIdx = swingIndices[i - 1];
 
-            // Process remaining swings
-            for (int swingIdx = 1; swingIdx < numSwings; swingIdx++)
-            {
-                int currNoteIdx = swingIndices[swingIdx];
-                int prevSwingHeadIdx = swingIndices[swingIdx - 1];
+                // Get tail of previous swing for direction
+                int prevTailIdx = GetTailIndex(cubes, prevIdx, n);
 
-                // Get the tail of previous swing for direction comparison
-                int prevSwingLastIdx = prevSwingHeadIdx;
-                if (cubes[prevSwingHeadIdx].Pattern && cubes[prevSwingHeadIdx].Head)
+                // Try both parities for current swing
+                for (int currParity = 0; currParity <= 1; currParity++)
                 {
-                    for (int i = prevSwingHeadIdx + 1; i < n && cubes[i].Pattern && !cubes[i].Head; i++)
+                    bool isForehand = currParity == 1;
+                    double minCost = double.MaxValue;
+                    bool bestPrevParity = false;
+
+                    // Try both previous parities
+                    for (int prevParity = 0; prevParity <= 1; prevParity++)
                     {
-                        if (cubes[i].Tail)
+                        if (cost[i - 1, prevParity] == double.MaxValue) continue;
+
+                        // Create SwingData objects for strain calculation
+                        var prevSwing = CreateSwingData(cubes, prevIdx, prevTailIdx, prevParity == 1);
+                        var currSwing = CreateSwingData(cubes, currIdx, currIdx, isForehand);
+
+                        // Calculate angle strain cost
+                        double strainCost = SwingAngleStrain.SwingAngleStrainCalc(currSwing, prevSwing, isRightHand);
+
+                        // Adjust cost based on direction changes and parity rules
+                        bool sameDirection = IsSameDir(cubes[prevTailIdx].Direction, cubes[currIdx].Direction);
+                        if (sameDirection && prevParity == currParity)
                         {
-                            prevSwingLastIdx = i;
-                            break;
+                            // Same direction, same parity = parity error, add small penalty
+                            strainCost += 0.8;
+                        }
+                        else if (sameDirection && prevParity != currParity)
+                        {
+                            // Same direction, flipping parity = harder on wrist, add larger penalty
+                            strainCost += 1;
+                        }
+                        else if (!sameDirection && prevParity == currParity)
+                        {
+                            // Different direction, keeping same parity = more awkward, add highest penalty
+                            strainCost += 1.5;
+                        }
+
+                        double totalCost = cost[i - 1, prevParity] + strainCost;
+
+                        if (totalCost < minCost)
+                        {
+                            minCost = totalCost;
+                            bestPrevParity = prevParity == 1;
                         }
                     }
+
+                    cost[i, currParity] = minCost;
+                    parentParity[i, currParity] = bestPrevParity;
                 }
+            }
 
-                // Check for bomb avoidance using PreprocessNotes.AnalyzeBombInfluence
-                (bool hasBombAvoidance, bool parityFlip, double playerX, double playerY) = bombs != null 
-                    ? PreprocessNotes.AnalyzeBombInfluence(cubes, prevSwingHeadIdx, currNoteIdx, bombs) 
-                    : (false, false, -1.0, -1.0);
+            // Backward pass: reconstruct optimal path
+            bool[] optimalParity = new bool[numSwings];
+            
+            // Find best final parity
+            bool lastParity = cost[numSwings - 1, 1] <= cost[numSwings - 1, 0];
+            optimalParity[numSwings - 1] = lastParity;
 
-                bool sameDirection = IsSameDir(cubes[prevSwingLastIdx].Direction, cubes[currNoteIdx].Direction);
+            // Trace back
+            for (int i = numSwings - 1; i > 0; i--)
+            {
+                int parityIdx = optimalParity[i] ? 1 : 0;
+                optimalParity[i - 1] = parentParity[i, parityIdx];
+            }
 
-                // Simple rule: if same direction, it's a parity error
-                if (sameDirection || parityFlip)
+            // Apply optimal parity to cubes
+            for (int i = 0; i < numSwings; i++)
+            {
+                int noteIdx = swingIndices[i];
+                bool forehand = optimalParity[i];
+
+                // Determine if this is a parity error
+                bool parityError = false;
+                if (i > 0)
                 {
-                    // Keep same parity (error!)
-                    cubes[currNoteIdx].Forehand = currentParity;
-                    cubes[currNoteIdx].ParityErrors = true;
-                }
-                else
-                {
-                    // Different direction: flip parity (normal alternation)
-                    currentParity = !currentParity;
-                    cubes[currNoteIdx].Forehand = currentParity;
-                    cubes[currNoteIdx].ParityErrors = false;
-                }
-
-                cubes[currNoteIdx].BombAvoidance = hasBombAvoidance;
-
-                // Apply same parity to all notes in this pattern group
-                if (cubes[currNoteIdx].Pattern && cubes[currNoteIdx].Head)
-                {
-                    for (int i = currNoteIdx + 1; i < n && cubes[i].Pattern && !cubes[i].Head; i++)
+                    int prevIdx = swingIndices[i - 1];
+                    int prevTailIdx = GetTailIndex(cubes, prevIdx, n);
+                    bool sameDirection = IsSameDir(cubes[prevTailIdx].Direction, cubes[noteIdx].Direction);
+                    
+                    // Mark as parity error if same parity is kept (either same or different direction)
+                    if (optimalParity[i] == optimalParity[i - 1])
                     {
-                        cubes[i].Forehand = cubes[currNoteIdx].Forehand;
-                        cubes[i].ParityErrors = cubes[currNoteIdx].ParityErrors;
-                        cubes[i].BombAvoidance = cubes[currNoteIdx].BombAvoidance;
+                        parityError = true;
+                    }
+                }
 
-                        if (cubes[i].Tail) break;
+                cubes[noteIdx].Forehand = forehand;
+                cubes[noteIdx].ParityErrors = parityError;
+
+                // Apply to pattern group
+                if (cubes[noteIdx].Pattern && cubes[noteIdx].Head)
+                {
+                    for (int j = noteIdx + 1; j < n && cubes[j].Pattern && !cubes[j].Head; j++)
+                    {
+                        cubes[j].Forehand = forehand;
+                        cubes[j].ParityErrors = parityError;
+                        if (cubes[j].Tail) break;
                     }
                 }
             }
+        }
+
+        private static int GetTailIndex(List<Cube> cubes, int headIdx, int maxIdx)
+        {
+            if (!cubes[headIdx].Pattern || !cubes[headIdx].Head)
+                return headIdx;
+
+            for (int i = headIdx + 1; i < maxIdx && cubes[i].Pattern && !cubes[i].Head; i++)
+            {
+                if (cubes[i].Tail)
+                    return i;
+            }
+            return headIdx;
+        }
+
+        private static SwingData CreateSwingData(List<Cube> cubes, int headIdx, int tailIdx, bool forehand)
+        {
+            var swingCubes = new List<Cube>();
+            
+            if (headIdx == tailIdx)
+            {
+                swingCubes.Add(cubes[headIdx]);
+            }
+            else
+            {
+                for (int i = headIdx; i <= tailIdx && i < cubes.Count; i++)
+                {
+                    swingCubes.Add(cubes[i]);
+                    if (cubes[i].Tail) break;
+                }
+            }
+
+            var swing = new SwingData(swingCubes)
+            {
+                Forehand = forehand
+            };
+
+            return swing;
         }
     }
 }
