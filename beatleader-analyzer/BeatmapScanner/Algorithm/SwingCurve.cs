@@ -161,6 +161,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 swingData[i].BezierCurveDistance = bezierDistance;
                 swingData[i].RepositioningDistance = repositioningDistance;
                 swingData[i].CurveComplexity = curveComplexity;
+                swingData[i].AnglePathStrain = pathAngleStrain;
                 swingData[i].PathStrain = curveComplexity + pathAngleStrain + repositioningDistance;
             }
 

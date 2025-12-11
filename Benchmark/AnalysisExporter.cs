@@ -2303,11 +2303,12 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 PathStrain = Math.Round(s.PathStrain, 3),
                 // PathStrain components
                 CurveComplexity = Math.Round(s.CurveComplexity, 3),
+                AnglePathStrain = Math.Round(s.AnglePathStrain, 3),
                 PositionComplexity = Math.Round(s.RepositioningDistance, 3),
                 // Final values
                 SwingTech = Math.Round(s.SwingTech, 3),
                 NjsBuff = Math.Round(s.NjsBuff, 3),
-                PreviousDistance = Math.Round(s.BezierCurveDistance, 3),
+                BezierCurveDistance = Math.Round(s.BezierCurveDistance, 3),
                 EntryX = Math.Round(s.EntryPosition.x, 3),
                 EntryY = Math.Round(s.EntryPosition.y, 3),
                 ExitX = Math.Round(s.ExitPosition.x, 3),
@@ -2550,6 +2551,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <li><strong>PathStrain:</strong> Difficulty from spatial movement and positioning
                         <ul style=""margin-left: 20px; margin-top: 5px;"">
                             <li><strong>CurveComplexity:</strong> Curve difficulty from the swing path</li>
+                            <li><strong>AnglePathStrain:</strong> Angular strain along the path</li>
                             <li><strong>PositionComplexity:</strong> Positional movement complexity</li>
                         </ul>
                     </li>
@@ -2604,10 +2606,11 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                             <th class=""sortable"" data-column=""AngleStrain"" data-type=""number"" title=""Angular difficulty"">Angle Strain</th>
                             <th class=""sortable"" data-column=""PathStrain"" data-type=""number"" title=""Movement difficulty (sum of components)"">Path Strain</th>
                             <th class=""sortable"" data-column=""CurveComplexity"" data-type=""number"" title=""Curve difficulty from swing path"">Curve</th>
+                            <th class=""sortable"" data-column=""AnglePathStrain"" data-type=""number"" title=""Angular strain along path"">Path Angle</th>                            
                             <th class=""sortable"" data-column=""PositionComplexity"" data-type=""number"" title=""Positional movement complexity"">Position</th>
                             <th class=""sortable"" data-column=""NjsBuff"" data-type=""number"" title=""NJS multiplier"">NJS Buff</th>
                             <th class=""sortable"" data-column=""SwingTech"" data-type=""number"" title=""Total tech difficulty"">Swing Tech</th>
-                            <th class=""sortable"" data-column=""PreviousDistance"" data-type=""number"" title=""Distance from previous swing"">Prev Dist</th>
+                            <th class=""sortable"" data-column=""BezierCurveDistance"" data-type=""number"" title=""Distance from previous swing"">BezierCurveDistance</th>
                         </tr>
                     </thead>
                     <tbody id=""swingTableBody""></tbody>
@@ -2637,10 +2640,11 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <td class=""value-angle"">${{swing.AngleStrain}}</td>
                     <td class=""value-path"">${{swing.PathStrain}}</td>
                     <td>${{swing.CurveComplexity}}</td>
+                    <td>${{swing.AnglePathStrain}}</td>
                     <td>${{swing.PositionComplexity}}</td>
                     <td class=""value-buff"">${{swing.NjsBuff}}</td>
                     <td class=""value-tech""><strong>${{swing.SwingTech}}</strong></td>
-                    <td>${{swing.PreviousDistance}}</td>
+                    <td>${{swing.BezierCurveDistance}}</td>
                 </tr>
             `).join('');
         }}
