@@ -77,13 +77,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 new SwingData(groups[0])
             };
 
-            // Calculate entry and exit positions for first note
-            Cube firstTail = groups[0].Count > 1 ? groups[0].Find(c => c.Tail) : null;
-            CalcEntryExit(swingData[^1], firstTail);
-
             int groupIndex = 0;
 
-            for (int i = 1; i < cubes.Count; i++)
+            for (int i = 0; i < cubes.Count; i++)
             {
                 var currentBeat = cubes[i].BpmTime;
 
@@ -95,29 +91,21 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     {
                         break;
                     }
-                    
+
                     swingData.Add(new SwingData(groups[groupIndex]));
-
-                    // Calculate entry and exit positions
-                    Cube groupTail = groups[groupIndex].Count > 1 ? groups[groupIndex].Find(c => c.Tail) : null;
-                    CalcEntryExit(swingData[^1], groupTail);
-
-                    if (cubes[i].Chain)
-                    {
-                        // Override exit position for chains
-                        CalcChainExit(swingData[^1], cubes[i]);
-                    }
+                    // This also take into account individual note with a chain.
+                    CalcEntryExit(swingData[^1]);
                 }
                 else
                 {
                     // Calculate multi-note exit position with averaged angle
                     Cube headCube = groupIndex >= 0 ? groups[groupIndex][0] : null;
-                    CalcMultiNoteExit(swingData[^1], cubes[i], headCube, strictAngles);
+                    CalcMultiNoteExit(swingData[^1], strictAngles);
                 }
             }
 
             // Second pass: verify that direction match geometry for multi-note swings
-            VerifyMultiNotes(swingData);
+            VerifyMultiNotes(swingData, strictAngles);
 
             // Normalize angles between swings if within tolerance angle
             // Only for fast sections (< 1 beat) and single notes
@@ -174,7 +162,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return swingData;
         }
 
-        public static void VerifyMultiNotes(List<SwingData> swingData)
+        public static void VerifyMultiNotes(List<SwingData> swingData, bool strictAngles)
         {
             // Calculate geometric direction for multi-note swings
             for (int i = 0; i < swingData.Count; i++)
@@ -187,15 +175,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 if(swing.Notes.All(x => x.CutDirection == 8))
                 {
+                    // Compute geometric angle based on head → tail
                     var entry = swing.Notes[0];
                     var exit = swing.Notes[^1];
                     var deltaX = exit.X - entry.X;
                     var deltaY = exit.Y - entry.Y;
+
                     var geometricAngle = Math.Atan2(deltaY, deltaX) * (180.0 / Math.PI);
-                    if (geometricAngle < 0)
-                    {
-                        geometricAngle += 360.0;
-                    }
+                    if (geometricAngle < 0) geometricAngle += 360.0;
 
                     // Calculate the reverse of the geometric angle
                     var reverseGeometricAngle = (geometricAngle + 180.0) % 360.0;
@@ -271,7 +258,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
 
                 // Recalculate entry and exit positions based on swing direction and all notes of the group positions
-                CalcEntryExit(swing, swing.Notes[^1]);
+                CalcEntryExit(swing);
+                CalcMultiNoteExit(swing, strictAngles);
             }
         }
     }

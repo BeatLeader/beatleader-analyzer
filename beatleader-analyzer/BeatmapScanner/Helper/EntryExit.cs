@@ -1,95 +1,65 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
-using static beatleader_analyzer.BeatmapScanner.Helper.SwingSimulation;
-using static beatleader_analyzer.BeatmapScanner.Helper.GridPosition;
+using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.AngleTolerance;
 using static beatleader_analyzer.BeatmapScanner.Helper.Common;
+using static beatleader_analyzer.BeatmapScanner.Helper.GridPosition;
+using static beatleader_analyzer.BeatmapScanner.Helper.SwingSimulation;
 
 namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     internal class EntryExit
     {
-        public static void CalcMultiNoteExit(SwingData current, Cube tailCube, Cube headCube, bool strictAngles = false)
+        /// <summary>
+        /// Determines what angle the swing should leave at.
+        /// Calculates the world-space exit position from that angle.
+        /// Blends the swing’s previous direction and positional geometry to keep the movement fluid.
+        /// Respects cut-direction constraints if the next note has a fixed direction.
+        /// </summary>
+        public static void CalcMultiNoteExit(SwingData current, bool strictAngles = false)
         {
-            if (headCube != null && headCube.Direction != 8)
-            {
-                double presetAngle = headCube.Direction;
-                double radians = ConvertDegreesToRadians(presetAngle);
-                double cos = Math.Cos(radians);
-                double sin = Math.Sin(radians);
+            Cube headCube = current.Notes[0];
+            Cube tailCube = current.Notes[^1];
 
-                var (tailPosX, tailPosY) = GridToMeters(tailCube.X, tailCube.Y);
-                current.Direction = presetAngle;
-                current.ExitPosition = (tailPosX + cos * NOTE_SIZE, tailPosY + sin * NOTE_SIZE);
-                return;
-            }
+            // Calculate geometric angle based on entry position and tail cube position
+            double currentAngle = FindAngleViaPos(tailCube, headCube, current.Direction, true);
 
-            double currentAngle = current.Direction;
-
-            if (headCube != null)
-            {
-                currentAngle = FindAngleViaPos(tailCube, headCube, current.Direction, true);
-            }
-
-            double angleInRadians = ConvertDegreesToRadians(currentAngle);
-            double cosAngle = Math.Cos(angleInRadians);
-            double sinAngle = Math.Sin(angleInRadians);
-
+            // Compute the geometric exit point
             (double tailX, double tailY) = GridToMeters(tailCube.X, tailCube.Y);
-            double tailExitX = tailX + cosAngle * NOTE_SIZE;
-            double tailExitY = tailY + sinAngle * NOTE_SIZE;
 
-            double dx = current.EntryPosition.x - tailExitX;
-            double dy = current.EntryPosition.y - tailExitY;
-            double averagedAngle = Mod(ConvertRadiansToDegrees(Math.Atan2(dy, dx)), 360);
+            // Blend the geometric angle with the current swing angle
+            double diff = (currentAngle - current.Direction + 540) % 360 - 180;
+            double blendedAngle = Mod(current.Direction + diff * 0.5, 360);
 
-            double diff = (averagedAngle - current.Direction + 540) % 360 - 180;
-            double newAngle = current.Direction + diff * 0.5;
+            // Respect the head cube's cut direction tolerance
+            double finalAngle = blendedAngle;
 
-            double tolerance = GetTolerance(strictAngles);
-            bool canUseAveragedAngle = true;
-
-            if (headCube != null && headCube.CutDirection != 8)
+            if (headCube.CutDirection != 8)
             {
-                double noteAngle = Mod(DirectionToDegree[headCube.CutDirection] + headCube.AngleOffset, 360);
-                canUseAveragedAngle = IsAngleWithinTolerance(newAngle, noteAngle, tolerance);
+                double arrowAngle = Mod(DirectionToDegree[headCube.CutDirection] + headCube.AngleOffset, 360);
+                double tolerance = GetTolerance(strictAngles);
+
+                if (!IsAngleWithinTolerance(blendedAngle, arrowAngle, tolerance))
+                {
+                    // Outside tolerance → clamp to the nearest edge of allowed range
+                    double delta = (blendedAngle - arrowAngle + 540) % 360 - 180;
+
+                    if (delta > 0)
+                        finalAngle = Mod(arrowAngle + tolerance, 360);     // clamp high side
+                    else
+                        finalAngle = Mod(arrowAngle - tolerance, 360);     // clamp low side
+                }
             }
 
-            if (canUseAveragedAngle)
-            {
-                current.Direction = newAngle;
+            double rad = ConvertDegreesToRadians(finalAngle);
+            double exitX = tailX + Math.Cos(rad) * NOTE_SIZE;
+            double exitY = tailY + Math.Sin(rad) * NOTE_SIZE;
 
-                angleInRadians = ConvertDegreesToRadians(newAngle);
-                cosAngle = Math.Cos(angleInRadians);
-                sinAngle = Math.Sin(angleInRadians);
-
-                tailExitX = tailX + cosAngle * NOTE_SIZE;
-                tailExitY = tailY + sinAngle * NOTE_SIZE;
-            }
-
-            current.ExitPosition = (tailExitX, tailExitY);
+            current.Direction = finalAngle;
+            current.ExitPosition = (exitX, exitY);
         }
 
-        public static void CalcChainExit(SwingData current, Cube chainCube)
-        {
-            double tailDirection = current.Direction;
-            if (chainCube.TailDirection != 8)
-            {
-                tailDirection = Mod(DirectionToDegree[chainCube.TailDirection], 360);
-            }
-
-            double angleInRadians = ConvertDegreesToRadians(tailDirection);
-            double cosAngle = Math.Cos(angleInRadians);
-            double sinAngle = Math.Sin(angleInRadians);
-
-            (double tailX, double tailY) = GridToMeters(chainCube.TailLine, chainCube.TailLayer);
-            current.ExitPosition = (
-                (tailX + cosAngle * NOTE_SIZE) * chainCube.Squish,
-                (tailY + sinAngle * NOTE_SIZE) * chainCube.Squish
-            );
-        }
-
-        public static void CalcEntryExit(SwingData current, Cube tail = null)
+        public static void CalcEntryExit(SwingData current)
         {
             Cube headCube = current.Notes[0];
             (double headCenterX, double headCenterY) = GridToMeters(headCube.X, headCube.Y);
@@ -101,12 +71,26 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             double sin = Math.Sin(angleRad);
 
             current.EntryPosition = (headCenterX - cos * NOTE_SIZE, headCenterY - sin * NOTE_SIZE);
-            
-            // If tail exists, use tail position for exit; otherwise use head position
-            if (tail != null)
+
+            // If there's a chain note, use its tail for exit position
+            Cube chainNote = current.Notes.Where(x => x.Chain).FirstOrDefault();
+            if (chainNote != null)
             {
-                (double tailCenterX, double tailCenterY) = GridToMeters(tail.X, tail.Y);
-                current.ExitPosition = (tailCenterX + cos * NOTE_SIZE, tailCenterY + sin * NOTE_SIZE);
+                double tailDirection = current.Direction;
+                if (chainNote.TailDirection != 8)
+                {
+                    tailDirection = Mod(DirectionToDegree[chainNote.TailDirection], 360);
+                }
+
+                double angleInRadians = ConvertDegreesToRadians(tailDirection);
+                double cosAngle = Math.Cos(angleInRadians);
+                double sinAngle = Math.Sin(angleInRadians);
+
+                (double tailX, double tailY) = GridToMeters(chainNote.TailLine, chainNote.TailLayer);
+                current.ExitPosition = (
+                    (tailX + cosAngle * NOTE_SIZE) * chainNote.Squish,
+                    (tailY + sinAngle * NOTE_SIZE) * chainNote.Squish
+                );
             }
             else
             {

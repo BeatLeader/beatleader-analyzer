@@ -228,6 +228,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Only set direction for the HEAD note (first in group)
                 int headIndex = group[0];
                 Cube headCube = cubes[headIndex];
+                bool groupHasBombAvoidance = false;
                 
                 if (headCube.CutDirection != 8)
                 {
@@ -235,7 +236,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     headCube.Direction = Mod(DirectionToDegree[headCube.CutDirection] + headCube.AngleOffset, 360);
 
                     // Check for bomb avoidance
-                    FlagBombAvoidance(cubes, previousCubeIndex, headIndex, bombs);
+                    var bombInfluence = FlagBombAvoidance(cubes, previousCubeIndex, headIndex, bombs);
+                    groupHasBombAvoidance = bombInfluence.hasBombs && (bombInfluence.playerX >= 0 || bombInfluence.playerY >= 0);
                 }
                 else
                 {
@@ -246,15 +248,17 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         headCube.Direction = GetInitialPosition(headCube.X, headCube.Y, isRightHand);
 
                         // Check for bomb avoidance
-                        FlagBombAvoidance(cubes, previousCubeIndex, headIndex, bombs);
+                        var bombInfluence = FlagBombAvoidance(cubes, previousCubeIndex, headIndex, bombs);
+                        groupHasBombAvoidance = bombInfluence.hasBombs && (bombInfluence.playerX >= 0 || bombInfluence.playerY >= 0);
                     }
                     else
                     {
                         // Check for bomb avoidance
                         var bombInfluence = FlagBombAvoidance(cubes, previousCubeIndex, headIndex, bombs);
+                        groupHasBombAvoidance = bombInfluence.hasBombs && (bombInfluence.playerX >= 0 || bombInfluence.playerY >= 0);
 
                         // If bomb avoidance occurred, calculate direction from player's new position
-                        if (bombInfluence.hasBombs && bombInfluence.playerX >= 0)
+                        if (groupHasBombAvoidance)
                         {
                             // Convert both positions to meters for consistent calculation
                             var (headMeterX, headMeterY) = GridToMeters(headCube.X, headCube.Y);
@@ -295,11 +299,20 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 // Mark head
                 headCube.Head = true;
-                
+
                 // Mark tail if group has multiple notes
                 if (group.Count > 1)
                 {
-                    cubes[group[group.Count - 1]].Tail = true;
+                    cubes[group[^1]].Tail = true;
+                }
+
+                // If bomb avoidance was detected, apply it to all notes in the group
+                if (groupHasBombAvoidance)
+                {
+                    foreach (int idx in group)
+                    {
+                        cubes[idx].BombAvoidance = true;
+                    }
                 }
             }
         }
@@ -310,7 +323,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             var bombInfluence = AnalyzeBombInfluence(cubes, previousIndex, currentIndex, bombs);
 
             // If bomb avoidance occurred
-            if (bombInfluence.hasBombs && bombInfluence.playerX >= 0)
+            if (bombInfluence.hasBombs && (bombInfluence.playerX >= 0 || bombInfluence.playerY >= 0))
             {
                 // Mark bomb avoidance
                 cubes[currentIndex].BombAvoidance = true;

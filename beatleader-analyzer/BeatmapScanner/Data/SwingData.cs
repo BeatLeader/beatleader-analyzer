@@ -61,4 +61,21 @@ namespace Analyzer.BeatmapScanner.Data
 
         internal readonly record struct Point(double X, double Y);
     }
+
+    /// <summary>
+    /// To store per-swing difficulty contributions over time.
+    /// </summary>
+    public class PerSwing
+    {
+        public double Time { get; set; } = 0;
+        public double Pass { get; set; } = 0;
+        public double Tech { get; set; } = 0;
+
+        public PerSwing(double time, double pass, double tech)
+        {
+            Time = time;
+            Pass = pass;
+            Tech = tech;
+        }
+    }
 }

@@ -207,7 +207,7 @@ namespace Benchmark
                 {
                     foreach (var rating in ratings)
                     {
-                        Console.WriteLine($"  {rating.Difficulty}: Pass={rating.Pass:F2}, Tech={rating.Tech:F2}");
+                        Console.WriteLine($"  {rating.Difficulty}: Pass={rating.PassRating:F2}, Tech={rating.TechRating:F2}");
 
                         var result = CreateAnalysisObject(map, rating);
                         allResults.Add(result);
@@ -238,9 +238,9 @@ namespace Benchmark
                 },
                 Ratings = new
                 {
-                    Pass = Math.Round(rating.Pass, 3),
-                    Tech = Math.Round(rating.Tech, 3),
-                    Nerf = Math.Round(rating.Nerf, 3)
+                    Pass = Math.Round(rating.PassRating, 3),
+                    Tech = Math.Round(rating.TechRating, 3),
+                    Nerf = Math.Round(rating.LowNoteNerf, 3)
                 },
                 Patterns = new
                 {
@@ -1571,7 +1571,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
 
             Console.WriteLine($"\nGenerating difficulty breakdown for: {characteristic} - {difficulty}");
             Console.WriteLine($"Total swings: {rating.SwingData.Count}");
-            Console.WriteLine($"Pass: {rating.Pass:F2}, Tech: {rating.Tech:F2}");
+            Console.WriteLine($"Pass: {rating.PassRating:F2}, Tech: {rating.TechRating:F2}");
 
             var html = DifficultyBreakdownHtmlExporter.GenerateBreakdownHtml(rating, map.Info._beatsPerMinute);
 
@@ -1632,7 +1632,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
 
                 Console.WriteLine($"\nGenerating difficulty breakdown for: {characteristic} - {difficulty}");
                 Console.WriteLine($"Total swings: {rating.SwingData.Count}");
-                Console.WriteLine($"Pass: {rating.Pass:F2}, Tech: {rating.Tech:F2}");
+                Console.WriteLine($"Pass: {rating.PassRating:F2}, Tech: {rating.TechRating:F2}");
 
                 var html = DifficultyBreakdownHtmlExporter.GenerateBreakdownHtml(rating, map.Info._beatsPerMinute);
 

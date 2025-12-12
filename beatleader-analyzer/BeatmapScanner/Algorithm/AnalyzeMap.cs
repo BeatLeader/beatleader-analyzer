@@ -66,7 +66,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             if (combinedSwingData.Count > 0)
             {
                 // Use all classified walls for difficulty calculation
-                Difficulty.CalcSwingDiff(combinedSwingData, modifiers.baseBPM, dodgeWallsAll, crouchWallsAll);
+                Difficulty.CalcSwingDiff(combinedSwingData, modifiers.modifiedBPM, dodgeWallsAll, crouchWallsAll);
                 
                 redSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 0).ToList();
                 blueSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 1).ToList();
@@ -160,9 +160,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             Ratings ratings = new Ratings
             {
-                Pass = balancedPass,
-                Tech = balancedTech,
-                Nerf = CalculateLowNoteNerf(combinedSwingData.Count),
+                PassRating = balancedPass,
+                TechRating = balancedTech,
+                LowNoteNerf = CalculateLowNoteNerf(combinedSwingData.Count),
                 Patterns = combinedPatterns,
                 SwingData = combinedSwingData,
                 DodgeWalls = dodgeWallsAll,
