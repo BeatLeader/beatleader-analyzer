@@ -20,10 +20,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
         /// Detects multi-note patterns and sets swing directions.
         /// Groups notes by proximity and validates/corrects angles based on geometry.
         /// </summary>
-        public static void Detect(List<Cube> cubes, List<Bomb> bombs, bool isRightHand, Timescale timescale)
+        public static void Detect(List<Cube> cubes, List<Bomb> bombs, bool isRightHand)
         {
             // Step 1: Create groups of notes that are close together in time (can be singular too)
-            var groups = CreateNoteGroups(cubes, timescale);
+            var groups = CreateNoteGroups(cubes);
             
             // Step 2: Set initial direction for all HEAD notes only
             SetInitialDirections(cubes, groups, bombs, isRightHand);
@@ -36,13 +36,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
         /// Creates groups of notes that are close together in time.
         /// Groups can contain simultaneous notes or notes very close in depth.
         /// </summary>
-        private static List<List<int>> CreateNoteGroups(List<Cube> cubes, Timescale timescale)
+        private static List<List<int>> CreateNoteGroups(List<Cube> cubes)
         {
             var groups = new List<List<int>>();
             int i = 0;
 
             // We use seconds, so we don't need to use bpm changes.
-            timescale.ResetCurrentBPM();
             while (i < cubes.Count)
             {
                 var group = new List<int> { i };

@@ -21,7 +21,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private const double ONE_SABER_NERF = 0.35;
         private const double BALANCED_TECH_SCALER = 10.0;
 
-        public static Ratings UseAlgorithm(List<Cube> red, List<Cube> blue, Modifiers modifiers, List<Wall> walls = null, List<Bomb> bombs = null)
+        public static Ratings UseAlgorithm(List<Cube> red, List<Cube> blue, 
+            Modifiers modifiers, List<Wall> walls = null, List<Bomb> bombs = null)
         {
             List<SwingData> redSwingData = [];
             List<SwingData> blueSwingData = [];
@@ -29,7 +30,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (red.Count > 2)
             {
-                PreprocessNotes.Detect(red, bombs, false, modifiers.timescale);
+                PreprocessNotes.Detect(red, bombs, false);
                 ParityPredictor.Predict(red, false, bombs);
                 redSwingData = SwingCreation.Process(red, false, modifiers.strictAngles);
                 
@@ -42,7 +43,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (blue.Count > 2)
             {
-                PreprocessNotes.Detect(blue, bombs, true, modifiers.timescale);
+                PreprocessNotes.Detect(blue, bombs, true);
                 ParityPredictor.Predict(blue, true, bombs);
                 blueSwingData = SwingCreation.Process(blue, true, modifiers.strictAngles);
                 
@@ -59,13 +60,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             // Classify all walls (for difficulty calculation) and count unique dodge actions (for statistics)
             var (dodgeWallsAll, crouchWallsAll, dodgeWallsCount, crouchWallsCount) = walls != null 
-                ? ClassifyWalls(walls, modifiers.timescale) 
+                ? ClassifyWalls(walls) 
                 : (new List<Wall>(), new List<Wall>(), 0, 0);
 
             if (combinedSwingData.Count > 0)
             {
                 // Use all classified walls for difficulty calculation
-                Difficulty.CalcSwingDiff(combinedSwingData, modifiers.timescale, dodgeWallsAll, crouchWallsAll);
+                Difficulty.CalcSwingDiff(combinedSwingData, modifiers.baseBPM, dodgeWallsAll, crouchWallsAll);
                 
                 redSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 0).ToList();
                 blueSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 1).ToList();

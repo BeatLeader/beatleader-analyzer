@@ -14,16 +14,20 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class Difficulty
     {
-        private const double STREAM_BONUS = 1.05;
-        private const double PARITY_ERROR_MULTIPLIER = 2.0;
+        private const double STRESS_FALLOFF = 2.0;
         private const double DISTANCE_FALLOFF = 4.68;
         private const double ANGLE_STRAIN_WEIGHT = 0.1;
         private const double SPEED_FALLOFF_BASE = 1.4;
-        private const double STRESS_FALLOFF = 2.0;
-        private const double DODGE_WALL_BUFF = 1.05;
-        private const double CROUCH_WALL_DURING_BUFF = 1.10;
+        // Parity Reset bonus
+        private const double PARITY_ERROR_MULTIPLIER = 2.0;
+        // Stream bonus
+        private const double STREAM_BONUS = 1.05;
+        // Wall bonus
+        private const double WALL_EXTRA_DURATION = 0.5f;
+        private const double DODGE_WALL_BUFF = 1.1;
+        private const double CROUCH_WALL_DURING_BUFF = 1.2;
 
-        public static void CalcSwingDiff(List<SwingData> swingData, Timescale timescale, List<Wall> dodgeWalls = null, List<Wall> crouchWalls = null)
+        public static void CalcSwingDiff(List<SwingData> swingData, float bpm, List<Wall> dodgeWalls = null, List<Wall> crouchWalls = null)
         {
             if (swingData.Count == 0)
             {
@@ -69,8 +73,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
 
             // Swing is in BpmTime, so we don't have to worry about BPM changes here
-            timescale.ResetCurrentBPM();
-            double bps = timescale.GetValue() / 60.0;
+            double bps = bpm / 60.0;
             int? previousHand = null;
 
             var wallBuffs = (dodgeWalls != null || crouchWalls != null) ? AnalyzeWallInfluence(swingData, dodgeWalls, crouchWalls) : new Dictionary<int, double>();
@@ -158,7 +161,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     float wallDuration = wall.DurationInSeconds;
                     float wallEnd = wallStart + wallDuration;
 
-                    if (swing.Notes[0].Seconds >= wallStart && swing.Notes[0].Seconds <= wallEnd)
+                    if (IsSwingDuringWall(swing, wall))
                     {
                         maxBuff = Math.Max(maxBuff, CROUCH_WALL_DURING_BUFF);
                     }
@@ -175,9 +178,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
         private static bool IsSwingDuringWall(SwingData swing, Wall wall)
         {
-            float wallDuration = wall.DurationInSeconds;
-            float wallEnd = wall.Seconds + wallDuration;
-            return swing.Notes[0].Seconds >= wall.Seconds && swing.Notes[0].Seconds <= wallEnd;
+            double wallStart = wall.Seconds - WALL_EXTRA_DURATION;
+            double wallDuration = wall.DurationInSeconds + WALL_EXTRA_DURATION;
+            double wallEnd = wall.Seconds + wallDuration;
+            return swing.Notes[0].Seconds >= wallStart && swing.Notes[0].Seconds <= wallEnd;
         }
 
         public static List<PerSwing> CalcAverage(List<SwingData> swingData, int WINDOW)

@@ -11,7 +11,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         private const float TIME_TOLERANCE = 0.1f; // Walls within 0.1s are truly simultaneous
         private const float DODGE_COOLDOWN_SECONDS = 1.0f;
 
-        public static (List<Wall> dodgeWallsAll, List<Wall> crouchWallsAll, int dodgeWallsCount, int crouchWallsCount) ClassifyWalls(List<Wall> walls, Timescale timescale)
+        public static (List<Wall> dodgeWallsAll, List<Wall> crouchWallsAll, int dodgeWallsCount, int crouchWallsCount) ClassifyWalls(List<Wall> walls)
         {
             var dodgeWallsList = new List<Wall>();
             var crouchWallsList = new List<Wall>();

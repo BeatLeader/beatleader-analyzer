@@ -20,16 +20,14 @@ namespace beatleader_analyzer
         /// <param name="speedMult">BPM and NJS Multiplier for speed modifiers</param>
         /// <param name="njsMult">NJS Multiplier for custom modifiers</param>
         /// <param name="strictAngle">Strict Angle modifier</param>
-        /// <param name="offset">Deprecated V1/V2 map format offset feature</param>
         /// <returns>Filled Ratings object</returns>
-        public Ratings GetRating(DifficultyV3 diff, string characteristic, string difficulty, float bpm, float speedMult = 1, float njsMult = 1, bool strictAngle = false, float offset = 0)
+        public Ratings GetRating(DifficultyV3 diff, string characteristic, string difficulty, float bpm, float speedMult = 1, float njsMult = 1, bool strictAngle = false)
         {
             try
             {
                 if (diff.Notes.Count >= 20)
                 {
-                    Timescale timescale = Timescale.Create(bpm, diff.bpmEvents, offset);
-                    Modifiers modifiers = new Modifiers(timescale, speedMult, njsMult, strictAngle);
+                    Modifiers modifiers = new Modifiers(bpm, speedMult, njsMult, strictAngle);
 
                     Ratings rating = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(diff.Notes, diff.Chains, 
                         diff.Bombs, diff.Walls, modifiers);
@@ -59,9 +57,8 @@ namespace beatleader_analyzer
         /// <param name="speedMult">BPM and NJS Multiplier for speed modifiers</param>
         /// <param name="njsMult">NJS Multiplier for custom modifiers</param>
         /// <param name="strictAngle">Strict Angle modifier</param>
-        /// <param name="offset">Deprecated V1/V2 map format offset feature</param>
         /// <returns>Filled Ratings object</returns>
-        public List<Ratings> GetRating(BeatmapV3 beatmap, string characteristic, float speedMult = 1, float njsMult = 1, bool strictAngle = false, float offset = 0)
+        public List<Ratings> GetRating(BeatmapV3 beatmap, string characteristic, float speedMult = 1, float njsMult = 1, bool strictAngle = false)
         {
             List<Ratings> ratings = [];
             var data = beatmap.Info._difficultyBeatmapSets.FirstOrDefault(x => x._beatmapCharacteristicName == characteristic);
@@ -74,8 +71,7 @@ namespace beatleader_analyzer
                 {
                     if (difficulty.Data.Notes.Count >= 20)
                     {
-                        Timescale timescale = Timescale.Create(bpm, difficulty.Data.bpmEvents, offset);
-                        Modifiers modifiers = new Modifiers(timescale, speedMult, njsMult, strictAngle);
+                        Modifiers modifiers = new Modifiers(bpm, speedMult, njsMult, strictAngle);
 
                         Ratings rating = Analyzer.BeatmapScanner.BeatmapScanner.Analyzer(difficulty.Data.Notes,
                             difficulty.Data.Chains, difficulty.Data.Bombs, difficulty.Data.Walls, modifiers);
