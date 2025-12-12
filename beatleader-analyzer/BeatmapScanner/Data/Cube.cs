@@ -31,8 +31,6 @@ namespace Analyzer.BeatmapScanner.Data
         public int TailDirection { get; set; } = 0;
         public float Squish { get; set; } = 0f;
         
-        
-        
         public Cube()
         {
         }

@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
+namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     /// <summary>
     /// Unified classifier for multi-note hits that handles both counting (for statistics) and labeling (for swing data).
@@ -197,7 +197,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
             int layerDiff = Math.Abs(note1.Y - note2.Y);
 
             // Check for adjacency: orthogonal (h/v) or diagonal
-            bool isOrthogonallyAdjacent = (lineDiff == 1 && layerDiff == 0) || (lineDiff == 0 && layerDiff == 1);
+            bool isOrthogonallyAdjacent = lineDiff == 1 && layerDiff == 0 || lineDiff == 0 && layerDiff == 1;
             bool isDiagonallyAdjacent = lineDiff == 1 && layerDiff == 1;
             bool isAdjacent = isOrthogonallyAdjacent || isDiagonallyAdjacent;
 
@@ -281,7 +281,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 double snapAngle = CalculateSnapAngle(note1, note2);
                 
                 // Get the CutDirection's intended angle
-                double cutDirectionAngle = MathHelper.Helper.DirectionToDegree[note1.CutDirection] + note1.AngleOffset;
+                double cutDirectionAngle = Common.DirectionToDegree[note1.CutDirection] + note1.AngleOffset;
                 cutDirectionAngle = (cutDirectionAngle + 360.0) % 360.0;
 
                 // Calculate angular difference (shortest path)
@@ -294,8 +294,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
                 // Check if notes are at pure cardinal or diagonal positions
                 // Pure cardinal: exactly horizontal or vertical (one diff is 0)
                 // Pure diagonal: line diff equals layer diff (e.g., (0,0) to (2,2))
-                bool isCardinalOrPureDiagonal = (lineDiff == 0 || layerDiff == 0) ||  // Cardinal
-                                                (lineDiff == layerDiff);                // Pure diagonal
+                bool isCardinalOrPureDiagonal = lineDiff == 0 || layerDiff == 0 ||  // Cardinal
+                                                lineDiff == layerDiff;                // Pure diagonal
 
                 // Slanted window: BOTH conditions must be true:
                 // 1. Snap angle differs from CutDirection (not directly aligned)
@@ -404,16 +404,16 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MultiNote
 
                 // Diagonal directions: both line and layer must differ in correct quadrant
                 // Up-Left (135°)
-                >= 112.5 and <= 157.5 => (layerDiff > 0 && lineDiff < 0) || (layerDiff < 0 && lineDiff > 0),
+                >= 112.5 and <= 157.5 => layerDiff > 0 && lineDiff < 0 || layerDiff < 0 && lineDiff > 0,
 
                 // Up-Right (45°)
-                >= 22.5 and <= 67.5 => (layerDiff > 0 && lineDiff > 0) || (layerDiff < 0 && lineDiff < 0),
+                >= 22.5 and <= 67.5 => layerDiff > 0 && lineDiff > 0 || layerDiff < 0 && lineDiff < 0,
 
                 // Down-Left (225°)
-                >= 202.5 and <= 247.5 => (layerDiff < 0 && lineDiff < 0) || (layerDiff > 0 && lineDiff > 0),
+                >= 202.5 and <= 247.5 => layerDiff < 0 && lineDiff < 0 || layerDiff > 0 && lineDiff > 0,
 
                 // Down-Right (315°)
-                >= 292.5 and <= 337.5 => (layerDiff < 0 && lineDiff > 0) || (layerDiff > 0 && lineDiff < 0),
+                >= 292.5 and <= 337.5 => layerDiff < 0 && lineDiff > 0 || layerDiff > 0 && lineDiff < 0,
 
                 _ => false
             };

@@ -1,13 +1,13 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
-using static beatleader_analyzer.BeatmapScanner.Helper.Grid.FindAngleViaPosition;
-using static beatleader_analyzer.BeatmapScanner.Helper.Grid.GridPositionHelper;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.AngleTolerance;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.SwingSimulation;
+using static beatleader_analyzer.BeatmapScanner.Helper.GridPosition;
+using static beatleader_analyzer.BeatmapScanner.Helper.AngleTolerance;
+using static beatleader_analyzer.BeatmapScanner.Helper.Common;
 
-namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
+namespace beatleader_analyzer.BeatmapScanner.Helper
 {
-    internal class CalculateEntryExit
+    internal class EntryExit
     {
         public static void CalcMultiNoteExit(SwingData current, Cube tailCube, Cube headCube, bool strictAngles = false)
         {
@@ -43,7 +43,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
             double dy = current.EntryPosition.y - tailExitY;
             double averagedAngle = Mod(ConvertRadiansToDegrees(Math.Atan2(dy, dx)), 360);
 
-            double diff = ((averagedAngle - current.Direction + 540) % 360) - 180;
+            double diff = (averagedAngle - current.Direction + 540) % 360 - 180;
             double newAngle = current.Direction + diff * 0.5;
 
             double tolerance = GetTolerance(strictAngles);

@@ -4,9 +4,9 @@ using Parser.Map.Difficulty.V3.Grid;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static beatleader_analyzer.BeatmapScanner.Helper.Grid.FindAngleViaPosition;
-using static beatleader_analyzer.BeatmapScanner.Helper.Grid.GridPositionHelper;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.SwingSimulation;
+using static beatleader_analyzer.BeatmapScanner.Helper.GridPosition;
+using static beatleader_analyzer.BeatmapScanner.Helper.Common;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -64,8 +64,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     }
 
                     float distance = timeDiff * cubes[j].Njs;
-                    
-                    if (distance < 1f && ValidateSliders(cubes[prevIndex], cubes[j]))
+
+                    // Some maps have reversed sliders, so distance <= 0.1f is a catch-all.
+                    // Example map: Meowchine, Break, Grave of the Fireflies.
+                    // 1.3f is for G1ll35 d3 R415 specifically (0.070s dot inline at 18NJS).
+                    // Might be unnecessary, but it's overweighted otherwise.
+                    // Example map with slow sliders: Alone intelligence, Lost It (require 1.2f), etc.
+                    if ((distance < 1.3f && ValidateSliders(cubes[prevIndex], cubes[j])) || distance <= 0.1f)
                     {
                         group.Add(j);
                     }
@@ -76,11 +81,50 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     }
                 }
                 
+                // Reorder group if notes are out of chronological order (incorrect slider mapping)
+                if (group.Count > 1)
+                {
+                    ReorderGroupByTime(group, cubes);
+                }
+                
                 groups.Add(group);
                 i += group.Count;
             }
             
             return groups;
+        }
+        
+        /// <summary>
+        /// Reorders notes within a group by their beat time.
+        /// Handles incorrectly mapped sliders where head appears after tail.
+        /// </summary>
+        private static void ReorderGroupByTime(List<int> group, List<Cube> cubes)
+        {
+            // Check if notes are already in order
+            bool needsReordering = false;
+            for (int i = 1; i < group.Count; i++)
+            {
+                if (cubes[group[i]].BpmTime < cubes[group[i - 1]].BpmTime)
+                {
+                    needsReordering = true;
+                    break;
+                }
+            }
+            
+            if (!needsReordering)
+            {
+                return;
+            }
+            
+            // Create list of (index, time) pairs and sort by time
+            var indexedNotes = group.Select(idx => new { Index = idx, Time = cubes[idx].BpmTime }).ToList();
+            indexedNotes.Sort((a, b) => a.Time.CompareTo(b.Time));
+            
+            // Update group with sorted indices
+            for (int i = 0; i < group.Count; i++)
+            {
+                group[i] = indexedNotes[i].Index;
+            }
         }
 
         private static bool ValidateSliders(Cube previous, Cube current)

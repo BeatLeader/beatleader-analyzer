@@ -5,9 +5,10 @@ using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
 using System.Linq;
 using beatleader_analyzer.BeatmapScanner.Data;
 using System.Runtime.InteropServices;
-using static beatleader_analyzer.BeatmapScanner.Helper.MultiNote.MultiNoteClassifier;
-using static beatleader_analyzer.BeatmapScanner.Helper.WallHelper.WallClassifier;
+using static beatleader_analyzer.BeatmapScanner.Helper.MultiNoteClassifier;
+using static beatleader_analyzer.BeatmapScanner.Helper.WallClassifier;
 using Parser.Map.Difficulty.V3.Grid;
+using beatleader_analyzer.BeatmapScanner.Helper;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -30,11 +31,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 PreprocessNotes.Detect(red, bombs, false, modifiers.timescale);
                 ParityPredictor.Predict(red, false, bombs);
-                redSwingData = SwingProcesser.Process(red, false, modifiers.strictAngles);
+                redSwingData = SwingCreation.Process(red, false, modifiers.strictAngles);
                 
                 if (redSwingData.Count > 0)
                 {
-                    SwingCurve.Calc(redSwingData, false);
+                    SwingBezierCurve.Calc(redSwingData, false);
                     combinedSwingData.AddRange(redSwingData);
                 }
             }
@@ -43,11 +44,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 PreprocessNotes.Detect(blue, bombs, true, modifiers.timescale);
                 ParityPredictor.Predict(blue, true, bombs);
-                blueSwingData = SwingProcesser.Process(blue, true, modifiers.strictAngles);
+                blueSwingData = SwingCreation.Process(blue, true, modifiers.strictAngles);
                 
                 if (blueSwingData.Count > 0)
                 {
-                    SwingCurve.Calc(blueSwingData, true);
+                    SwingBezierCurve.Calc(blueSwingData, true);
                     combinedSwingData.AddRange(blueSwingData);
                 }
             }
@@ -64,7 +65,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             if (combinedSwingData.Count > 0)
             {
                 // Use all classified walls for difficulty calculation
-                DiffToPass.CalcSwingDiff(combinedSwingData, modifiers.timescale, dodgeWallsAll, crouchWallsAll);
+                Difficulty.CalcSwingDiff(combinedSwingData, modifiers.timescale, dodgeWallsAll, crouchWallsAll);
                 
                 redSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 0).ToList();
                 blueSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 1).ToList();
@@ -78,13 +79,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     if (redSwingData.Count > 1)
                     {
-                        passDiffRed += DiffToPass.CalcAverage(redSwingData, windowSize / 2).Select(x => x.Pass).Max();
+                        passDiffRed += Difficulty.CalcAverage(redSwingData, windowSize / 2).Select(x => x.Pass).Max();
                     }
                     if (blueSwingData.Count > 1)
                     {
-                        passDiffBlue += DiffToPass.CalcAverage(blueSwingData, windowSize / 2).Select(x => x.Pass).Max();
+                        passDiffBlue += Difficulty.CalcAverage(blueSwingData, windowSize / 2).Select(x => x.Pass).Max();
                     }
-                    passDiffCombined += DiffToPass.CalcAverage(combinedSwingData, windowSize).Select(x => x.Pass).Max();
+                    passDiffCombined += Difficulty.CalcAverage(combinedSwingData, windowSize).Select(x => x.Pass).Max();
                 }
                 
                 passDiffRed /= windowSizes.Count;

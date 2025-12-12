@@ -1,12 +1,12 @@
 using System;
 
-namespace beatleader_analyzer.BeatmapScanner.Helper.Grid
+namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     /// <summary>
     /// Converts Beat Saber grid positions to meter-based world coordinates.
     /// Grid Y=0 starts at the bottom of the play space.
     /// </summary>
-    internal class GridPositionHelper
+    internal class GridPosition
     {
         // X-axis spacing: 0.6m between adjacent columns
         private const double X_SPACING = 0.6;

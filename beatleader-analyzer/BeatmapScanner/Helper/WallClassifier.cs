@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
+namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     internal class WallClassifier
     {
@@ -30,7 +30,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.WallHelper
             foreach (var wall in wallsByTime)
             {
                 // Classify wall based on what it blocks
-                bool coversCenter = (wall.x <= 1 && wall.x + wall.Width > 1) || (wall.x == 2 && wall.Width >= 1);
+                bool coversCenter = wall.x <= 1 && wall.x + wall.Width > 1 || wall.x == 2 && wall.Width >= 1;
                 
                 if (!coversCenter)
                 {

@@ -1,4 +1,4 @@
-﻿namespace Analyzer.BeatmapScanner.Algorithm
+﻿namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     internal class NjsBuff
     {

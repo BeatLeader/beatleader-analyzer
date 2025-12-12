@@ -1,6 +1,6 @@
-﻿using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Curve;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.SwingAngleStrain;
+﻿using static beatleader_analyzer.BeatmapScanner.Helper.Common;
+using static beatleader_analyzer.BeatmapScanner.Helper.BezierCurve;
+using static beatleader_analyzer.BeatmapScanner.Helper.AngleStrain;
 using Analyzer.BeatmapScanner.Data;
 using System.Collections.Generic;
 using System;
@@ -16,7 +16,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// <summary>
     /// Calculates swing path complexity using Bezier curve analysis.
     /// </summary>
-    public class SwingCurve
+    public class SwingBezierCurve
     {
         public static bool UseParallel { get; set; } = true;
 

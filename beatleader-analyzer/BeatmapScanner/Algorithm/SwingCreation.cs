@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.CalculateEntryExit;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.SwingAngleStrain;
+using static beatleader_analyzer.BeatmapScanner.Helper.EntryExit;
+using static beatleader_analyzer.BeatmapScanner.Helper.Common;
+using static beatleader_analyzer.BeatmapScanner.Helper.AngleStrain;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -13,7 +13,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// Converts analyzed cubes into swing data with entry/exit positions.
     /// Multi-note hits are combined into single swings.
     /// </summary>
-    internal class SwingProcesser
+    internal class SwingCreation
     {
         public static List<SwingData> Process(List<Cube> cubes, bool isRightHand, bool strictAngles = false)
         {

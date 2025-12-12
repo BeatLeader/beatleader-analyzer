@@ -1,11 +1,8 @@
-﻿using Analyzer.BeatmapScanner.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 
-namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
+namespace beatleader_analyzer.BeatmapScanner.Helper
 {
-    internal class Helper
+    internal class Common
     {
         // Beat Saber grid spacing constants (in meters)
         // Based on ArcViewer: https://github.com/AllPoland/ArcViewer/blob/c3522d320c41a60d74830bca8f657a1a9c2b4e9d/Assets/__Scripts/Previewer/MapControl/Objects/ObjectManager.cs#L44
@@ -34,17 +31,38 @@ namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
             return (x % m + m) % m;
         }
 
-        public static void Swap<T>(IList<T> list, int indexA, int indexB)
-        {
-            (list[indexB], list[indexA]) = (list[indexA], list[indexB]);
-        }
-
         /// <summary>
         /// Reverses a cut direction by 180 degrees.
         /// </summary>
         public static double ReverseCutDirection(double direction)
         {
             return direction >= 180 ? direction - 180 : direction + 180;
+        }
+
+        /// <summary>
+        /// Checks if two swing directions are similar (handles angle wrapping).
+        /// </summary>
+        public static bool IsSameDir(double before, double after, double degree = 67.5)
+        {
+            before = Mod(before, 360);
+            after = Mod(after, 360);
+
+            if (Math.Abs(before - after) <= 180)
+            {
+                if (Math.Abs(before - after) < degree)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if (360 - Math.Abs(before - after) < degree)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

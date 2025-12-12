@@ -1,9 +1,8 @@
 ﻿using Analyzer.BeatmapScanner.Data;
-using beatleader_analyzer.BeatmapScanner.Helper.MathHelper;
+using beatleader_analyzer.BeatmapScanner.Helper;
 using Parser.Map.Difficulty.V3.Grid;
 using System;
 using System.Collections.Generic;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -65,7 +64,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         var currSwing = CreateSwingData(cubes, currIdx, currIdx, isForehand);
 
                         // Calculate angle strain cost
-                        double strainCost = SwingAngleStrain.ParityAngleStrainCalc(currSwing, prevSwing, isRightHand);
+                        double strainCost = AngleStrain.ParityAngleStrainCalc(currSwing, prevSwing, isRightHand);
 
 
                         double totalCost = cost[i - 1, prevParity] + strainCost;

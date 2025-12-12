@@ -1,7 +1,7 @@
 using System;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
+using static beatleader_analyzer.BeatmapScanner.Helper.Common;
 
-namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
+namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     /// <summary>
     /// Configuration for note cut angle tolerance based on game settings.

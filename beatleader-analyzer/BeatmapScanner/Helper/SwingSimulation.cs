@@ -1,15 +1,14 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
-using static beatleader_analyzer.BeatmapScanner.Helper.Grid.GridPositionHelper;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.Helper;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
+using static beatleader_analyzer.BeatmapScanner.Helper.GridPosition;
+using static beatleader_analyzer.BeatmapScanner.Helper.Common;
 
-namespace beatleader_analyzer.BeatmapScanner.Helper.Grid
+namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     /// <summary>
     /// Calculates swing directions for dot notes based on spatial relationship.
     /// </summary>
-    internal class FindAngleViaPosition
+    internal class SwingSimulation
     {
         public static double FindAngleViaPos(Cube current, Cube previous, double guideAngle, bool isSameSwing)
         {

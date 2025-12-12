@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using static Analyzer.BeatmapScanner.Data.SwingData;
 
-namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
+namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     /// <summary>
     /// Cubic Bezier curve calculations for swing path analysis.
     /// </summary>
-    internal class Curve
+    internal class BezierCurve
     {
         private const int nTimes = 25;
         private static readonly double[] tCached = Enumerable.Range(0, nTimes).Select(i => i / (double)(nTimes - 1)).ToArray();

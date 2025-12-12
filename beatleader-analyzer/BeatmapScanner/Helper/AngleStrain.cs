@@ -1,10 +1,10 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
-using static beatleader_analyzer.BeatmapScanner.Helper.MathHelper.IsSameDirection;
+using static beatleader_analyzer.BeatmapScanner.Helper.Common;
 
-namespace beatleader_analyzer.BeatmapScanner.Helper.MathHelper
+namespace beatleader_analyzer.BeatmapScanner.Helper
 {
-    internal class SwingAngleStrain
+    internal class AngleStrain
     {
         const double LEFT_FOREHAND_NEUTRAL = 292.5;
         const double RIGHT_FOREHAND_NEUTRAL = 247.5;
