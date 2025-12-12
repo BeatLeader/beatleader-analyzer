@@ -101,7 +101,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     handsRatio = Math.Min(easierHand / Math.Max(Math.Min(harderHand, passDiffCombined), 0.0001), 1.0);
                 }
-                
+
+                // https://www.desmos.com/calculator/ibkvqjsuoo
                 double nerfMultiplier = 1.0 - (1.0 - handsRatio) * ONE_SABER_NERF;
                 balancedPass = passDiffCombined * nerfMultiplier * PASS_CALIBRATION_FACTOR;
             }
@@ -118,7 +119,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 combinedSwingData.Sort(CompareAngleAndPathStrain);
                 double tech = AverageAnglePath(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
-                
+
+                // https://www.desmos.com/calculator/dspid2fyyj
                 balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * BALANCED_TECH_SCALER;
             }
 
@@ -172,6 +174,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return ratings;
         }
 
+        // https://www.desmos.com/calculator/mmn1dmczhz
         private static double CalculateLowNoteNerf(int noteCount)
         {
             return 1.0 / (1.0 + Math.Pow(Math.E, -1.4 - (noteCount / 50.0)));

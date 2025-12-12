@@ -25,7 +25,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         // Wall bonus
         private const double WALL_EXTRA_DURATION = 0.5f;
         private const double DODGE_WALL_BUFF = 1.1;
-        private const double CROUCH_WALL_DURING_BUFF = 1.2;
+        private const double CROUCH_WALL_BUFF = 1.2;
 
         public static void CalcSwingDiff(List<SwingData> swingData, float bpm, List<Wall> dodgeWalls = null, List<Wall> crouchWalls = null)
         {
@@ -92,11 +92,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double xHitDist = swing.EntryPosition.x - swing.ExitPosition.x;
                 double yHitDist = swing.EntryPosition.y - swing.ExitPosition.y;
                 double hitDistance = Math.Sqrt(xHitDist * xHitDist + yHitDist * yHitDist);
+                // https://www.desmos.com/calculator/mshzoffzgs
                 double hitDiff = hitDistance / (hitDistance + DISTANCE_FALLOFF) + 1.0;
                 
                 double stress = (swing.AngleStrain * ANGLE_STRAIN_WEIGHT + swing.PathStrain) * hitDiff;
-                
+                // https://www.desmos.com/calculator/nl9wpe3fdo
                 double speedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
+                // https://www.desmos.com/calculator/lcpwvisblz
                 double stressMultiplier = stress / (stress + STRESS_FALLOFF) + 1.0;
 
                 // Store intermediate values on the swing for debugging/export
@@ -163,7 +165,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                     if (IsSwingDuringWall(swing, wall))
                     {
-                        maxBuff = Math.Max(maxBuff, CROUCH_WALL_DURING_BUFF);
+                        maxBuff = Math.Max(maxBuff, CROUCH_WALL_BUFF);
                     }
                 }
 
