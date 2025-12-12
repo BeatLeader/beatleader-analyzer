@@ -86,7 +86,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private static bool ValidateSliders(Cube previous, Cube current)
         {
             // We want to consider dot spam as sliders
-            if (previous.CutDirection == 8 && current.CutDirection == 8 && 
+            if (current.CutDirection == 8 && 
                 previous.X == current.X && previous.Y == current.Y)
             {
                 return true;

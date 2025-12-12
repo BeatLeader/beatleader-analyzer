@@ -8,7 +8,6 @@ using System.Runtime.InteropServices;
 using static beatleader_analyzer.BeatmapScanner.Helper.MultiNote.MultiNoteClassifier;
 using static beatleader_analyzer.BeatmapScanner.Helper.WallHelper.WallClassifier;
 using Parser.Map.Difficulty.V3.Grid;
-using beatleader_parser.Timescale;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
