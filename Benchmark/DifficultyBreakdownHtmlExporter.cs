@@ -82,8 +82,8 @@ namespace Benchmark
 
         private static void GeneratePassRatingBreakdown(StringBuilder html, Ratings ratings, float bpm)
         {
-            var redSwings = ratings.SwingData.Where(x => x.Notes[0].Type == 0).ToList();
-            var blueSwings = ratings.SwingData.Where(x => x.Notes[0].Type == 1).ToList();
+            var redSwings = ratings.SwingData.Where(x => x.Cubes[0].Type == 0).ToList();
+            var blueSwings = ratings.SwingData.Where(x => x.Cubes[0].Type == 1).ToList();
             var allSwings = ratings.SwingData;
 
             html.AppendLine("        <div class=\"section\">");
@@ -261,13 +261,13 @@ namespace Benchmark
             for (int i = 0; i < swingData.Count; i++)
             {
                 var swing = swingData[i];
-                string handClass = swing.Notes[0].Type == 0 ? "red" : "blue";
+                string handClass = swing.Cubes[0].Type == 0 ? "red" : "blue";
                 string buffsText = GetBuffsText(swing);
 
                 html.AppendLine("                    <tr>");
                 html.AppendLine($"                        <td>{i + 1}</td>");
-                html.AppendLine($"                        <td>{swing.Notes[0].JsonTime:F2}</td>");
-                html.AppendLine($"                        <td class=\"{handClass}\">{(swing.Notes[0].Type == 0 ? "Red" : "Blue")}</td>");
+                html.AppendLine($"                        <td>{swing.Cubes[0].JsonTime:F2}</td>");
+                html.AppendLine($"                        <td class=\"{handClass}\">{(swing.Cubes[0].Type == 0 ? "Red" : "Blue")}</td>");
                 html.AppendLine($"                        <td>{swing.PatternType}</td>");
                 html.AppendLine($"                        <td>{swing.SwingFrequency:F3}</td>");
                 html.AppendLine($"                        <td>{swing.BezierCurveDistance:F3}</td>");

@@ -244,16 +244,16 @@ namespace Benchmark
                 },
                 Patterns = new
                 {
-                    Stacks = rating.Patterns.Stacks,
-                    Towers = rating.Patterns.Towers,
-                    Windows = rating.Patterns.Windows,
-                    SlantedWindows = rating.Patterns.SlantedWindows,
-                    Sliders = rating.Patterns.Sliders,
-                    CurvedSliders = rating.Patterns.CurvedSliders,
-                    DodgeWalls = rating.Patterns.DodgeWalls,
-                    CrouchWalls = rating.Patterns.CrouchWalls,
-                    ParityErrors = rating.Patterns.ParityErrors,
-                    BombAvoidances = rating.Patterns.BombAvoidances
+                    Stacks = rating.Statistics.Stacks,
+                    Towers = rating.Statistics.Towers,
+                    Windows = rating.Statistics.Windows,
+                    SlantedWindows = rating.Statistics.SlantedWindows,
+                    Sliders = rating.Statistics.Sliders,
+                    CurvedSliders = rating.Statistics.CurvedSliders,
+                    DodgeWalls = rating.Statistics.DodgeWalls,
+                    CrouchWalls = rating.Statistics.CrouchWalls,
+                    ParityErrors = rating.Statistics.ParityErrors,
+                    BombAvoidances = rating.Statistics.BombAvoidances
                 },
                 Walls = new
                 {
@@ -283,9 +283,9 @@ namespace Benchmark
                     .Select((s, index) => new
                     {
                         Rank = index + 1,
-                        Time = Math.Round(s.Notes[0].JsonTime, 3),
+                        Time = Math.Round(s.Cubes[0].JsonTime, 3),
                         Difficulty = Math.Round(s.SwingDiff, 3),
-                        Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
+                        Hand = s.Cubes[0].Type == 0 ? "Red" : "Blue",
                         Angle = Math.Round(s.Direction, 1),
                         Direction = Benchmark.AngleToDirection(s.Direction),
                         Parity = s.Forehand ? "Forehand" : "Backhand",
@@ -297,10 +297,10 @@ namespace Benchmark
                 {
                     AverageDifficulty = Math.Round(rating.SwingData.Average(s => s.SwingDiff), 3),
                     MaxDifficulty = Math.Round(rating.SwingData.Max(s => s.SwingDiff), 3),
-                    ParityErrorPercentage = Math.Round((double)rating.Patterns.ParityErrors / rating.SwingData.Count * 100, 3),
-                    BombAvoidancePercentage = Math.Round((double)rating.Patterns.BombAvoidances / rating.SwingData.Count * 100, 3),
-                    RedHandSwings = rating.SwingData.Count(s => s.Notes[0].Type == 0),
-                    BlueHandSwings = rating.SwingData.Count(s => s.Notes[0].Type == 1)
+                    ParityErrorPercentage = Math.Round((double)rating.Statistics.ParityErrors / rating.SwingData.Count * 100, 3),
+                    BombAvoidancePercentage = Math.Round((double)rating.Statistics.BombAvoidances / rating.SwingData.Count * 100, 3),
+                    RedHandSwings = rating.SwingData.Count(s => s.Cubes[0].Type == 0),
+                    BlueHandSwings = rating.SwingData.Count(s => s.Cubes[0].Type == 1)
                 }
             };
         }
@@ -918,12 +918,12 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 Swings = rating.SwingData.Select((s, index) => new
                 {
                     Index = index,
-                    Time = Math.Round(s.Notes[0].JsonTime, 3),
-                    Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
+                    Time = Math.Round(s.Cubes[0].JsonTime, 3),
+                    Hand = s.Cubes[0].Type == 0 ? "Red" : "Blue",
                     Position = new
                     {
-                        Line = s.Notes[0].X,
-                        Layer = s.Notes[0].Y
+                        Line = s.Cubes[0].X,
+                        Layer = s.Cubes[0].Y
                     },
                     Entry = new
                     {
@@ -1080,10 +1080,10 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             var swingDataJson = JsonConvert.SerializeObject(rating.SwingData.Select((s, index) => new
             {
                 Index = index,
-                Time = Math.Round(s.Notes[0].JsonTime, 3),
-                Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
-                Line = s.Notes[0].X,
-                Layer = s.Notes[0].Y,
+                Time = Math.Round(s.Cubes[0].JsonTime, 3),
+                Hand = s.Cubes[0].Type == 0 ? "Red" : "Blue",
+                Line = s.Cubes[0].X,
+                Layer = s.Cubes[0].Y,
                 EntryX = Math.Round(s.EntryPosition.x, 3),
                 EntryY = Math.Round(s.EntryPosition.y, 3),
                 ExitX = Math.Round(s.ExitPosition.x, 3),
@@ -1726,10 +1726,10 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 Swings = diff.rating.SwingData.Select((s, index) => new
                 {
                     Index = index,
-                    Time = Math.Round(s.Notes[0].JsonTime, 3),
-                    Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
-                    Line = s.Notes[0].X,
-                    Layer = s.Notes[0].Y,
+                    Time = Math.Round(s.Cubes[0].JsonTime, 3),
+                    Hand = s.Cubes[0].Type == 0 ? "Red" : "Blue",
+                    Line = s.Cubes[0].X,
+                    Layer = s.Cubes[0].Y,
                     EntryX = Math.Round(s.EntryPosition.x, 3),
                     EntryY = Math.Round(s.EntryPosition.y, 3),
                     ExitX = Math.Round(s.ExitPosition.x, 3),
@@ -2290,10 +2290,10 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             var swingDataJson = JsonConvert.SerializeObject(rating.SwingData.Select((s, index) => new
             {
                 Index = index,
-                Time = Math.Round(s.Notes[0].JsonTime, 3),
-                Hand = s.Notes[0].Type == 0 ? "Red" : "Blue",
-                Line = s.Notes[0].X,
-                Layer = s.Notes[0].Y,
+                Time = Math.Round(s.Cubes[0].JsonTime, 3),
+                Hand = s.Cubes[0].Type == 0 ? "Red" : "Blue",
+                Line = s.Cubes[0].X,
+                Layer = s.Cubes[0].Y,
                 Angle = Math.Round(s.Direction, 1),
                 Direction = Benchmark.AngleToDirection(s.Direction),
                 Parity = s.Forehand ? "Forehand" : "Backhand",
