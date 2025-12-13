@@ -15,8 +15,6 @@ namespace Analyzer.BeatmapScanner
             foreach (var note in notes)
             {
                 var cube = new Cube(note);
-                // NJS is affected by both speed modifier and njs modifier
-                cube.Njs *= modifiers.speedMult * modifiers.njsMult;
                 cubes.Add(cube);
             }
 

@@ -66,7 +66,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             if (combinedSwingData.Count > 0)
             {
                 // Use all classified walls for difficulty calculation
-                Difficulty.CalcSwingDiff(combinedSwingData, modifiers.modifiedBPM, dodgeWallsAll, crouchWallsAll);
+                Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
                 
                 redSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 0).ToList();
                 blueSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 1).ToList();
@@ -111,7 +111,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 foreach (var swing in combinedSwingData)
                 {
-                    double buff = NjsBuff.CalculateNjsBuff(swing.Notes[0].Njs);
+                    double buff = NjsBuff.CalculateNjsBuff(swing.Notes[0].Njs, modifiers);
                     swing.AngleStrain *= buff;
                     swing.PathStrain *= buff;
                     swing.SwingTech = swing.AngleStrain + swing.PathStrain;

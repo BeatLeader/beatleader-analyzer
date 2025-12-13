@@ -26,7 +26,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private const double DODGE_WALL_BUFF = 1.1;
         private const double CROUCH_WALL_BUFF = 1.2;
 
-        public static void CalcSwingDiff(List<SwingData> swingData, float bpm, List<Wall> dodgeWalls = null, List<Wall> crouchWalls = null)
+        public static void CalcSwingDiff(List<SwingData> swingData, Modifiers modifiers, List<Wall> dodgeWalls = null, List<Wall> crouchWalls = null)
         {
             if (swingData.Count == 0)
             {
@@ -73,7 +73,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
 
             // Swing is in BpmTime, so we don't have to worry about BPM changes here
-            double bps = bpm / 60.0;
+            double bps = modifiers.modifiedBPM / 60.0;
             int? previousHand = null;
 
             var wallBuffs = (dodgeWalls != null || crouchWalls != null) ? AnalyzeWallInfluence(swingData, dodgeWalls, crouchWalls) : new Dictionary<int, double>();
@@ -118,7 +118,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 swing.SwingDiff = swingSpeed * speedFalloff * stressMultiplier;
 
-                double njsBuff = NjsBuff.CalculateNjsBuff(swing.Notes[0].Njs);
+                double njsBuff = NjsBuff.CalculateNjsBuff(swing.Notes[0].Njs, modifiers);
                 swing.NjsBuff = njsBuff;
                 swing.SwingDiff *= njsBuff;
 
