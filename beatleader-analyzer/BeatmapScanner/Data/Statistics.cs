@@ -12,5 +12,6 @@ namespace Analyzer.BeatmapScanner.Data
         public int CrouchWalls { get; set; } = 0;
         public int ParityErrors { get; set; } = 0;
         public int BombAvoidances { get; set; } = 0;
+        public int LinearSwings { get; set; } = 0;
     }
 }

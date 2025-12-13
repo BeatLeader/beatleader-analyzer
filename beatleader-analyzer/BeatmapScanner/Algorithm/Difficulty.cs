@@ -40,7 +40,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             // Calculate swing frequency and transition distance per hand (red and blue separately)
             for (int i = 0; i < swingData.Count; i++)
             {
-                int currentHand = swingData[i].Notes[0].Type;
+                int currentHand = swingData[i].Cubes[0].Type;
 
                 if (currentHand == 0)
                 {
@@ -126,11 +126,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 swing.SwingDiff = swingDiff;
 
-                double njsBuff = NjsBuff.CalculateNjsBuff(swing.Notes[0].Njs, modifiers);
+                double njsBuff = NjsBuff.CalculateNjsBuff(swing.Cubes[0].Njs, modifiers);
                 swing.NjsBuff = njsBuff;
                 swing.SwingDiff *= njsBuff;
 
-                int currentHand = swing.Notes[0].Type;
+                int currentHand = swing.Cubes[0].Type;
                 if (previousHand.HasValue && previousHand.Value != currentHand)
                 {
                     swing.SwingDiff *= STREAM_BONUS;
@@ -196,7 +196,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             double wallStart = wall.Seconds - WALL_EXTRA_DURATION;
             double wallDuration = wall.DurationInSeconds + WALL_EXTRA_DURATION;
             double wallEnd = wall.Seconds + wallDuration;
-            return swing.Notes[0].Seconds >= wallStart && swing.Notes[0].Seconds <= wallEnd;
+            return swing.Cubes[0].Seconds >= wallStart && swing.Cubes[0].Seconds <= wallEnd;
         }
 
         public static List<PerSwing> CalcAverage(List<SwingData> swingData, int WINDOW)

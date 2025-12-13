@@ -18,8 +18,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         /// </summary>
         public static void CalcMultiNoteExit(SwingData current, bool strictAngles = false)
         {
-            Cube headCube = current.Notes[0];
-            Cube tailCube = current.Notes[^1];
+            Cube headCube = current.Cubes[0];
+            Cube tailCube = current.Cubes[^1];
 
             // Calculate geometric angle based on entry position and tail cube position
             double currentAngle = FindAngleViaPos(tailCube, headCube, current.Direction, true);
@@ -61,7 +61,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
         public static void CalcEntryExit(SwingData current)
         {
-            Cube headCube = current.Notes[0];
+            Cube headCube = current.Cubes[0];
             (double headCenterX, double headCenterY) = GridToMeters(headCube.X, headCube.Y);
 
             double swingAngle = headCube.Direction;
@@ -73,7 +73,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             current.EntryPosition = (headCenterX - cos * NOTE_SIZE, headCenterY - sin * NOTE_SIZE);
 
             // If there's a chain note, use its tail for exit position
-            Cube chainNote = current.Notes.Where(x => x.Chain).FirstOrDefault();
+            Cube chainNote = current.Cubes.Where(x => x.Chain).FirstOrDefault();
             if (chainNote != null)
             {
                 double angleInRadians = ConvertDegreesToRadians(chainNote.TailDirection);
@@ -95,8 +95,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         public static void NormalizeAngle(SwingData previous, SwingData current, bool strictAngles)
         {
             // Calculate the geometric angle
-            double deltaX = current.Notes[0].X - previous.Notes[0].X;
-            double deltaY = current.Notes[0].Y - previous.Notes[0].Y;
+            double deltaX = current.Cubes[0].X - previous.Cubes[0].X;
+            double deltaY = current.Cubes[0].Y - previous.Cubes[0].Y;
 
             // Calculate angle in radians, then convert to degrees
             double angleRadians = Math.Atan2(deltaY, deltaX);
@@ -109,7 +109,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             }
 
             // Get the current note's intended direction
-            double currentAngle = current.Notes[0].Direction;
+            double currentAngle = current.Cubes[0].Direction;
 
             // Calculate angular difference (shortest path around circle)
             double angleDiff = Math.Abs(potentialAngle - currentAngle);
@@ -126,7 +126,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             {
                 current.Direction = potentialAngle;
 
-                (double centerX, double centerY) = GridToMeters(current.Notes[0].X, current.Notes[0].Y);
+                (double centerX, double centerY) = GridToMeters(current.Cubes[0].X, current.Cubes[0].Y);
 
                 double angleRad = ConvertDegreesToRadians(current.Direction);
                 double cos = Math.Cos(angleRad);

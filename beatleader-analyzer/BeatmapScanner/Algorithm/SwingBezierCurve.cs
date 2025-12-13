@@ -112,7 +112,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     double deltaY = currentSwingPosition.y - previousSwingPosition.y;
                     repositioningDistance = deltaX * deltaX + deltaY * deltaY;
                     // Quickly reduce repositioning distance value over time
-                    double timeDiff = Math.Abs(swingData[i].Notes[0].Seconds - swingData[i - 1].Notes[^1].Seconds);
+                    double timeDiff = Math.Abs(swingData[i].Cubes[0].Seconds - swingData[i - 1].Cubes[^1].Seconds);
                     // In seconds: 0 = 1, 0.3 = 0.549, 0.5 = 0.368, 1 = 0.135
                     repositioningDistance *= Math.Exp(-2.0 * timeDiff);
                     // Clamp to max grid distance squared
@@ -161,8 +161,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         else
                         {
                             var pathAngleSlice = angleList.Slice(pathLookbackIndex, angleCount - pathLookbackIndex);
-                            pathAngleStrain = BezierAngleTotalStrain(pathAngleSlice, swingData[i].Notes[0].Seconds,
-                                swingData[i - 1].Notes[^1].Seconds, swingData[i].Forehand, isRightHand) / pathAngleSlice.Length * 8;
+                            pathAngleStrain = BezierAngleTotalStrain(pathAngleSlice, swingData[i].Cubes[0].Seconds,
+                                swingData[i - 1].Cubes[^1].Seconds, swingData[i].Forehand, isRightHand) / pathAngleSlice.Length * 8;
                         }
                     }
                 }

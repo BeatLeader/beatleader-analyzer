@@ -8,7 +8,7 @@ namespace Analyzer.BeatmapScanner.Data
     /// </summary>
     public class SwingData
     {
-        public List<Cube> Notes { get; set; } = null!;
+        public List<Cube> Cubes { get; set; } = null!;
         public double BpmTime { get; set; } = 0;
         public double Direction { get; set; } = 0;
         public (double x, double y) EntryPosition { get; set; } = (0, 0);
@@ -41,7 +41,7 @@ namespace Analyzer.BeatmapScanner.Data
         public SwingData(List<Cube> cubes)
         {
             var start = cubes[0];
-            Notes = cubes;
+            Cubes = cubes;
             BpmTime = start.BpmTime;
             Direction = start.Direction;
             Forehand = start.Forehand;
@@ -52,7 +52,7 @@ namespace Analyzer.BeatmapScanner.Data
         public SwingData(List<Cube> cubes, double direction, bool forehand)
         {
             var start = cubes[0];
-            Notes = cubes;
+            Cubes = cubes;
             BpmTime = start.BpmTime;
             Direction = direction;
             Forehand = forehand;

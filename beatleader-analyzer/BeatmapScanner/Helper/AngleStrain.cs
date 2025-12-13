@@ -33,7 +33,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             swingStrain += normalizedStrain * normalizedStrain * normalizedStrain;
 
             // Add falloff based on delta time between swings in seconds
-            double deltaTime = Math.Abs(current.Notes[0].Seconds - previous.Notes[^1].Seconds);
+            double deltaTime = Math.Abs(current.Cubes[0].Seconds - previous.Cubes[^1].Seconds);
             if (deltaTime >= 0.25)
             {
                 // In seconds: 0.25 = 1, 0.5 = 0.707, 1 = 0.3535
@@ -107,7 +107,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             if (previous.Forehand != current.Forehand && similarAngle) swingStrain *= 0.5;
 
             // Add falloff based on delta time between swings in seconds
-            double deltaTime = Math.Abs(current.Notes[0].Seconds - previous.Notes[^1].Seconds);
+            double deltaTime = Math.Abs(current.Cubes[0].Seconds - previous.Cubes[^1].Seconds);
             if (deltaTime >= 0.25)
             {
                 // In seconds: 0.25 = 1, 0.5 = 0.707, 1 = 0.3535

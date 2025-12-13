@@ -10,6 +10,7 @@ namespace Analyzer.BeatmapScanner.Data
     /// </summary>
     public class Cube
     {
+        public Note Note { get; set; } = null!;
         public float JsonTime { get; set; } = 0;
         public float BpmTime { get; set; } = 0;
         public float Seconds { get; set; } = 0;
@@ -39,6 +40,7 @@ namespace Analyzer.BeatmapScanner.Data
 
         public Cube(Cube cube)
         {
+            Note = cube.Note;
             JsonTime = cube.JsonTime;
             BpmTime = cube.BpmTime;
             Seconds = cube.Seconds;
@@ -64,6 +66,7 @@ namespace Analyzer.BeatmapScanner.Data
 
         public Cube(Note note)
         {
+            Note = note;
             JsonTime = note.Beats;
             BpmTime = note.BpmTime;
             Seconds = note.Seconds;

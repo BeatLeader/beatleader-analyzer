@@ -10,8 +10,10 @@ namespace beatleader_analyzer.BeatmapScanner.Data
         public string Difficulty { get; set; }
         public double PassRating { get; set; }
         public double TechRating { get; set; }
+        public double MultiRating { get; set; }
+        public double LinearPercentage { get; set; }
         public double LowNoteNerf { get; set; }
-        public Statistics Patterns { get; set; } = new Statistics();
+        public Statistics Statistics { get; set; } = new Statistics();
         public List<SwingData> SwingData { get; set; } = new List<SwingData>();
         public List<Wall> DodgeWalls { get; set; } = new List<Wall>();
         public List<Wall> CrouchWalls { get; set; } = new List<Wall>();

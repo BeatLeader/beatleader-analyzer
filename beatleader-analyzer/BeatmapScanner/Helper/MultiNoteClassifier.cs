@@ -31,7 +31,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
             foreach (var swing in swingData)
             {
-                if (swing.Notes.Count < 2)
+                if (swing.Cubes.Count < 2)
                 {
                     continue;
                 }
@@ -54,7 +54,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
             foreach (var swing in swingData)
             {
-                if (swing.Notes.Count < 2)
+                if (swing.Cubes.Count < 2)
                 {
                     swing.PatternType = "Single";
                     continue;
@@ -69,7 +69,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         /// </summary>
         private static void ClassifyAndCountMultiNoteHit(SwingData swing, Statistics stats)
         {
-            int noteCount = swing.Notes.Count;
+            int noteCount = swing.Cubes.Count;
             bool isSimultaneous = AreNotesSimultaneous(swing);
 
             if (isSimultaneous)
@@ -119,7 +119,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         /// </summary>
         private static string DetermineMultiNoteHitType(SwingData swing)
         {
-            int noteCount = swing.Notes.Count;
+            int noteCount = swing.Cubes.Count;
             bool isSimultaneous = AreNotesSimultaneous(swing);
 
             if (isSimultaneous)
@@ -169,12 +169,12 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         /// </summary>
         private static bool AreNotesSimultaneous(SwingData swing)
         {
-            if (swing.Notes.Count < 2) return false;
+            if (swing.Cubes.Count < 2) return false;
 
-            float firstTime = swing.Notes[0].BpmTime;
-            for (int i = 1; i < swing.Notes.Count; i++)
+            float firstTime = swing.Cubes[0].BpmTime;
+            for (int i = 1; i < swing.Cubes.Count; i++)
             {
-                if (Math.Abs(swing.Notes[i].BpmTime - firstTime) > SIMULTANEOUS_TIME_TOLERANCE)
+                if (Math.Abs(swing.Cubes[i].BpmTime - firstTime) > SIMULTANEOUS_TIME_TOLERANCE)
                 {
                     return false;
                 }
@@ -188,10 +188,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         /// </summary>
         private static bool IsStack(SwingData swing)
         {
-            if (swing.Notes.Count != 2) return false;
+            if (swing.Cubes.Count != 2) return false;
 
-            Cube note1 = swing.Notes[0];
-            Cube note2 = swing.Notes[1];
+            Cube note1 = swing.Cubes[0];
+            Cube note2 = swing.Cubes[1];
 
             int lineDiff = Math.Abs(note1.X - note2.X);
             int layerDiff = Math.Abs(note1.Y - note2.Y);
@@ -211,11 +211,11 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         /// </summary>
         private static bool IsTower(SwingData swing)
         {
-            if (swing.Notes.Count != 3) return false;
+            if (swing.Cubes.Count != 3) return false;
 
-            Cube note1 = swing.Notes[0];
-            Cube note2 = swing.Notes[1];
-            Cube note3 = swing.Notes[2];
+            Cube note1 = swing.Cubes[0];
+            Cube note2 = swing.Cubes[1];
+            Cube note3 = swing.Cubes[2];
 
             bool verticalLine = note1.X == note2.X && note2.X == note3.X;
             bool horizontalLine = note1.Y == note2.Y && note2.Y == note3.Y;
@@ -257,10 +257,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         {
             isSlanted = false;
 
-            if (swing.Notes.Count != 2) return false;
+            if (swing.Cubes.Count != 2) return false;
 
-            Cube note1 = swing.Notes[0];
-            Cube note2 = swing.Notes[1];
+            Cube note1 = swing.Cubes[0];
+            Cube note2 = swing.Cubes[1];
 
             int lineDiff = Math.Abs(note1.X - note2.X);
             int layerDiff = Math.Abs(note1.Y - note2.Y);
@@ -324,13 +324,13 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         /// </summary>
         private static bool IsCurvedSlider(SwingData swing)
         {
-            if (swing.Notes.Count < 3) return false;
+            if (swing.Cubes.Count < 3) return false;
 
-            for (int i = 1; i < swing.Notes.Count - 1; i++)
+            for (int i = 1; i < swing.Cubes.Count - 1; i++)
             {
-                Cube prev = swing.Notes[i - 1];
-                Cube curr = swing.Notes[i];
-                Cube next = swing.Notes[i + 1];
+                Cube prev = swing.Cubes[i - 1];
+                Cube curr = swing.Cubes[i];
+                Cube next = swing.Cubes[i + 1];
 
                 int vec1X = curr.X - prev.X;
                 int vec1Y = curr.Y - prev.Y;

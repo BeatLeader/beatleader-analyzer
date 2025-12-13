@@ -118,12 +118,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     continue;
                 }
 
-                if (swingData[i].Notes[0].Pattern && swingData[i].Notes[0].Head)
+                if (swingData[i].Cubes[0].Pattern && swingData[i].Cubes[0].Head)
                 {
                     continue;
                 }
 
-                if (swingData[i].Notes[0].BombAvoidance)
+                if (swingData[i].Cubes[0].BombAvoidance)
                 {
                     continue;
                 }
@@ -142,8 +142,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double target = ReverseCutDirection(swingData[i - 1].Direction);
                 double dirDiff = Math.Abs(((target - swingData[i].Direction + 540) % 360) - 180);
                 bool directionMatches = dirDiff < 22.5;
-                var prevPos = swingData[i - 1].Notes[^1];
-                var currPos = swingData[i].Notes[0];
+                var prevPos = swingData[i - 1].Cubes[^1];
+                var currPos = swingData[i].Cubes[0];
                 double dx = currPos.X - prevPos.X;
                 double dy = currPos.Y - prevPos.Y;
                 double geometricAngle = Math.Atan2(dy, dx) * 180.0 / Math.PI;
@@ -172,16 +172,16 @@ namespace Analyzer.BeatmapScanner.Algorithm
             for (int i = 0; i < swingData.Count; i++)
             {
                 var swing = swingData[i];
-                if (swing.Notes.Count <= 1)
+                if (swing.Cubes.Count <= 1)
                 {
                     continue;
                 }
 
-                if(swing.Notes.All(x => x.CutDirection == 8))
+                if(swing.Cubes.All(x => x.CutDirection == 8))
                 {
                     // Compute geometric angle based on head → tail
-                    var entry = swing.Notes[0];
-                    var exit = swing.Notes[^1];
+                    var entry = swing.Cubes[0];
+                    var exit = swing.Cubes[^1];
                     var deltaX = exit.X - entry.X;
                     var deltaY = exit.Y - entry.Y;
 
@@ -198,11 +198,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     SwingData previousSwing = i > 0 ? swingData[i - 1] : null;
 
                     // Test geometric angle
-                    var tempSwingGeometric = new SwingData(swing.Notes, geometricAngle, currentParity);
+                    var tempSwingGeometric = new SwingData(swing.Cubes, geometricAngle, currentParity);
                     double strainGeometric = SwingAngleStrainCalc(tempSwingGeometric, previousSwing, isRightHand);
 
                     // Test reverse angle
-                    var tempSwingReverse = new SwingData(swing.Notes, reverseGeometricAngle, currentParity);
+                    var tempSwingReverse = new SwingData(swing.Cubes, reverseGeometricAngle, currentParity);
                     double strainReverse= SwingAngleStrainCalc(tempSwingReverse, previousSwing, isRightHand);
 
                     // Find which combination has the lowest strain
@@ -234,7 +234,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     }
                     
                     swing.Direction = selectedAngle;
-                    swing.Notes.ForEach(n => n.Direction = swing.Direction);
+                    swing.Cubes.ForEach(n => n.Direction = swing.Direction);
                 }
 
                 // Reorder notes based on their projection along the swing direction
@@ -244,21 +244,21 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double dirY = Math.Sin(directionRadians);
 
                 // Calculate projection of each note onto the direction vector
-                var notesWithProjection = swing.Notes.Select(note => new
+                var notesWithProjection = swing.Cubes.Select(note => new
                 {
                     Note = note,
                     Projection = note.X * dirX + note.Y * dirY
                 }).OrderBy(x => x.Projection).ToList();
 
                 // Reorder the notes list
-                swing.Notes.Clear();
-                swing.Notes.AddRange(notesWithProjection.Select(x => x.Note));
+                swing.Cubes.Clear();
+                swing.Cubes.AddRange(notesWithProjection.Select(x => x.Note));
 
                 // Update Head and Tail markers
-                for (int j = 0; j < swing.Notes.Count; j++)
+                for (int j = 0; j < swing.Cubes.Count; j++)
                 {
-                    swing.Notes[j].Head = j == 0;
-                    swing.Notes[j].Tail = j == swing.Notes.Count - 1;
+                    swing.Cubes[j].Head = j == 0;
+                    swing.Cubes[j].Tail = j == swing.Cubes.Count - 1;
                 }
 
                 // Recalculate entry and exit positions based on swing direction and all notes of the group positions

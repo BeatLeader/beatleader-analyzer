@@ -68,8 +68,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Use all classified walls for difficulty calculation
                 Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
                 
-                redSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 0).ToList();
-                blueSwingData = combinedSwingData.Where(x => x.Notes[0].Type == 1).ToList();
+                redSwingData = combinedSwingData.Where(x => x.Cubes[0].Type == 0).ToList();
+                blueSwingData = combinedSwingData.Where(x => x.Cubes[0].Type == 1).ToList();
 
                 var windowSizes = new HashSet<int> { 8, 16, 32, 64, 128 };
                 double passDiffRed = 0.0;
@@ -111,7 +111,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 foreach (var swing in combinedSwingData)
                 {
-                    double buff = NjsBuff.CalculateNjsBuff(swing.Notes[0].Njs, modifiers);
+                    double buff = NjsBuff.CalculateNjsBuff(swing.Cubes[0].Njs, modifiers);
                     swing.AngleStrain *= buff;
                     swing.PathStrain *= buff;
                     swing.SwingTech = swing.AngleStrain + swing.PathStrain;
@@ -144,7 +144,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             int parityErrorsCount = combinedSwingData.Count(s => s.ParityErrors);
             int bombAvoidanceCount = combinedSwingData.Count(s => s.BombAvoidance);
 
-            var combinedPatterns = new Statistics
+            var combinedStatistics = new Statistics
             {
                 Stacks = redMultiNotes.Stacks + blueMultiNotes.Stacks,
                 Towers = redMultiNotes.Towers + blueMultiNotes.Towers,
@@ -155,20 +155,28 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 DodgeWalls = dodgeWallCount,
                 CrouchWalls = crouchWallCount,
                 ParityErrors = parityErrorsCount,
-                BombAvoidances = bombAvoidanceCount
+                BombAvoidances = bombAvoidanceCount,
+                LinearSwings = combinedSwingData.Count(s => s.IsLinear)
             };
 
             combinedSwingData.Sort((x, y) => x.BpmTime.CompareTo(y.BpmTime));
+            double multiRating = 0;
+            if (combinedSwingData.Count > 0)
+            {
+                multiRating = CalculateMultiNoteRating(combinedStatistics, combinedSwingData.Count);
+            }
 
             Ratings ratings = new Ratings
             {
                 PassRating = balancedPass,
                 TechRating = balancedTech,
                 LowNoteNerf = CalculateLowNoteNerf(combinedSwingData.Count),
-                Patterns = combinedPatterns,
+                Statistics = combinedStatistics,
                 SwingData = combinedSwingData,
                 DodgeWalls = dodgeWallsAll,
-                CrouchWalls = crouchWallsAll
+                CrouchWalls = crouchWallsAll,
+                LinearPercentage = combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count,
+                MultiRating = multiRating
             };
 
             return ratings;
@@ -178,6 +186,19 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private static double CalculateLowNoteNerf(int noteCount)
         {
             return 1.0 / (1.0 + Math.Pow(Math.E, -1.4 - (noteCount / 50.0)));
+        }
+
+        private const double STACK_VALUE = 1.0;
+        private const double TOWER_VALUE = 1.5;
+        private const double SLIDER_VALUE = 2;
+        private const double CURVED_SLIDER_VALUE = 3;
+        private const double WINDOW_VALUE = 1.3;
+
+        private static double CalculateMultiNoteRating(Statistics stats, int swingCount)
+        {
+            double multiNoteHits = stats.Stacks * STACK_VALUE + stats.Towers * TOWER_VALUE + stats.Sliders * SLIDER_VALUE + stats.CurvedSliders * CURVED_SLIDER_VALUE +
+                                   (stats.Windows + stats.SlantedWindows) * WINDOW_VALUE;
+            return multiNoteHits / swingCount;
         }
 
         private static readonly Comparer<SwingData> CompareAngleAndPathStrain = 
