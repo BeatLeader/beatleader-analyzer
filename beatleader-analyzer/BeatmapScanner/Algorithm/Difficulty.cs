@@ -14,7 +14,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     internal class Difficulty
     {
         private const double STRESS_FALLOFF = 2.0;
-        private const double DISTANCE_FALLOFF = 4.68;
+        private const double DISTANCE_FALLOFF = 2.668;
         private const double ANGLE_STRAIN_WEIGHT = 0.1;
         private const double SPEED_FALLOFF_BASE = 1.4;
         // Parity Reset bonus
@@ -55,14 +55,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (previousSwing != null)
                 {
                     swingData[i].SwingFrequency = 1 / (swingData[i].BpmTime - previousSwing.BpmTime);
-                    
-                    // Calculate transition distance from previous exit to current entry
-                    swingData[i].HitDistance = CalculateTransitionDistance(
-                        previousSwing.ExitPosition,
-                        previousSwing.Direction,
-                        swingData[i].EntryPosition,
-                        swingData[i].Direction
-                    );
                 }
                 else
                 {
@@ -96,6 +88,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (swing.ParityErrors)
                 {
                     swingSpeed *= PARITY_ERROR_MULTIPLIER;
+                }
+
+                if (i > 0)
+                {
+                    // Calculate straight-line distance between positions
+                    double dx = swing.EntryPosition.x - swingData[i - 1].EntryPosition.x;
+                    double dy = swing.EntryPosition.y - swingData[i - 1].EntryPosition.y;
+                    swingData[i].HitDistance = Math.Sqrt(dx * dx + dy * dy);
                 }
 
                 // https://www.desmos.com/calculator/mshzoffzgs
@@ -137,68 +137,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
         }
-
-        private static double CalculateTransitionDistance(
-            (double x, double y) prevExitPos,
-            double prevExitAngle,
-            (double x, double y) currentEntryPos,
-            double currentEntryAngle)
-        {
-            // Calculate straight-line distance between positions
-            double dx = currentEntryPos.x - prevExitPos.x;
-            double dy = currentEntryPos.y - prevExitPos.y;
-            double straightDistance = Math.Sqrt(dx * dx + dy * dy);
-
-            // Convert angles from degrees to radians
-            double prevExitAngleRad = prevExitAngle * Math.PI / 180.0;
-            double currentEntryAngleRad = currentEntryAngle * Math.PI / 180.0;
-            
-            // Get direction vectors (normalized)
-            double prevExitDirX = Math.Cos(prevExitAngleRad);
-            double prevExitDirY = Math.Sin(prevExitAngleRad);
-            double currentEntryDirX = Math.Cos(currentEntryAngleRad);
-            double currentEntryDirY = Math.Sin(currentEntryAngleRad);
-
-            // Calculate how far you swing in the exit direction
-            // Project the transition vector onto the exit direction
-            double projectionOnExit = dx * prevExitDirX + dy * prevExitDirY;
-            
-            // If projection is positive, you're swinging away from the target
-            // You need to travel that distance out, then come back to reach the target
-            double effectiveDistance = straightDistance;
-            
-            if (projectionOnExit > 0)
-            {
-                // Swinging away from target: distance = go out + come back to target
-                // Total = projectionOnExit (going out) + straightDistance (to reach target from start)
-                effectiveDistance = straightDistance + projectionOnExit;
-            }
-            
-            // Special case: same or very close position with opposite swing directions
-            const double CLOSE_THRESHOLD = 0.1; // Grid units
-            if (straightDistance < CLOSE_THRESHOLD)
-            {
-                // Calculate angle difference between the two swing directions
-                double angleDiff = Math.Abs(currentEntryAngle - prevExitAngle);
-                
-                // Normalize to 0-180 range
-                if (angleDiff > 180)
-                {
-                    angleDiff = 360 - angleDiff;
-                }
-                
-                // For opposite directions (angle ~180), need to swing out and come back
-                // Use a base distance of 1 for opposite swings at same position
-                if (angleDiff > 135) // Near-opposite directions
-                {
-                    double resetDistance = 1;
-                    effectiveDistance = Math.Max(effectiveDistance, resetDistance);
-                }
-            }
-
-            return effectiveDistance;
-        }
-
         private static Dictionary<int, double> AnalyzeWallInfluence(List<SwingData> swingData, List<Wall> dodgeWalls, List<Wall> crouchWalls)
         {
             var wallBuffs = new Dictionary<int, double>();
