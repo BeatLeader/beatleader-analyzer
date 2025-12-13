@@ -1,11 +1,10 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using beatleader_analyzer.BeatmapScanner.Data;
+using beatleader_analyzer.BeatmapScanner.Helper;
+using Parser.Map.Difficulty.V3.Grid;
 using System;
 using System.Collections.Generic;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
-using Parser.Map.Difficulty.V3.Grid;
-using beatleader_parser.Timescale;
-using beatleader_analyzer.BeatmapScanner.Helper;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -38,7 +37,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             SwingData previousBlue = null;
             SwingData previousSwing = null;
 
-            // Calculate swing frequency per hand (red and blue separately)
+            // Calculate swing frequency and transition distance per hand (red and blue separately)
             for (int i = 0; i < swingData.Count; i++)
             {
                 int currentHand = swingData[i].Notes[0].Type;
@@ -56,10 +55,19 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (previousSwing != null)
                 {
                     swingData[i].SwingFrequency = 1 / (swingData[i].BpmTime - previousSwing.BpmTime);
+                    
+                    // Calculate transition distance from previous exit to current entry
+                    swingData[i].HitDistance = CalculateTransitionDistance(
+                        previousSwing.ExitPosition,
+                        previousSwing.Direction,
+                        swingData[i].EntryPosition,
+                        swingData[i].Direction
+                    );
                 }
                 else
                 {
                     swingData[i].SwingFrequency = 0;
+                    swingData[i].HitDistance = 0;
                 }
 
                 if (currentHand == 0)
@@ -81,6 +89,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             for (int i = 0; i < swingData.Count; i++)
             {
                 var swing = swingData[i];
+                // https://www.desmos.com/calculator/mshzoffzgs
                 double distanceDiff = swing.BezierCurveDistance / (swing.BezierCurveDistance + DISTANCE_FALLOFF) + 1;
                 
                 double swingSpeed = swing.SwingFrequency * distanceDiff * bps;
@@ -88,12 +97,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     swingSpeed *= PARITY_ERROR_MULTIPLIER;
                 }
-                
-                double xHitDist = swing.EntryPosition.x - swing.ExitPosition.x;
-                double yHitDist = swing.EntryPosition.y - swing.ExitPosition.y;
-                double hitDistance = Math.Sqrt(xHitDist * xHitDist + yHitDist * yHitDist);
+
                 // https://www.desmos.com/calculator/mshzoffzgs
-                double hitDiff = hitDistance / (hitDistance + DISTANCE_FALLOFF) + 1.0;
+                double hitDiff = swingData[i].HitDistance / (swingData[i].HitDistance + DISTANCE_FALLOFF) + 1.0;
                 
                 double stress = (swing.AngleStrain * ANGLE_STRAIN_WEIGHT + swing.PathStrain) * hitDiff;
                 // https://www.desmos.com/calculator/nl9wpe3fdo
@@ -104,7 +110,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Store intermediate values on the swing for debugging/export
                 swing.DistanceDiff = distanceDiff;
                 swing.SwingSpeed = swingSpeed;
-                swing.HitDistance = hitDistance;
+                swing.HitDistance = swingData[i].HitDistance;
                 swing.HitDiff = hitDiff;
                 swing.Stress = stress;
                 swing.SpeedFalloff = speedFalloff;
@@ -130,6 +136,67 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swing.WallBuff = wallBuff;
                 }
             }
+        }
+
+        private static double CalculateTransitionDistance(
+            (double x, double y) prevExitPos,
+            double prevExitAngle,
+            (double x, double y) currentEntryPos,
+            double currentEntryAngle)
+        {
+            // Calculate straight-line distance between positions
+            double dx = currentEntryPos.x - prevExitPos.x;
+            double dy = currentEntryPos.y - prevExitPos.y;
+            double straightDistance = Math.Sqrt(dx * dx + dy * dy);
+
+            // Convert angles from degrees to radians
+            double prevExitAngleRad = prevExitAngle * Math.PI / 180.0;
+            double currentEntryAngleRad = currentEntryAngle * Math.PI / 180.0;
+            
+            // Get direction vectors (normalized)
+            double prevExitDirX = Math.Cos(prevExitAngleRad);
+            double prevExitDirY = Math.Sin(prevExitAngleRad);
+            double currentEntryDirX = Math.Cos(currentEntryAngleRad);
+            double currentEntryDirY = Math.Sin(currentEntryAngleRad);
+
+            // Calculate how far you swing in the exit direction
+            // Project the transition vector onto the exit direction
+            double projectionOnExit = dx * prevExitDirX + dy * prevExitDirY;
+            
+            // If projection is positive, you're swinging away from the target
+            // You need to travel that distance out, then come back to reach the target
+            double effectiveDistance = straightDistance;
+            
+            if (projectionOnExit > 0)
+            {
+                // Swinging away from target: distance = go out + come back to target
+                // Total = projectionOnExit (going out) + straightDistance (to reach target from start)
+                effectiveDistance = straightDistance + projectionOnExit;
+            }
+            
+            // Special case: same or very close position with opposite swing directions
+            const double CLOSE_THRESHOLD = 0.1; // Grid units
+            if (straightDistance < CLOSE_THRESHOLD)
+            {
+                // Calculate angle difference between the two swing directions
+                double angleDiff = Math.Abs(currentEntryAngle - prevExitAngle);
+                
+                // Normalize to 0-180 range
+                if (angleDiff > 180)
+                {
+                    angleDiff = 360 - angleDiff;
+                }
+                
+                // For opposite directions (angle ~180), need to swing out and come back
+                // Use a base distance of 1 for opposite swings at same position
+                if (angleDiff > 135) // Near-opposite directions
+                {
+                    double resetDistance = 1;
+                    effectiveDistance = Math.Max(effectiveDistance, resetDistance);
+                }
+            }
+
+            return effectiveDistance;
         }
 
         private static Dictionary<int, double> AnalyzeWallInfluence(List<SwingData> swingData, List<Wall> dodgeWalls, List<Wall> crouchWalls)

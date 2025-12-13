@@ -152,6 +152,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         var angleSlice = angleChangeList.Slice(firstIndex, lastIndex - firstIndex);
                         avgAngleChange = Average(angleSlice);
                         curveComplexity = avgAngleChange / 180.0;
+                        curveComplexity = curveComplexity * curveComplexity;
 
                         if (i == 0)
                         {
@@ -161,7 +162,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         {
                             var pathAngleSlice = angleList.Slice(pathLookbackIndex, angleCount - pathLookbackIndex);
                             pathAngleStrain = BezierAngleTotalStrain(pathAngleSlice, swingData[i].Notes[0].Seconds,
-                                swingData[i - 1].Notes[^1].Seconds, swingData[i].Forehand, isRightHand) / pathAngleSlice.Length * 4;
+                                swingData[i - 1].Notes[^1].Seconds, swingData[i].Forehand, isRightHand) / pathAngleSlice.Length * 8;
                         }
                     }
                 }

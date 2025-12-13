@@ -1,7 +1,7 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using beatleader_analyzer.BeatmapScanner.Helper;
 using Parser.Map.Difficulty.V3.Grid;
-using System;
+using static beatleader_analyzer.BeatmapScanner.Helper.Common;
 using System.Collections.Generic;
 
 namespace Analyzer.BeatmapScanner.Algorithm
@@ -35,8 +35,17 @@ namespace Analyzer.BeatmapScanner.Algorithm
             bool[,] parentParity = new bool[numSwings, 2];
 
             // Initialize first swing (start with forehand)
-            cost[0, 0] = double.MaxValue; // backhand start is not preferred
-            cost[0, 1] = 0; // forehand start
+            if (IsSameDir(cubes[0].Direction, 90))
+            {
+                // If first swing direction is UP, prefer backhand start
+                cost[0, 0] = 0; // backhand start
+                cost[0, 1] = double.MaxValue; // forehand start is not preferred
+            }
+            else
+            {
+                cost[0, 0] = double.MaxValue; // backhand start is not preferred
+                cost[0, 1] = 0; // forehand start
+            }
 
             // Forward pass: calculate minimum cost for each swing with each parity
             for (int i = 1; i < numSwings; i++)
