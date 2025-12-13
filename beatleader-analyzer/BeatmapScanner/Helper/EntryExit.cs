@@ -36,7 +36,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
             if (headCube.CutDirection != 8)
             {
-                double arrowAngle = Mod(DirectionToDegree[headCube.CutDirection] + headCube.AngleOffset, 360);
+                double arrowAngle = headCube.Direction;
                 double tolerance = GetTolerance(strictAngles);
 
                 if (!IsAngleWithinTolerance(blendedAngle, arrowAngle, tolerance))
@@ -76,13 +76,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             Cube chainNote = current.Notes.Where(x => x.Chain).FirstOrDefault();
             if (chainNote != null)
             {
-                double tailDirection = current.Direction;
-                if (chainNote.TailDirection != 8)
-                {
-                    tailDirection = Mod(DirectionToDegree[chainNote.TailDirection], 360);
-                }
-
-                double angleInRadians = ConvertDegreesToRadians(tailDirection);
+                double angleInRadians = ConvertDegreesToRadians(chainNote.TailDirection);
                 double cosAngle = Math.Cos(angleInRadians);
                 double sinAngle = Math.Sin(angleInRadians);
 

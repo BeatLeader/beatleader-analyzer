@@ -16,6 +16,7 @@ namespace Analyzer.BeatmapScanner.Data
         public bool Forehand { get; set; } = true;
         public bool ParityErrors { get; set; } = false;
         public bool BombAvoidance { get; set; } = false;
+        public bool IsLinear { get; set; } = false;
         public double AngleStrain { get; set; } = 0;
         public double AnglePathStrain { get; set; } = 0;
         public double PathStrain { get; set; } = 0;
@@ -28,11 +29,11 @@ namespace Analyzer.BeatmapScanner.Data
         public double HitDistance { get; set; } = 0;
         public double HitDiff { get; set; } = 0;
         public double Stress { get; set; } = 0;
-        public double SpeedFalloff { get; set; } = 0;
+        public double LowSpeedFalloff { get; set; } = 0;
         public double StressMultiplier { get; set; } = 0;
         public double NjsBuff { get; set; } = 1.0;
         public double WallBuff { get; set; } = 1.0;
-        public bool StreamBonusApplied { get; set; } = false;
+        public bool IsStream { get; set; } = false;
         public double SwingDiff { get; set; } = 0;
         public double SwingTech { get; set; } = 0;
         public string PatternType { get; set; } = "Single";

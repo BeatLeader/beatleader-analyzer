@@ -1,9 +1,11 @@
 ﻿using Analyzer.BeatmapScanner.Algorithm;
 using Analyzer.BeatmapScanner.Data;
-using System.Collections.Generic;
-using Parser.Map.Difficulty.V3.Grid;
-using System.Linq;
 using beatleader_analyzer.BeatmapScanner.Data;
+using Parser.Map.Difficulty.V3.Grid;
+using System.Collections.Generic;
+using System.Linq;
+using static beatleader_analyzer.BeatmapScanner.Helper.Common;
+
 namespace Analyzer.BeatmapScanner
 {
     internal class BeatmapScanner
@@ -28,7 +30,8 @@ namespace Analyzer.BeatmapScanner
                     found.Chain = true;
                     found.TailLine = chain.tx;
                     found.TailLayer = chain.ty;
-                    found.TailDirection = chain.TailCutDirection;
+                    found.TailCutDirection = chain.TailCutDirection;
+                    found.TailDirection = Mod(DirectionToDegree[chain.TailCutDirection], 360);
                     found.Squish = chain.Squish;
                 }
             }

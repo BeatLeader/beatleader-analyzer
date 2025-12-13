@@ -103,7 +103,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 
                 double stress = (swing.AngleStrain * ANGLE_STRAIN_WEIGHT + swing.PathStrain) * hitDiff;
                 // https://www.desmos.com/calculator/nl9wpe3fdo
-                double speedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
+                double lowSpeedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
                 // https://www.desmos.com/calculator/lcpwvisblz
                 double stressMultiplier = stress / (stress + STRESS_FALLOFF) + 1.0;
 
@@ -113,10 +113,18 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 swing.HitDistance = swingData[i].HitDistance;
                 swing.HitDiff = hitDiff;
                 swing.Stress = stress;
-                swing.SpeedFalloff = speedFalloff;
+                swing.LowSpeedFalloff = lowSpeedFalloff;
                 swing.StressMultiplier = stressMultiplier;
 
-                swing.SwingDiff = swingSpeed * speedFalloff * stressMultiplier;
+                double swingDiff = swingSpeed * lowSpeedFalloff * stressMultiplier;
+                // Apply linear swing (3 swings in very similar direction in a row) penalty
+                if (swing.IsLinear)
+                {
+                    // Threw a random number for now
+                    swingDiff *= 0.8;
+                }
+
+                swing.SwingDiff = swingDiff;
 
                 double njsBuff = NjsBuff.CalculateNjsBuff(swing.Notes[0].Njs, modifiers);
                 swing.NjsBuff = njsBuff;
@@ -126,7 +134,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (previousHand.HasValue && previousHand.Value != currentHand)
                 {
                     swing.SwingDiff *= STREAM_BONUS;
-                    swing.StreamBonusApplied = true;
+                    swing.IsStream = true;
                 }
                 previousHand = currentHand;
 

@@ -1,5 +1,6 @@
 ﻿
 
+using static beatleader_analyzer.BeatmapScanner.Helper.Common;
 using Parser.Map.Difficulty.V3.Grid;
 
 namespace Analyzer.BeatmapScanner.Data
@@ -17,7 +18,7 @@ namespace Analyzer.BeatmapScanner.Data
         public int Type { get; set; } = 0;
         public int CutDirection { get; set; } = 0;
         public double AngleOffset { get; set; } = 0;
-        public double Direction { get; set; } = 8;
+        public double Direction { get; set; } = -1;
         public float Njs { get; set; } = 0;
         public bool Head { get; set; } = false;
         public bool Tail { get; set; } = false;
@@ -28,7 +29,8 @@ namespace Analyzer.BeatmapScanner.Data
         public bool BombAvoidance { get; set; } = false;
         public int TailLine { get; set; } = 0;
         public int TailLayer {  get; set; } = 0;
-        public int TailDirection { get; set; } = 0;
+        public int TailCutDirection { get; set; } = 0;
+        public double TailDirection { get; set; } = -1;
         public float Squish { get; set; } = 0f;
         
         public Cube()
@@ -71,6 +73,8 @@ namespace Analyzer.BeatmapScanner.Data
             CutDirection = note.CutDirection;
             AngleOffset = note.AngleOffset;
             Njs = note.njs;
+            if (note.CutDirection == 8) Direction = -1;
+            else Direction = Mod(DirectionToDegree[note.CutDirection] + note.AngleOffset, 360);
         }
     }
 }

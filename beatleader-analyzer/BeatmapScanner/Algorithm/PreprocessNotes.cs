@@ -45,6 +45,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             while (i < cubes.Count)
             {
                 var group = new List<int> { i };
+                bool isSlider = false;
 
                 // Add notes that are at the same time or very close in depth
                 for (int j = i + 1; j < cubes.Count; j++)
@@ -54,7 +55,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     float prevTime = cubes[prevIndex].Seconds;
                     float prevNjs = cubes[prevIndex].Njs;
                     float timeDiff = Math.Abs(cubes[j].Seconds - prevTime);
-                    
+
                     // Check if simultaneous (same time)
                     if (timeDiff < 0.001f)
                     {
@@ -64,12 +65,17 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                     float distance = timeDiff * cubes[j].Njs;
 
+                    // If previous note was a slider, we want to compare head note to current note for direction
+                    Cube previous = cubes[group[0]];
+
                     // Some maps have reversed sliders, so distance <= 0.1f is a catch-all.
                     // Example map: Meowchine, Break, Grave of the Fireflies.
                     // 1.3f is for G1ll35 d3 R415 specifically (0.070s dot inline at 18NJS).
                     // Might be unnecessary, but it's overweighted otherwise.
                     // Example map with slow sliders: Alone intelligence, Lost It (require 1.2f), etc.
-                    if ((distance < 1.3f && ValidateSliders(cubes[prevIndex], cubes[j])) || distance <= 0.1f)
+                    // Map with high EBPM dot placement: CHUTEN
+                    isSlider = ValidateSliders(previous, cubes[j]);
+                    if ((distance < 1.3f && isSlider) || distance <= 0.1f)
                     {
                         group.Add(j);
                     }
@@ -151,67 +157,57 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 geometricAngle += 360.0;
             }
 
-            // Threshold for "similar direction" - within 67.5 degrees (matching IsSameDir threshold)
-            const double DIRECTION_TOLERANCE = 67.5;
-
-            // Case 0: Both are dots and no direction is set - we store the direction for potential upcoming dot notes
-            if (previous.Direction == 8 && previous.CutDirection == 8 && current.CutDirection == 8)
+            // Case 0: Both are dots
+            if (previous.CutDirection == 8 && current.CutDirection == 8)
             {
+                // We just assume that it is. It's not worth it getting false negative.
+                // Mostly due to singular dot note before sliders (so we don't know the actual expected direction)
+                // Or bomb resets, which can completely change the expected direction.
+                // Trying to verify dot direction will create some pretty horrible false positive.
                 previous.Direction = geometricAngle;
                 current.Direction = geometricAngle;
                 return true;
             }
-            else if (previous.CutDirection == 8 && current.CutDirection == 8)
-            {
-                double angleDiff = Math.Abs(Mod(geometricAngle - previous.Direction + 180, 360) - 180);
-
-                return angleDiff <= DIRECTION_TOLERANCE;
-            }
+            
 
             // Case 1: Previous is arrow, current is dot
             // Verify current's position is in a similar direction to previous arrow
             if (previous.CutDirection != 8 && current.CutDirection == 8)
             {
-                double previousArrowAngle = Mod(DirectionToDegree[previous.CutDirection] + previous.AngleOffset, 360);
-                double angleDiff = Math.Abs(Mod(geometricAngle - previousArrowAngle + 180, 360) - 180);
-                
-                return angleDiff <= DIRECTION_TOLERANCE;
+                if (IsSameDir(geometricAngle, previous.Direction))
+                {
+                    current.Direction = previous.Direction;
+                    return true;
+                }
             }
 
             // Case 2: Previous is dot, current is arrow
             // Verify current arrow is in a similar direction to the geometric path
             if (previous.CutDirection == 8 && current.CutDirection != 8)
             {
-                double currentArrowAngle = Mod(DirectionToDegree[current.CutDirection] + current.AngleOffset, 360);
-                double angleDiff = Math.Abs(Mod(geometricAngle - currentArrowAngle + 180, 360) - 180);
-                
-                return angleDiff <= DIRECTION_TOLERANCE;
+                if (IsSameDir(geometricAngle, current.Direction))
+                {
+                    previous.Direction = current.Direction;
+                    return true;
+                }
             }
 
             // Case 3: Both are arrows
             // Verify both arrows are similar to each other AND to the geometric path
             if (previous.CutDirection != 8 && current.CutDirection != 8)
             {
-                double previousArrowAngle = Mod(DirectionToDegree[previous.CutDirection] + previous.AngleOffset, 360);
-                double currentArrowAngle = Mod(DirectionToDegree[current.CutDirection] + current.AngleOffset, 360);
-                
                 // Check if arrows are similar to each other
-                double arrowDiff = Math.Abs(Mod(currentArrowAngle - previousArrowAngle + 180, 360) - 180);
-                if (arrowDiff > DIRECTION_TOLERANCE)
+                if (!IsSameDir(previous.Direction, current.Direction))
                 {
                     return false;
                 }
-                
-                // Check if geometric path is similar to the arrow directions
-                double geomToPrevDiff = Math.Abs(Mod(geometricAngle - previousArrowAngle + 180, 360) - 180);
-                double geomToCurrDiff = Math.Abs(Mod(geometricAngle - currentArrowAngle + 180, 360) - 180);
-                
+
                 // At least one arrow should align with the geometric path
-                return geomToPrevDiff <= DIRECTION_TOLERANCE || geomToCurrDiff <= DIRECTION_TOLERANCE;
+                if (IsSameDir(geometricAngle, current.Direction) || IsSameDir(geometricAngle, previous.Direction)) return true;
             }
 
-            // Fallback - should not reach here
-            return true;
+            // Fallback
+            return false;
         }
 
         /// <summary>
@@ -233,7 +229,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (headCube.CutDirection != 8)
                 {
                     // Arrow: use literal direction
-                    headCube.Direction = Mod(DirectionToDegree[headCube.CutDirection] + headCube.AngleOffset, 360);
+                    headCube.Direction = headCube.Direction;
 
                     // Check for bomb avoidance
                     var bombInfluence = FlagBombAvoidance(cubes, previousCubeIndex, headIndex, bombs);

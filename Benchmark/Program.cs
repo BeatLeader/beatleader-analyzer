@@ -6,6 +6,10 @@ namespace Benchmark
 {
     internal class Program
     {
+        public const float SpeedMult = 1f;
+        public const float NjsMult = 1f;
+        public const bool StrictAngles = false;
+
         static void Main(string[] args)
         {
             if (args.Length > 0 && args[0].ToLower() == "export")

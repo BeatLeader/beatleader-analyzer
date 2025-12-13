@@ -59,7 +59,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             return calculatedAngle;
         }
 
-        public static (double x, double y) SimSwingPos(double x, double y, double direction, double distance = 1)
+        public static (double x, double y) SimSwingPos(double x, double y, double direction, double distance = 1.5)
         {
             // Convert grid position to meters first
             var (meterX, meterY) = GridToMeters(x, y);

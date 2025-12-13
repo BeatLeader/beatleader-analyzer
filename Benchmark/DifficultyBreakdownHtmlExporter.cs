@@ -276,7 +276,7 @@ namespace Benchmark
                 html.AppendLine($"                        <td>{swing.AngleStrain:F3}</td>");
                 html.AppendLine($"                        <td>{swing.PathStrain:F3}</td>");
                 html.AppendLine($"                        <td>{swing.Stress:F3}</td>");
-                html.AppendLine($"                        <td>{swing.SpeedFalloff:F3}</td>");
+                html.AppendLine($"                        <td>{swing.LowSpeedFalloff:F3}</td>");
                 html.AppendLine($"                        <td>{swing.StressMultiplier:F3}</td>");
                 html.AppendLine($"                        <td title=\"{buffsText}\">{GetBuffsMultiplier(swing):F3}</td>");
                 html.AppendLine($"                        <td class=\"final-value\">{swing.SwingDiff:F3}</td>");
@@ -295,9 +295,9 @@ namespace Benchmark
             html.AppendLine("                    <li><strong>DistanceDiff:</strong> HitDistance / (HitDistance + 1.8) + 1.0</li>");
             html.AppendLine("                    <li><strong>SwingSpeed:</strong> SwingFrequency × DistanceDiff × (BPM / 60)</li>");
             html.AppendLine("                    <li><strong>Stress:</strong> (AngleStrain × 0.1 + PathStrain) × HitDiff</li>");
-            html.AppendLine("                    <li><strong>SpeedFalloff:</strong> 1.0 - 1.4<sup>-SwingSpeed</sup></li>");
+            html.AppendLine("                    <li><strong>LowSpeedFalloff:</strong> 1.0 - 1.4<sup>-SwingSpeed</sup></li>");
             html.AppendLine("                    <li><strong>StressMultiplier:</strong> Stress / (Stress + 2.0) + 1.0</li>");
-            html.AppendLine("                    <li><strong>SwingDiff:</strong> SwingSpeed × SpeedFalloff × StressMultiplier × NjsBuff × WallBuff × StreamBonus</li>");
+            html.AppendLine("                    <li><strong>SwingDiff:</strong> SwingSpeed × LowSpeedFalloff × StressMultiplier × NjsBuff × WallBuff × StreamBonus</li>");
             html.AppendLine("                </ul>");
             html.AppendLine("            </div>");
             
@@ -309,7 +309,7 @@ namespace Benchmark
             var buffs = new List<string>();
             if (swing.NjsBuff > 1.0) buffs.Add($"NJS: {swing.NjsBuff:F3}");
             if (swing.WallBuff > 1.0) buffs.Add($"Wall: {swing.WallBuff:F3}");
-            if (swing.StreamBonusApplied) buffs.Add("Stream: 1.050");
+            if (swing.IsStream) buffs.Add("Stream: 1.050");
             if (swing.ParityErrors) buffs.Add("Parity: 2.000");
             return buffs.Count > 0 ? string.Join(", ", buffs) : "None";
         }
@@ -317,7 +317,7 @@ namespace Benchmark
         private static double GetBuffsMultiplier(SwingData swing)
         {
             double mult = swing.NjsBuff * swing.WallBuff;
-            if (swing.StreamBonusApplied) mult *= 1.05;
+            if (swing.IsStream) mult *= 1.05;
             if (swing.ParityErrors) mult *= 2.0; // Already applied to speed
             return mult;
         }

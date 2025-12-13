@@ -201,7 +201,7 @@ namespace Benchmark
             {
                 Console.WriteLine($"\nAnalyzing characteristic: {characteristic._beatmapCharacteristicName}");
                 
-                var ratings = analyzer.GetRating(map, characteristic._beatmapCharacteristicName);
+                var ratings = analyzer.GetRating(map, characteristic._beatmapCharacteristicName, Program.SpeedMult, Program.NjsMult, Program.StrictAngles);
 
                 if (ratings != null)
                 {
@@ -1285,7 +1285,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         
         <div class=""content"">
             <div class=""controls"">
-                <input type=""text"" id=""searchBox"" placeholder=""Search by time, hand, angle..."">
+                <input type=""text"" id=""searchBox"" placeholder=""Search by time"">
                 <select id=""filterHand"">
                     <option value="""">All Hands</option>
                     <option value=""Red"">Red Hand</option>
@@ -1382,7 +1382,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             const bombAvoidanceOnly = document.getElementById('filterBombAvoidance').checked;
             
             filteredData = swingData.filter(swing => {{
-                if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
+                if (search && !String(swing.Time).includes(search)) return false;
                 if (handFilter && swing.Hand !== handFilter) return false;
                 if (parityFilter && swing.Parity !== parityFilter) return false;
                 if (patternFilter && swing.PatternType !== patternFilter) return false;
@@ -1980,7 +1980,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             <div class=""difficulty-selector"" id=""difficultySelector""></div>
             
             <div class=""controls"">
-                <input type=""text"" id=""searchBox"" placeholder=""Search by time, hand, angle..."">
+                <input type=""text"" id=""searchBox"" placeholder=""Search by time"">
                 <select id=""filterHand"">
                     <option value="""">All Hands</option>
                     <option value=""Red"">Red Hand</option>
@@ -2140,7 +2140,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             const bombAvoidanceOnly = document.getElementById('filterBombAvoidance').checked;
             
             filteredData = swingData.filter(swing => {{
-                if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
+                if (search && !String(swing.Time).includes(search)) return false;
                 if (handFilter && swing.Hand !== handFilter) return false;
                 if (parityFilter && swing.Parity !== parityFilter) return false;
                 if (patternFilter) {{
@@ -2656,7 +2656,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             const patternFilter = document.getElementById('filterPattern').value;
             
             filteredData = swingData.filter(swing => {{
-                if (search && !JSON.stringify(swing).toLowerCase().includes(search)) return false;
+                if (search && !String(swing.Time).includes(search)) return false;
                 if (handFilter && swing.Hand !== handFilter) return false;
                 if (parityFilter && swing.Parity !== parityFilter) return false;
                 if (patternFilter) {{
