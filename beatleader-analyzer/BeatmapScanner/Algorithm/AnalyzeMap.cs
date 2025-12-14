@@ -188,11 +188,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return 1.0 / (1.0 + Math.Pow(Math.E, -1.4 - (noteCount / 50.0)));
         }
 
-        private const double STACK_VALUE = 1.0;
-        private const double TOWER_VALUE = 1.5;
-        private const double SLIDER_VALUE = 2;
-        private const double CURVED_SLIDER_VALUE = 3;
-        private const double WINDOW_VALUE = 1.3;
+        private const double STACK_VALUE = 1.05;
+        private const double TOWER_VALUE = 1.1;
+        private const double SLIDER_VALUE = 1.05;
+        private const double CURVED_SLIDER_VALUE = 1.5;
+        private const double WINDOW_VALUE = 1.1;
 
         private static double CalculateMultiNoteRating(Statistics stats, int swingCount)
         {
