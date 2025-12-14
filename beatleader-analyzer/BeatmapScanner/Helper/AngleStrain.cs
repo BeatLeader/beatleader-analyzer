@@ -30,7 +30,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
             double deviation = AngleDeviation(neutralAngle, current.Direction);
             double normalizedStrain = deviation / 180.0;
-            swingStrain += normalizedStrain * normalizedStrain * normalizedStrain;
+            swingStrain += normalizedStrain * normalizedStrain;
 
             // Add falloff based on delta time between swings in seconds
             double deltaTime = Math.Abs(current.Cubes[0].Seconds - previous.Cubes[^1].Seconds);
@@ -62,7 +62,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             {
                 double deviation = AngleDeviation(neutralAngle, angle);
                 double normalizedStrain = deviation / 180.0;
-                totalStrain += normalizedStrain * normalizedStrain * normalizedStrain;
+                totalStrain += normalizedStrain * normalizedStrain;
             }
 
             // Add falloff based on delta time between swings in seconds

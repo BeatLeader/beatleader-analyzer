@@ -121,7 +121,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (swing.IsLinear)
                 {
                     // Threw a random number for now
-                    swingDiff *= 0.8;
+                    swingDiff *= 0.6;
                 }
 
                 swing.SwingDiff = swingDiff;

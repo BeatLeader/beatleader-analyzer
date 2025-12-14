@@ -162,7 +162,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         {
                             var pathAngleSlice = angleList.Slice(pathLookbackIndex, angleCount - pathLookbackIndex);
                             pathAngleStrain = BezierAngleTotalStrain(pathAngleSlice, swingData[i].Cubes[0].Seconds,
-                                swingData[i - 1].Cubes[^1].Seconds, swingData[i].Forehand, isRightHand) / pathAngleSlice.Length * 8;
+                                swingData[i - 1].Cubes[^1].Seconds, swingData[i].Forehand, isRightHand) / pathAngleSlice.Length * 4;
                         }
                     }
                 }
