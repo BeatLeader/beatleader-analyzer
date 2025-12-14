@@ -120,8 +120,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Apply linear swing (3 swings in very similar direction in a row) penalty
                 if (swing.IsLinear)
                 {
-                    // Threw a random number for now
-                    swingDiff *= 0.6;
+                    swingDiff *= 1;
                 }
 
                 swing.SwingDiff = swingDiff;

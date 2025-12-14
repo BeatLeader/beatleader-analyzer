@@ -17,8 +17,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class AnalyzeMap
     {
-        private const double PASS_CALIBRATION_FACTOR = 0.8;
+        private const double PASS_CALIBRATION_FACTOR = 0.75;
         private const double ONE_SABER_NERF = 0.5;
+        private const double TECH_CALIBRATION_FACTOR = 1.05;
         private const double BALANCED_TECH_SCALER = 10.0;
 
         public static Ratings UseAlgorithm(List<Cube> red, List<Cube> blue, 
@@ -27,6 +28,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             List<SwingData> redSwingData = [];
             List<SwingData> blueSwingData = [];
             List<SwingData> combinedSwingData = [];
+            double peakSustainedEBPM = 0.0;
 
             if (red.Count > 2)
             {
@@ -81,10 +83,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     if (redSwingData.Count > 1)
                     {
                         passDiffRed += Difficulty.CalcAverage(redSwingData, windowSize / 2).Select(x => x.Pass).Max();
+                        peakSustainedEBPM = CalculatePeakSustainedEBPM(redSwingData, modifiers);
                     }
                     if (blueSwingData.Count > 1)
                     {
                         passDiffBlue += Difficulty.CalcAverage(blueSwingData, windowSize / 2).Select(x => x.Pass).Max();
+                        peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData, modifiers), peakSustainedEBPM);
                     }
                     passDiffCombined += Difficulty.CalcAverage(combinedSwingData, windowSize).Select(x => x.Pass).Max();
                 }
@@ -121,7 +125,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double tech = AverageAnglePath(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
 
                 // https://www.desmos.com/calculator/dspid2fyyj
-                balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * BALANCED_TECH_SCALER;
+                balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * TECH_CALIBRATION_FACTOR * BALANCED_TECH_SCALER;
             }
 
             var redMultiNotes = redSwingData.Count > 0 ? CountMultiNoteHits(redSwingData) : new Statistics();
@@ -176,6 +180,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 DodgeWalls = dodgeWallsAll,
                 CrouchWalls = crouchWallsAll,
                 LinearPercentage = combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count,
+                PeakSustainedEBPM = peakSustainedEBPM,
                 MultiRating = multiRating
             };
 
@@ -203,6 +208,31 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
         private static readonly Comparer<SwingData> CompareAngleAndPathStrain = 
             Comparer<SwingData>.Create((a, b) => (a.AngleStrain + a.PathStrain).CompareTo(b.AngleStrain + b.PathStrain));
+
+        private static double CalculatePeakSustainedEBPM(List<SwingData> swingData, Modifiers modifiers)
+        {
+            if (swingData.Count == 0)
+                return 0.0;
+
+            double bpm = modifiers.modifiedBPM;
+
+            int windowSize = Math.Min(4, swingData.Count);
+            double maxEbpm = 0.0;
+            for (int i = 0; i <= swingData.Count - windowSize; i++)
+            {
+                double ebpmSum = 0.0;
+                for (int j = i; j < i + windowSize; j++)
+                {
+                    ebpmSum += swingData[j].SwingFrequency * (bpm / 2);
+                }
+                double averageEbpm = ebpmSum / windowSize;
+                if (averageEbpm > maxEbpm)
+                {
+                    maxEbpm = averageEbpm;
+                }
+            }
+            return maxEbpm;
+        }
 
         private static double AverageAnglePath(Span<SwingData> list)
         {
