@@ -17,10 +17,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class AnalyzeMap
     {
-        private const double PASS_CALIBRATION_FACTOR = 0.75;
+        private const double PASS_CALIBRATION_FACTOR = 0.7;
         private const double ONE_SABER_NERF = 0.5;
-        private const double TECH_CALIBRATION_FACTOR = 1.05;
-        private const double BALANCED_TECH_SCALER = 10.0;
+        private const double BALANCED_TECH_SCALER = 11.5;
 
         public static Ratings UseAlgorithm(List<Cube> red, List<Cube> blue, 
             Modifiers modifiers, List<Wall> walls = null, List<Bomb> bombs = null)
@@ -125,7 +124,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double tech = AverageAnglePath(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
 
                 // https://www.desmos.com/calculator/dspid2fyyj
-                balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * TECH_CALIBRATION_FACTOR * BALANCED_TECH_SCALER;
+                balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * BALANCED_TECH_SCALER;
             }
 
             var redMultiNotes = redSwingData.Count > 0 ? CountMultiNoteHits(redSwingData) : new Statistics();
