@@ -98,6 +98,12 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             double deltaX = current.Cubes[0].X - previous.Cubes[0].X;
             double deltaY = current.Cubes[0].Y - previous.Cubes[0].Y;
 
+            // We can't deduce anything from same position
+            if (deltaX == 0 && deltaY == 0)
+            {
+                return;
+            }
+
             // Calculate angle in radians, then convert to degrees
             double angleRadians = Math.Atan2(deltaY, deltaX);
             double potentialAngle = angleRadians * 180.0 / Math.PI;

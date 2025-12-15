@@ -132,25 +132,25 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
 
             swingData[0].AngleStrain = SwingAngleStrainCalc(swingData[0], null, isRightHand) * 4;
-            bool isLinear = false;
+            bool isLinear = true;
 
             for (int i = 1; i < swingData.Count; i++)
             {
                 swingData[i].AngleStrain = SwingAngleStrainCalc(swingData[i], swingData[i - 1], isRightHand) * 4;
 
                 // Check if it's linear
+                // First we check if the expected direction matches the reverse diretion of the previous swing
                 double target = ReverseCutDirection(swingData[i - 1].Direction);
-                double dirDiff = Math.Abs(((target - swingData[i].Direction + 540) % 360) - 180);
-                bool directionMatches = dirDiff < 22.5;
+                bool directionMatches = IsSameDir(target, swingData[i].Direction, 22.5);
+                // Then we check if the note placement matches the expected geometric direction
                 var prevPos = swingData[i - 1].Cubes[^1];
                 var currPos = swingData[i].Cubes[0];
                 double dx = currPos.X - prevPos.X;
                 double dy = currPos.Y - prevPos.Y;
-                double geometricAngle = Math.Atan2(dy, dx) * 180.0 / Math.PI;
-                if (geometricAngle < 0) geometricAngle += 360;
-                double geoDiff = Math.Abs(((target - geometricAngle + 540) % 360) - 180);
-                bool movementMatchesDirection = geoDiff < 22.5;
-                if (directionMatches && movementMatchesDirection)
+                double geometricAngle = Mod(Math.Atan2(dy, dx) * 180.0 / Math.PI, 360);
+                bool movementMatchesDirection = IsSameDir(target, geometricAngle, 22.5);
+                Console.WriteLine(swingData[i].Cubes[0].JsonTime + ": directionMatches=" + directionMatches + ", movementMatchesDirection=" + movementMatchesDirection + " dx=" + dx + " dy=" + dy);
+                if (directionMatches && (movementMatchesDirection || (dx == 0 && dy == 0))) // We can't deduce anything from same position
                 {
                     // Can be considered linear movement, reduce strain
                     if (isLinear)

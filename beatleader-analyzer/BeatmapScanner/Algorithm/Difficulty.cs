@@ -15,7 +15,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         private const double STRESS_FALLOFF = 2.0;
         private const double DISTANCE_FALLOFF = 2.668;
-        private const double ANGLE_STRAIN_WEIGHT = 0.1;
         private const double SPEED_FALLOFF_BASE = 1.4;
         // Parity Reset bonus
         private const double PARITY_ERROR_MULTIPLIER = 2.0;
@@ -81,15 +80,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             for (int i = 0; i < swingData.Count; i++)
             {
                 var swing = swingData[i];
-                // https://www.desmos.com/calculator/mshzoffzgs
-                double distanceDiff = swing.BezierCurveDistance / (swing.BezierCurveDistance + DISTANCE_FALLOFF) + 1;
                 
-                double swingSpeed = swing.SwingFrequency * distanceDiff * bps;
-                if (swing.ParityErrors)
-                {
-                    swingSpeed *= PARITY_ERROR_MULTIPLIER;
-                }
-
                 if (i > 0)
                 {
                     // Calculate straight-line distance between positions
@@ -99,9 +90,25 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
 
                 // https://www.desmos.com/calculator/mshzoffzgs
-                double hitDiff = swingData[i].HitDistance / (swingData[i].HitDistance + DISTANCE_FALLOFF) + 1.0;
-                
-                double stress = (swing.AngleStrain * ANGLE_STRAIN_WEIGHT + swing.PathStrain) * hitDiff;
+                double distanceDiff = swingData[i].HitDistance / (swingData[i].HitDistance + DISTANCE_FALLOFF) + 1;
+
+                double swingSpeed = swing.SwingFrequency * distanceDiff * bps;
+                if (swing.ParityErrors)
+                {
+                    swingSpeed *= PARITY_ERROR_MULTIPLIER;
+                }
+
+                double stress;
+                // Apply linear swing (3 swings in very similar direction in a row) penalty
+                if (swing.IsLinear)
+                {
+                    stress = (swing.AngleStrain * 0.1 + swing.PathStrain * 0.1) * distanceDiff;
+                }
+                else
+                {
+                    stress = (swing.AngleStrain * 1 + swing.PathStrain * 1) * distanceDiff;
+                }
+
                 // https://www.desmos.com/calculator/nl9wpe3fdo
                 double lowSpeedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
                 // https://www.desmos.com/calculator/lcpwvisblz
@@ -111,17 +118,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 swing.DistanceDiff = distanceDiff;
                 swing.SwingSpeed = swingSpeed;
                 swing.HitDistance = swingData[i].HitDistance;
-                swing.HitDiff = hitDiff;
                 swing.Stress = stress;
                 swing.LowSpeedFalloff = lowSpeedFalloff;
                 swing.StressMultiplier = stressMultiplier;
 
                 double swingDiff = swingSpeed * lowSpeedFalloff * stressMultiplier;
-                // Apply linear swing (3 swings in very similar direction in a row) penalty
-                if (swing.IsLinear)
-                {
-                    swingDiff *= 1;
-                }
 
                 swing.SwingDiff = swingDiff;
 

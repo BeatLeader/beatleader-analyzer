@@ -62,11 +62,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 Span<double> angleChangeList = stackalloc double[maxPoints];
                 int angleCount = 0;
                 int angleChangeCount = 0;
-                
-                double bezierDistance = 0;
-
-                double dx = point3.X - point0.X;
-                double dy = point3.Y - point0.Y;
 
                 for (int f = 1; f < point.Length; f++)
                 {
@@ -75,8 +70,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     
                     double angle = Mod(ConvertRadiansToDegrees(Math.Atan2(deltaY, deltaX)), 360);
                     angleList[angleCount] = angle;
-
-                    bezierDistance += Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
 
                     if (angleCount > 0)
                     {
@@ -88,10 +81,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     angleCount++;
                 }
 
-                bezierDistance -= 0.75;
-
                 (double x, double y) currentSwingPosition = (0, 0);
                 (double x, double y) previousSwingPosition = (0, 0);
+
+                double timeDiff = 1;
 
                 if (i > 1)
                 {
@@ -111,9 +104,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     double deltaX = currentSwingPosition.x - previousSwingPosition.x;
                     double deltaY = currentSwingPosition.y - previousSwingPosition.y;
                     repositioningDistance = deltaX * deltaX + deltaY * deltaY;
-                    // Quickly reduce repositioning distance value over time
-                    double timeDiff = Math.Abs(swingData[i].Cubes[0].Seconds - swingData[i - 1].Cubes[^1].Seconds);
-                    // In seconds: 0 = 1, 0.3 = 0.549, 0.5 = 0.368, 1 = 0.135
+                    // Decay over time
+                    timeDiff = Math.Abs(swingData[i].Cubes[0].Seconds - swingData[i - 1].Cubes[^1].Seconds);
+                    // https://www.desmos.com/calculator/5xlyaybnmt
                     repositioningDistance *= Math.Exp(-2.0 * timeDiff);
                     // Clamp to max grid distance squared
                     repositioningDistance = repositioningDistance / (repositioningDistance + MAX_GRID_DISTANCE_SQUARED);
@@ -153,6 +146,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         avgAngleChange = Average(angleSlice);
                         curveComplexity = avgAngleChange / 180.0;
                         curveComplexity = curveComplexity * curveComplexity;
+                        // Decay over time
+                        curveComplexity *= Math.Exp(-2.0 * timeDiff);
 
                         if (i == 0)
                         {
@@ -163,11 +158,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
                             var pathAngleSlice = angleList.Slice(pathLookbackIndex, angleCount - pathLookbackIndex);
                             pathAngleStrain = BezierAngleTotalStrain(pathAngleSlice, swingData[i].Cubes[0].Seconds,
                                 swingData[i - 1].Cubes[^1].Seconds, swingData[i].Forehand, isRightHand) / pathAngleSlice.Length * 4;
+                            // Decay over time
+                            pathAngleStrain *= Math.Exp(-2.0 * timeDiff);
                         }
                     }
                 }
 
-                swingData[i].BezierCurveDistance = bezierDistance;
                 swingData[i].RepositioningDistance = repositioningDistance;
                 swingData[i].CurveComplexity = curveComplexity;
                 swingData[i].AnglePathStrain = pathAngleStrain;

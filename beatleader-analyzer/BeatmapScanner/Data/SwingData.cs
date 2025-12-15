@@ -20,14 +20,12 @@ namespace Analyzer.BeatmapScanner.Data
         public double AngleStrain { get; set; } = 0;
         public double AnglePathStrain { get; set; } = 0;
         public double PathStrain { get; set; } = 0;
-        public double BezierCurveDistance { get; set; } = 0;
         public double RepositioningDistance { get; set; } = 0;
         public double CurveComplexity { get; set; } = 0;
         public double SwingFrequency { get; set; } = 0;
         public double DistanceDiff { get; set; } = 0;
         public double SwingSpeed { get; set; } = 0;
         public double HitDistance { get; set; } = 0;
-        public double HitDiff { get; set; } = 0;
         public double Stress { get; set; } = 0;
         public double LowSpeedFalloff { get; set; } = 0;
         public double StressMultiplier { get; set; } = 0;

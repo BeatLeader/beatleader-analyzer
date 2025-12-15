@@ -251,6 +251,7 @@ namespace Benchmark
             html.AppendLine("                        <th>Angle<br/>Strain</th>");
             html.AppendLine("                        <th>Path<br/>Strain</th>");
             html.AppendLine("                        <th>Stress</th>");
+            html.AppendLine("                        <th>IsLinear</th>");
             html.AppendLine("                        <th>Speed<br/>Falloff</th>");
             html.AppendLine("                        <th>Stress<br/>Mult</th>");
             html.AppendLine("                        <th>Buffs</th>");
@@ -270,12 +271,13 @@ namespace Benchmark
                 html.AppendLine($"                        <td class=\"{handClass}\">{(swing.Cubes[0].Type == 0 ? "Red" : "Blue")}</td>");
                 html.AppendLine($"                        <td>{swing.PatternType}</td>");
                 html.AppendLine($"                        <td>{swing.SwingFrequency:F3}</td>");
-                html.AppendLine($"                        <td>{swing.BezierCurveDistance:F3}</td>");
+                html.AppendLine($"                        <td>{swing.HitDistance:F3}</td>");
                 html.AppendLine($"                        <td>{swing.DistanceDiff:F3}</td>");
                 html.AppendLine($"                        <td>{swing.SwingSpeed:F3}</td>");
                 html.AppendLine($"                        <td>{swing.AngleStrain:F3}</td>");
                 html.AppendLine($"                        <td>{swing.PathStrain:F3}</td>");
                 html.AppendLine($"                        <td>{swing.Stress:F3}</td>");
+                html.AppendLine($"                        <td>{swing.IsLinear:F3}</td>");
                 html.AppendLine($"                        <td>{swing.LowSpeedFalloff:F3}</td>");
                 html.AppendLine($"                        <td>{swing.StressMultiplier:F3}</td>");
                 html.AppendLine($"                        <td title=\"{buffsText}\">{GetBuffsMultiplier(swing):F3}</td>");
@@ -294,7 +296,7 @@ namespace Benchmark
             html.AppendLine("                    <li><strong>SwingFrequency:</strong> 2 / (nextBeat - prevBeat)</li>");
             html.AppendLine("                    <li><strong>DistanceDiff:</strong> HitDistance / (HitDistance + 1.8) + 1.0</li>");
             html.AppendLine("                    <li><strong>SwingSpeed:</strong> SwingFrequency × DistanceDiff × (BPM / 60)</li>");
-            html.AppendLine("                    <li><strong>Stress:</strong> (AngleStrain × 0.1 + PathStrain) × HitDiff</li>");
+            html.AppendLine("                    <li><strong>Stress:</strong> (AngleStrain × 0.1 + PathStrain) × DistanceDiff</li>");
             html.AppendLine("                    <li><strong>LowSpeedFalloff:</strong> 1.0 - 1.4<sup>-SwingSpeed</sup></li>");
             html.AppendLine("                    <li><strong>StressMultiplier:</strong> Stress / (Stress + 2.0) + 1.0</li>");
             html.AppendLine("                    <li><strong>SwingDiff:</strong> SwingSpeed × LowSpeedFalloff × StressMultiplier × NjsBuff × WallBuff × StreamBonus</li>");

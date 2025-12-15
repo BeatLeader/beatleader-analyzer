@@ -2308,7 +2308,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 // Final values
                 SwingTech = Math.Round(s.SwingTech, 3),
                 NjsBuff = Math.Round(s.NjsBuff, 3),
-                BezierCurveDistance = Math.Round(s.BezierCurveDistance, 3),
+                HitDistance = Math.Round(s.HitDistance, 3),
                 EntryX = Math.Round(s.EntryPosition.x, 3),
                 EntryY = Math.Round(s.EntryPosition.y, 3),
                 ExitX = Math.Round(s.ExitPosition.x, 3),
@@ -2610,7 +2610,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                             <th class=""sortable"" data-column=""PositionComplexity"" data-type=""number"" title=""Positional movement complexity"">Position</th>
                             <th class=""sortable"" data-column=""NjsBuff"" data-type=""number"" title=""NJS multiplier"">NJS Buff</th>
                             <th class=""sortable"" data-column=""SwingTech"" data-type=""number"" title=""Total tech difficulty"">Swing Tech</th>
-                            <th class=""sortable"" data-column=""BezierCurveDistance"" data-type=""number"" title=""Distance from previous swing"">BezierCurveDistance</th>
+                            <th class=""sortable"" data-column=""HitDistance"" data-type=""number"" title=""Distance from previous swing"">HitDistance</th>
                         </tr>
                     </thead>
                     <tbody id=""swingTableBody""></tbody>
@@ -2644,7 +2644,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <td>${{swing.PositionComplexity}}</td>
                     <td class=""value-buff"">${{swing.NjsBuff}}</td>
                     <td class=""value-tech""><strong>${{swing.SwingTech}}</strong></td>
-                    <td>${{swing.BezierCurveDistance}}</td>
+                    <td>${{swing.HitDistance}}</td>
                 </tr>
             `).join('');
         }}
