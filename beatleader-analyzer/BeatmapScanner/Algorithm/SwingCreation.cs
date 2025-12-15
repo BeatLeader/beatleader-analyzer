@@ -149,7 +149,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double dy = currPos.Y - prevPos.Y;
                 double geometricAngle = Mod(Math.Atan2(dy, dx) * 180.0 / Math.PI, 360);
                 bool movementMatchesDirection = IsSameDir(target, geometricAngle, 22.5);
-                Console.WriteLine(swingData[i].Cubes[0].JsonTime + ": directionMatches=" + directionMatches + ", movementMatchesDirection=" + movementMatchesDirection + " dx=" + dx + " dy=" + dy);
                 if (directionMatches && (movementMatchesDirection || (dx == 0 && dy == 0))) // We can't deduce anything from same position
                 {
                     // Can be considered linear movement, reduce strain
