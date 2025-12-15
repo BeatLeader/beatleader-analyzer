@@ -107,7 +107,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     // Decay over time
                     timeDiff = Math.Abs(swingData[i].Cubes[0].Seconds - swingData[i - 1].Cubes[^1].Seconds);
                     // https://www.desmos.com/calculator/5xlyaybnmt
-                    repositioningDistance *= Math.Exp(-2.0 * timeDiff);
+                    repositioningDistance *= Math.Exp((0.25 - timeDiff) * Math.Log(4.0));
                     // Clamp to max grid distance squared
                     repositioningDistance = repositioningDistance / (repositioningDistance + MAX_GRID_DISTANCE_SQUARED);
                 }
@@ -147,7 +147,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         curveComplexity = avgAngleChange / 180.0;
                         curveComplexity = curveComplexity * curveComplexity;
                         // Decay over time
-                        curveComplexity *= Math.Exp(-2.0 * timeDiff);
+                        curveComplexity *= Math.Exp((0.25 - timeDiff) * Math.Log(4.0));
 
                         if (i == 0)
                         {
@@ -158,8 +158,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                             var pathAngleSlice = angleList.Slice(pathLookbackIndex, angleCount - pathLookbackIndex);
                             pathAngleStrain = BezierAngleTotalStrain(pathAngleSlice, swingData[i].Cubes[0].Seconds,
                                 swingData[i - 1].Cubes[^1].Seconds, swingData[i].Forehand, isRightHand) / pathAngleSlice.Length * 4;
-                            // Decay over time
-                            pathAngleStrain *= Math.Exp(-2.0 * timeDiff);
                         }
                     }
                 }
