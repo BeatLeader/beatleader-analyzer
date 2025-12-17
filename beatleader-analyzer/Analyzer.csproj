@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net9.0;netstandard2.1</TargetFrameworks>
+	<TargetFrameworks>net9.0;netstandard2.1</TargetFrameworks>
     <RootNamespace>beatleader_analyzer</RootNamespace>
 	  <LangVersion>preview</LangVersion>
   </PropertyGroup>
@@ -17,9 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Parser">
-      <HintPath>dll\Parser.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\Parser\beatleader-parser\Parser.csproj" />
   </ItemGroup>
 
 </Project>

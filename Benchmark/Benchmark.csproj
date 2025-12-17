@@ -15,12 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\beatleader-analyzer\Analyzer.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Parser">
-      <HintPath>..\beatleader-analyzer\dll\Parser.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\Parser\beatleader-parser\Parser.csproj" />
   </ItemGroup>
 
 </Project>
