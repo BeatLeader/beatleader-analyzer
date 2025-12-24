@@ -33,7 +33,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 PreprocessNotes.Detect(red, bombs, false);
                 ParityPredictor.Predict(red, false, bombs);
-                redSwingData = SwingCreation.Process(red, false, modifiers.strictAngles);
+                redSwingData = SwingCreation.Process(red, false, modifiers);
                 
                 if (redSwingData.Count > 0)
                 {
@@ -46,7 +46,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 PreprocessNotes.Detect(blue, bombs, true);
                 ParityPredictor.Predict(blue, true, bombs);
-                blueSwingData = SwingCreation.Process(blue, true, modifiers.strictAngles);
+                blueSwingData = SwingCreation.Process(blue, true, modifiers);
                 
                 if (blueSwingData.Count > 0)
                 {

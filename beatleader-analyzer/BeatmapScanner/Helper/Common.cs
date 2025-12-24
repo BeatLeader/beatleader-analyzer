@@ -32,6 +32,14 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         }
 
         /// <summary>
+        /// Returns signed angle difference (b - a), correctly handling angle wrapping.
+        /// </summary>
+        public static double AngleDifference(double a, double b)
+        {
+            return (b - a + 540) % 360 - 180;
+        }
+
+        /// <summary>
         /// Reverses a cut direction by 180 degrees.
         /// </summary>
         public static double ReverseCutDirection(double direction)

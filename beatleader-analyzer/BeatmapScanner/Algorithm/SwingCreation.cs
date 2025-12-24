@@ -6,6 +6,7 @@ using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.EntryExit;
 using static beatleader_analyzer.BeatmapScanner.Helper.Common;
 using static beatleader_analyzer.BeatmapScanner.Helper.AngleStrain;
+using beatleader_analyzer.BeatmapScanner.Data;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -15,7 +16,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class SwingCreation
     {
-        public static List<SwingData> Process(List<Cube> cubes, bool isRightHand, bool strictAngles = false)
+        public static List<SwingData> Process(List<Cube> cubes, bool isRightHand, Modifiers modifiers)
         {
             if (cubes.Count == 0)
             {
@@ -100,24 +101,30 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     // Calculate multi-note exit position with averaged angle
                     Cube headCube = groupIndex >= 0 ? groups[groupIndex][0] : null;
-                    CalcMultiNoteExit(swingData[^1], strictAngles);
+                    CalcMultiNoteExit(swingData[^1], modifiers.strictAngles);
                 }
             }
 
             // Second pass: verify that direction match geometry for multi-note swings
-            VerifyMultiNotes(swingData, strictAngles);
+            VerifyMultiNotes(swingData, modifiers.strictAngles);
 
-            // Normalize angles between swings if within tolerance angle
-            // Only for fast sections (< 1 beat) and single notes
+            // Calculate swing frequency
+            SwingData previousSwing = null;
+            foreach (SwingData swing in swingData)
+            {
+                if (previousSwing != null)
+                {
+                    swing.SwingFrequency = 1 / (swing.BpmTime - previousSwing.BpmTime);
+                }
+
+                previousSwing = swing;
+            }
+
+            // Normalize angles between swings based on angle tolerance
             // Skip multi-note patterns as they are already geometrically normalized in preprocessing
             // Skip notes with bomb avoidance as they have special direction calculation
             for (int i = 1; i < swingData.Count; i++)
             {
-                if (swingData[i].BpmTime - swingData[i - 1].BpmTime >= 1.0)
-                {
-                    continue;
-                }
-
                 if (swingData[i].Cubes[0].Pattern && swingData[i].Cubes[0].Head)
                 {
                     continue;
@@ -128,7 +135,22 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     continue;
                 }
 
-                NormalizeAngle(swingData[i - 1], swingData[i], strictAngles);
+                NormalizeAngle(swingData[i - 1], swingData[i], modifiers);
+            }
+
+            // Calculate hit distance
+            previousSwing = null;
+            foreach (SwingData swing in swingData)
+            {
+                if (previousSwing != null)
+                {
+                    // Calculate straight-line distance between positions
+                    double dx = swing.EntryPosition.x - previousSwing.EntryPosition.x;
+                    double dy = swing.EntryPosition.y - previousSwing.EntryPosition.y;
+                    swing.HitDistance = Math.Sqrt(dx * dx + dy * dy);
+                }
+
+                previousSwing = swing;
             }
 
             swingData[0].AngleStrain = SwingAngleStrainCalc(swingData[0], null, isRightHand) * 4;

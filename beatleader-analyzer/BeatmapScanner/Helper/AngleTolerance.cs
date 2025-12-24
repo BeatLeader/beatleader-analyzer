@@ -21,13 +21,18 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         public const double STRICT_TOLERANCE = 40.0;
 
         /// <summary>
+        /// Safety margin for angle tolerance in degrees.
+        /// </summary>
+        public const double TOLERANCE_MARGIN = 8.0;
+
+        /// <summary>
         /// Gets the angle tolerance based on whether Strict Angles modifier is active.
         /// </summary>
         /// <param name="strictAngles">True if Strict Angles modifier is active</param>
         /// <returns>Angle tolerance in degrees</returns>
         public static double GetTolerance(bool strictAngles)
         {
-            return strictAngles ? STRICT_TOLERANCE : DEFAULT_TOLERANCE;
+            return strictAngles ? STRICT_TOLERANCE - TOLERANCE_MARGIN : DEFAULT_TOLERANCE - TOLERANCE_MARGIN;
         }
 
         /// <summary>

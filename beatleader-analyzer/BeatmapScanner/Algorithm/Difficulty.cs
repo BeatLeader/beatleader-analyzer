@@ -32,45 +32,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return;
             }
 
-            SwingData previousRed = null;
-            SwingData previousBlue = null;
-            SwingData previousSwing = null;
-
-            // Calculate swing frequency and transition distance per hand (red and blue separately)
-            for (int i = 0; i < swingData.Count; i++)
-            {
-                int currentHand = swingData[i].Cubes[0].Type;
-
-                if (currentHand == 0)
-                {
-                    previousSwing = previousRed;
-                }
-                else
-                {
-                    previousSwing = previousBlue;
-                }
-
-                // Calculate frequency using only same-hand swings
-                if (previousSwing != null)
-                {
-                    swingData[i].SwingFrequency = 1 / (swingData[i].BpmTime - previousSwing.BpmTime);
-                }
-                else
-                {
-                    swingData[i].SwingFrequency = 0;
-                    swingData[i].HitDistance = 0;
-                }
-
-                if (currentHand == 0)
-                {
-                    previousRed = swingData[i];
-                }
-                else
-                {
-                    previousBlue = swingData[i];
-                }
-            }
-
             // Swing is in BpmTime, so we don't have to worry about BPM changes here
             double bps = modifiers.modifiedBPM / 60.0;
             int? previousHand = null;
@@ -80,17 +41,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
             for (int i = 0; i < swingData.Count; i++)
             {
                 var swing = swingData[i];
-                
-                if (i > 0)
-                {
-                    // Calculate straight-line distance between positions
-                    double dx = swing.EntryPosition.x - swingData[i - 1].EntryPosition.x;
-                    double dy = swing.EntryPosition.y - swingData[i - 1].EntryPosition.y;
-                    swingData[i].HitDistance = Math.Sqrt(dx * dx + dy * dy);
-                }
 
                 // https://www.desmos.com/calculator/mshzoffzgs
-                double distanceDiff = swingData[i].HitDistance / (swingData[i].HitDistance + DISTANCE_FALLOFF) + 1;
+                double distanceDiff = swing.HitDistance / (swing.HitDistance + DISTANCE_FALLOFF) + 1;
 
                 double swingSpeed = swing.SwingFrequency * distanceDiff * bps;
                 if (swing.ParityErrors)
@@ -117,7 +70,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Store intermediate values on the swing for debugging/export
                 swing.DistanceDiff = distanceDiff;
                 swing.SwingSpeed = swingSpeed;
-                swing.HitDistance = swingData[i].HitDistance;
                 swing.Stress = stress;
                 swing.LowSpeedFalloff = lowSpeedFalloff;
                 swing.StressMultiplier = stressMultiplier;

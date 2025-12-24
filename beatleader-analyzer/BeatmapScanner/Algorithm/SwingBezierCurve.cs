@@ -20,9 +20,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static bool UseParallel { get; set; } = true;
 
-        // Maximum reasonable distance in meters squared (full grid diagonal ~3m, squared = 9m²)
-        private const double MAX_GRID_DISTANCE_SQUARED = 4.68;
-
         public static void Calc(List<SwingData> swingData, bool isRightHand)
         {
             CalcInternal(swingData, isRightHand);
@@ -86,30 +83,31 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 double timeDiff = 1;
 
-                if (i > 1)
+                // Single swing perpendicular repositioning
+                if (i > 0)
                 {
                     currentSwingPosition = swingData[i].EntryPosition;
+                    previousSwingPosition = swingData[i - 1].ExitPosition;
 
-                    // Positional difference between 2 swings ago and now
-                    // unless parity errors, then use previous swing instead
-                    if (!swingData[i].ParityErrors)
-                    {
-                        previousSwingPosition = swingData[i - 2].EntryPosition;
-                    }
-                    else
-                    {
-                        previousSwingPosition = swingData[i - 1].EntryPosition;
-                    }
-                    
-                    double deltaX = currentSwingPosition.x - previousSwingPosition.x;
-                    double deltaY = currentSwingPosition.y - previousSwingPosition.y;
-                    repositioningDistance = deltaX * deltaX + deltaY * deltaY;
-                    // Decay over time
-                    timeDiff = Math.Abs(swingData[i].Cubes[0].Seconds - swingData[i - 1].Cubes[^1].Seconds);
-                    // https://www.desmos.com/calculator/5xlyaybnmt
-                    repositioningDistance *= Math.Exp((0.25 - timeDiff) * Math.Log(4.0));
-                    // Clamp to max grid distance squared
-                    repositioningDistance = repositioningDistance / (repositioningDistance + MAX_GRID_DISTANCE_SQUARED);
+                    (double x, double y) posChangeVector = (currentSwingPosition.x - previousSwingPosition.x, currentSwingPosition.y - previousSwingPosition.y);
+                    (double x, double y) projectionVector = (Math.Cos((swingData[i].Direction + 90) * Math.PI / 180), Math.Sin((swingData[i].Direction + 90) * Math.PI / 180));
+                    repositioningDistance = Math.Abs(posChangeVector.x * projectionVector.x + posChangeVector.y * projectionVector.y) * 1.0;
+                }
+
+                // 2-swing average total repositioning
+                if (i > 1)
+                {
+                    (double x, double y) swingAPos = ((swingData[i].EntryPosition.x + swingData[i].ExitPosition.x) / 2, (swingData[i].EntryPosition.y + swingData[i].ExitPosition.y) / 2);
+                    (double x, double y) swingBPos = ((swingData[i - 1].EntryPosition.x + swingData[i - 1].ExitPosition.x) / 2, (swingData[i - 1].EntryPosition.y + swingData[i - 1].ExitPosition.y) / 2);
+                    (double x, double y) swingCPos = ((swingData[i - 2].EntryPosition.x + swingData[i - 2].ExitPosition.x) / 2, (swingData[i - 2].EntryPosition.y + swingData[i - 2].ExitPosition.y) / 2);
+
+                    (double x, double y) avgAB = ((swingAPos.x + swingBPos.x) / 2, (swingAPos.y + swingBPos.y) / 2);
+                    (double x, double y) avgBC = ((swingBPos.x + swingCPos.x) / 2, (swingBPos.y + swingCPos.y) / 2);
+
+                    (double x, double y) avgDelta = (avgAB.x - avgBC.x, avgAB.y - avgBC.y);
+                    double distance = Math.Sqrt(avgDelta.x * avgDelta.x + avgDelta.y * avgDelta.y);
+
+                    repositioningDistance += distance * 0.5;
                 }
 
                 double first, last, pathLookback;

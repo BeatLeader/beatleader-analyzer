@@ -1,4 +1,5 @@
 ﻿using Analyzer.BeatmapScanner.Data;
+using beatleader_analyzer.BeatmapScanner.Data;
 using System;
 using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.AngleTolerance;
@@ -28,7 +29,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             (double tailX, double tailY) = GridToMeters(tailCube.X, tailCube.Y);
 
             // Blend the geometric angle with the current swing angle
-            double diff = (currentAngle - current.Direction + 540) % 360 - 180;
+            double diff = AngleDifference(current.Direction, currentAngle);
             double blendedAngle = Mod(current.Direction + diff * 0.5, 360);
 
             // Respect the head cube's cut direction tolerance
@@ -42,7 +43,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 if (!IsAngleWithinTolerance(blendedAngle, arrowAngle, tolerance))
                 {
                     // Outside tolerance → clamp to the nearest edge of allowed range
-                    double delta = (blendedAngle - arrowAngle + 540) % 360 - 180;
+                    double delta = AngleDifference(arrowAngle, blendedAngle);
 
                     if (delta > 0)
                         finalAngle = Mod(arrowAngle + tolerance, 360);     // clamp high side
@@ -92,11 +93,11 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             }
         }
 
-        public static void NormalizeAngle(SwingData previous, SwingData current, bool strictAngles)
+        public static void NormalizeAngle(SwingData previous, SwingData current, Modifiers modifiers)
         {
-            // Calculate the geometric angle
-            double deltaX = current.Cubes[0].X - previous.Cubes[0].X;
-            double deltaY = current.Cubes[0].Y - previous.Cubes[0].Y;
+            // Calculate the geometric angle from previous swing exit to current note center
+            double deltaX = GridXToMeters(current.Cubes[0].X) - previous.ExitPosition.x;
+            double deltaY = GridYToMeters(current.Cubes[0].Y) - previous.ExitPosition.y;
 
             // We can't deduce anything from same position
             if (deltaX == 0 && deltaY == 0)
@@ -118,29 +119,41 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             double currentAngle = current.Cubes[0].Direction;
 
             // Calculate angular difference (shortest path around circle)
-            double angleDiff = Math.Abs(potentialAngle - currentAngle);
-            if (angleDiff > 180)
-            {
-                angleDiff = 360 - angleDiff;
-            }
+            double angleDiff = AngleDifference(currentAngle, potentialAngle);
+            double angleDiffPrev = AngleDifference(previous.Direction, potentialAngle);
+
+            // Handle invert
+            // this is kind of janky and can do the wrong thing in some cases
+            // to do it properly you'd need to account for parity, rotation, angle strain, etc.
+            // should be good enough for now (probably)
+            if (angleDiff < -90 && Math.Abs(angleDiffPrev) < 90) angleDiff += 180;
+            if (angleDiff > 90 && Math.Abs(angleDiffPrev) < 90) angleDiff -= 180;
 
             // Tolerance for angle adjustment (in degrees)
-            double tolerance = GetTolerance(strictAngles);
+            double tolerance = GetTolerance(modifiers.strictAngles);
 
-            // If the geometric angle is within tolerance, use it instead
-            if (angleDiff <= tolerance)
-            {
-                current.Direction = potentialAngle;
+            // Adjust angle based on tolerance and speed
+            const double ROLLOFF_MIN = 1.5;
+            const double ROLLOFF_MAX = 15.0;
 
-                (double centerX, double centerY) = GridToMeters(current.Cubes[0].X, current.Cubes[0].Y);
+            double bps = modifiers.modifiedBPM / 60;
+            double sps = current.SwingFrequency * bps;
 
-                double angleRad = ConvertDegreesToRadians(current.Direction);
-                double cos = Math.Cos(angleRad);
-                double sin = Math.Sin(angleRad);
+            // https://www.desmos.com/calculator/cxt6aehw0h
+            double rolloff = Math.Clamp(0.05 * sps * sps + 0.25 * sps + 1.2, ROLLOFF_MIN, ROLLOFF_MAX);
 
-                current.EntryPosition = (centerX - cos * NOTE_SIZE, centerY - sin * NOTE_SIZE);
-                current.ExitPosition = (centerX + cos * NOTE_SIZE, centerY + sin * NOTE_SIZE);
-            }
+            // https://www.desmos.com/calculator/wal5fknd9f
+            double angleAdjust = tolerance * angleDiff / Math.Pow(Math.Pow(Math.Abs(angleDiff), rolloff) + Math.Pow(tolerance, rolloff), 1 / rolloff);
+            current.Direction = Mod(current.Direction + angleAdjust, 360);
+
+            (double centerX, double centerY) = GridToMeters(current.Cubes[0].X, current.Cubes[0].Y);
+
+            double angleRad = ConvertDegreesToRadians(current.Direction);
+            double cos = Math.Cos(angleRad);
+            double sin = Math.Sin(angleRad);
+
+            current.EntryPosition = (centerX - cos * NOTE_SIZE, centerY - sin * NOTE_SIZE);
+            current.ExitPosition = (centerX + cos * NOTE_SIZE, centerY + sin * NOTE_SIZE);
         }
     }
 }
