@@ -81,8 +81,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 (double x, double y) currentSwingPosition = (0, 0);
                 (double x, double y) previousSwingPosition = (0, 0);
 
-                double timeDiff = 1;
-
                 // Single swing perpendicular repositioning
                 if (i > 0)
                 {
@@ -110,6 +108,17 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     repositioningDistance += distance * 0.5;
                 }
 
+                // Rotation
+                double rotationAmount = 0.0;
+                if (i > 0)
+                {
+                    double angleDifference = AngleDifference(swingData[i - 1].Direction, swingData[i].Direction);
+                    rotationAmount = Math.Abs(angleDifference);
+                    if (!swingData[i].ParityErrors) rotationAmount = Math.Abs(rotationAmount - 180);
+
+                    rotationAmount /= 180;
+                }
+
                 double first, last, pathLookback;
 
                 if (swingData[i].ParityErrors)
@@ -125,9 +134,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     last = 0.8;
                 }
 
-                double curveComplexity = 0;
                 double pathAngleStrain = 0;
-                double avgAngleChange = 0;
                 int firstIndex = 0;
                 int lastIndex = 0;
                 int pathLookbackIndex = 0;
@@ -140,13 +147,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                     if (lastIndex > firstIndex)
                     {
-                        var angleSlice = angleChangeList.Slice(firstIndex, lastIndex - firstIndex);
-                        avgAngleChange = Average(angleSlice);
-                        curveComplexity = avgAngleChange / 180.0;
-                        curveComplexity = curveComplexity * curveComplexity;
-                        // Decay over time
-                        curveComplexity *= Math.Exp((0.25 - timeDiff) * Math.Log(4.0));
-
                         if (i == 0)
                         {
                             pathAngleStrain = 0;
@@ -161,9 +161,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
 
                 swingData[i].RepositioningDistance = repositioningDistance;
-                swingData[i].CurveComplexity = curveComplexity;
+                swingData[i].RotationAmount = rotationAmount;
                 swingData[i].AnglePathStrain = pathAngleStrain;
-                swingData[i].PathStrain = curveComplexity + pathAngleStrain + repositioningDistance;
+                swingData[i].PathStrain = rotationAmount + pathAngleStrain + repositioningDistance;
             }
 
             // Disable parallel processing when capturing debug data to maintain correct order
