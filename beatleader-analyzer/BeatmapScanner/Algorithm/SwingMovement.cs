@@ -1,22 +1,15 @@
 ﻿using static beatleader_analyzer.BeatmapScanner.Helper.Common;
-using static beatleader_analyzer.BeatmapScanner.Helper.BezierCurve;
-using static beatleader_analyzer.BeatmapScanner.Helper.AngleStrain;
 using Analyzer.BeatmapScanner.Data;
 using System.Collections.Generic;
 using System;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using System.Runtime.CompilerServices;
-using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
-using static Analyzer.BeatmapScanner.Data.SwingData;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
     /// <summary>
-    /// Calculates swing path complexity using Bezier curve analysis.
+    /// Calculates movement between swings, measuring repositioning distance and rotation amount.
     /// </summary>
-    public class SwingBezierCurve
+    public class SwingMovement
     {
         public static bool UseParallel { get; set; } = true;
 
@@ -44,39 +37,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             void ForContent(int i)
             {
-                Point point0 = new(swingData[i - 1].ExitPosition.x, swingData[i - 1].ExitPosition.y);
-                Point point1 = new(point0.X + cosValues[i - 1], point0.Y + sinValues[i - 1]);
-                Point point3 = new(swingData[i].EntryPosition.x, swingData[i].EntryPosition.y);
-                Point point2 = new(point3.X - cosValues[i], point3.Y - sinValues[i]);
-
-                Span<Point> controlPoints = stackalloc Point[4] { point0, point1, point2, point3 };
-                var point = BezierCurveDirect(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3]);
-
                 double repositioningDistance = 0;
-                
-                const int maxPoints = 25;
-                Span<double> angleList = stackalloc double[maxPoints];
-                Span<double> angleChangeList = stackalloc double[maxPoints];
-                int angleCount = 0;
-                int angleChangeCount = 0;
-
-                for (int f = 1; f < point.Length; f++)
-                {
-                    double deltaX = point[f].X - point[f - 1].X;
-                    double deltaY = point[f].Y - point[f - 1].Y;
-                    
-                    double angle = Mod(ConvertRadiansToDegrees(Math.Atan2(deltaY, deltaX)), 360);
-                    angleList[angleCount] = angle;
-
-                    if (angleCount > 0)
-                    {
-                        double angleDiff = Math.Abs(angleList[angleCount] - angleList[angleCount - 1]);
-                        double angleChange = 180 - Math.Abs(angleDiff - 180);
-                        angleChangeList[angleChangeCount++] = angleChange;
-                    }
-                    
-                    angleCount++;
-                }
 
                 (double x, double y) currentSwingPosition = (0, 0);
                 (double x, double y) previousSwingPosition = (0, 0);
@@ -119,51 +80,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     rotationAmount /= 180;
                 }
 
-                double first, last, pathLookback;
-
-                if (swingData[i].ParityErrors)
-                {
-                    pathLookback = 0.9;
-                    first = 0.5;
-                    last = 1;
-                }
-                else
-                {
-                    pathLookback = 0.5;
-                    first = 0.2;
-                    last = 0.8;
-                }
-
-                double pathAngleStrain = 0;
-                int firstIndex = 0;
-                int lastIndex = 0;
-                int pathLookbackIndex = 0;
-
-                if (angleChangeCount >= 2 && angleCount >= 2)
-                {
-                    firstIndex = Math.Max(0, (int)(angleChangeCount * first));
-                    lastIndex = Math.Min(angleChangeCount, (int)(angleChangeCount * last));
-                    pathLookbackIndex = (int)(angleCount * pathLookback);
-
-                    if (lastIndex > firstIndex)
-                    {
-                        if (i == 0)
-                        {
-                            pathAngleStrain = 0;
-                        }
-                        else
-                        {
-                            var pathAngleSlice = angleList.Slice(pathLookbackIndex, angleCount - pathLookbackIndex);
-                            pathAngleStrain = BezierAngleTotalStrain(pathAngleSlice, swingData[i].Cubes[0].Seconds,
-                                swingData[i - 1].Cubes[^1].Seconds, swingData[i].Forehand, isRightHand) / pathAngleSlice.Length * 4;
-                        }
-                    }
-                }
-
                 swingData[i].RepositioningDistance = repositioningDistance;
                 swingData[i].RotationAmount = rotationAmount;
-                swingData[i].AnglePathStrain = pathAngleStrain;
-                swingData[i].PathStrain = rotationAmount + pathAngleStrain + repositioningDistance;
+                swingData[i].PathStrain = rotationAmount + repositioningDistance;
             }
 
             // Disable parallel processing when capturing debug data to maintain correct order

@@ -2303,7 +2303,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 PathStrain = Math.Round(s.PathStrain, 3),
                 // PathStrain components
                 CurveComplexity = Math.Round(s.RotationAmount, 3),
-                AnglePathStrain = Math.Round(s.AnglePathStrain, 3),
                 PositionComplexity = Math.Round(s.RepositioningDistance, 3),
                 // Final values
                 SwingTech = Math.Round(s.SwingTech, 3),

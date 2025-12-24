@@ -32,7 +32,7 @@ namespace Benchmark
         [Benchmark]
         public void GetRating()
         {
-            SwingBezierCurve.UseParallel = UseParallelFor;
+            SwingMovement.UseParallel = UseParallelFor;
             analyzer.GetRating(map, "Standard");
         }
 

@@ -37,7 +37,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 
                 if (redSwingData.Count > 0)
                 {
-                    SwingBezierCurve.Calc(redSwingData, false);
+                    SwingMovement.Calc(redSwingData, false);
                     combinedSwingData.AddRange(redSwingData);
                 }
             }
@@ -50,7 +50,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 
                 if (blueSwingData.Count > 0)
                 {
-                    SwingBezierCurve.Calc(blueSwingData, true);
+                    SwingMovement.Calc(blueSwingData, true);
                     combinedSwingData.AddRange(blueSwingData);
                 }
             }

@@ -43,39 +43,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             return swingStrain;
         }
 
-        public static double BezierAngleTotalStrain(Span<double> angleData, double currentTime, double previousTime, bool forehand, bool isRightHand)
-        {
-            if (previousTime == 0) return 0;
-
-            double neutralAngle;
-            if (forehand)
-            {
-                neutralAngle = isRightHand ? RIGHT_FOREHAND_NEUTRAL : LEFT_FOREHAND_NEUTRAL;
-            }
-            else
-            {
-                neutralAngle = isRightHand ? RIGHT_BACKHAND_NEUTRAL : LEFT_BACKHAND_NEUTRAL;
-            }
-
-            double totalStrain = 0;
-            foreach (double angle in angleData)
-            {
-                double deviation = AngleDeviation(neutralAngle, angle);
-                double normalizedStrain = deviation / 180.0;
-                totalStrain += normalizedStrain * normalizedStrain;
-            }
-
-            // Add falloff based on delta time between swings in seconds
-            double deltaTime = Math.Abs(currentTime - previousTime);
-            if (deltaTime >= 0.25)
-            {
-                // In seconds: 0.25 = 1, 0.5 = 0.707, 1 = 0.3535
-                totalStrain *= Math.Exp((0.25 - deltaTime) * Math.Log(4.0));
-            }
-
-            return totalStrain;
-        }
-
         private static double AngleDeviation(double angle1, double angle2)
         {
             double diff = Math.Abs(angle1 - angle2);
