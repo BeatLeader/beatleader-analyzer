@@ -2289,7 +2289,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
         {
             var swingDataJson = JsonConvert.SerializeObject(rating.SwingData.Select((s, index) => new
             {
-                Index = index,
                 Time = Math.Round(s.Cubes[0].JsonTime, 3),
                 Hand = s.Cubes[0].Type == 0 ? "Red" : "Blue",
                 Line = s.Cubes[0].X,
@@ -2302,16 +2301,11 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 AngleStrain = Math.Round(s.AngleStrain, 3),
                 PathStrain = Math.Round(s.PathStrain, 3),
                 // PathStrain components
-                CurveComplexity = Math.Round(s.RotationAmount, 3),
-                PositionComplexity = Math.Round(s.RepositioningDistance, 3),
+                RotationAmount = Math.Round(s.RotationAmount, 3),
+                RepositioningDistance = Math.Round(s.RepositioningDistance, 3),
                 // Final values
                 SwingTech = Math.Round(s.SwingTech, 3),
-                NjsBuff = Math.Round(s.NjsBuff, 3),
-                HitDistance = Math.Round(s.HitDistance, 3),
-                EntryX = Math.Round(s.EntryPosition.x, 3),
-                EntryY = Math.Round(s.EntryPosition.y, 3),
-                ExitX = Math.Round(s.ExitPosition.x, 3),
-                ExitY = Math.Round(s.ExitPosition.y, 3)
+                NjsBuff = Math.Round(s.NjsBuff, 3)
             }).ToList());
 
             return $@"<!DOCTYPE html>
@@ -2549,9 +2543,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <li><strong>AngleStrain:</strong> Difficulty from angular changes between swings</li>
                     <li><strong>PathStrain:</strong> Difficulty from spatial movement and positioning
                         <ul style=""margin-left: 20px; margin-top: 5px;"">
-                            <li><strong>CurveComplexity:</strong> Curve difficulty from the swing path</li>
-                            <li><strong>AnglePathStrain:</strong> Angular strain along the path</li>
-                            <li><strong>PositionComplexity:</strong> Positional movement complexity</li>
+                            <li><strong>RotationAmount:</strong> Rotation amount</li>
+                            <li><strong>Repo. Distance:</strong> Repositioning Distance</li>
                         </ul>
                     </li>
                     <li><strong>NJS Buff:</strong> Multiplier based on Note Jump Speed (NJS > 24 increases difficulty)</li>
@@ -2594,7 +2587,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 <table id=""swingTable"">
                     <thead>
                         <tr>
-                            <th class=""sortable"" data-column=""Index"" data-type=""number"">#</th>
                             <th class=""sortable"" data-column=""Time"" data-type=""number"">Beat</th>
                             <th class=""sortable"" data-column=""Hand"" data-type=""string"">Hand</th>
                             <th class=""sortable"" data-column=""Position"" data-type=""string"">Pos</th>
@@ -2603,13 +2595,11 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                             <th class=""sortable"" data-column=""Parity"" data-type=""string"">Parity</th>
                             <th class=""sortable"" data-column=""PatternType"" data-type=""string"">Pattern</th>
                             <th class=""sortable"" data-column=""AngleStrain"" data-type=""number"" title=""Angular difficulty"">Angle Strain</th>
+                            <th class=""sortable"" data-column=""RotationAmount"" data-type=""number"" title=""Rotation amount"">Rotation Amount</th>                            
+                            <th class=""sortable"" data-column=""RepositioningDistance"" data-type=""number"" title=""Repo. Distance"">Repo. Distance</th>
                             <th class=""sortable"" data-column=""PathStrain"" data-type=""number"" title=""Movement difficulty (sum of components)"">Path Strain</th>
-                            <th class=""sortable"" data-column=""CurveComplexity"" data-type=""number"" title=""Curve difficulty from swing path"">Curve</th>
-                            <th class=""sortable"" data-column=""AnglePathStrain"" data-type=""number"" title=""Angular strain along path"">Path Angle</th>                            
-                            <th class=""sortable"" data-column=""PositionComplexity"" data-type=""number"" title=""Positional movement complexity"">Position</th>
                             <th class=""sortable"" data-column=""NjsBuff"" data-type=""number"" title=""NJS multiplier"">NJS Buff</th>
                             <th class=""sortable"" data-column=""SwingTech"" data-type=""number"" title=""Total tech difficulty"">Swing Tech</th>
-                            <th class=""sortable"" data-column=""HitDistance"" data-type=""number"" title=""Distance from previous swing"">HitDistance</th>
                         </tr>
                     </thead>
                     <tbody id=""swingTableBody""></tbody>
@@ -2628,7 +2618,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             const tbody = document.getElementById('swingTableBody');
             tbody.innerHTML = filteredData.map(swing => `
                 <tr>
-                    <td>${{swing.Index + 1}}</td>
                     <td>${{swing.Time}}</td>
                     <td><span class=""badge badge-${{swing.Hand.toLowerCase()}}"">${{swing.Hand}}</span></td>
                     <td>(${{swing.Line}},${{swing.Layer}})</td>
@@ -2637,13 +2626,11 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     <td><span class=""badge badge-${{swing.Parity.toLowerCase()}}"">${{swing.Parity}}</span></td>
                     <td>${{swing.PatternType}}</td>
                     <td class=""value-angle"">${{swing.AngleStrain}}</td>
+                    <td>${{swing.RotationAmount}}</td>
+                    <td>${{swing.RepositioningDistance}}</td>
                     <td class=""value-path"">${{swing.PathStrain}}</td>
-                    <td>${{swing.CurveComplexity}}</td>
-                    <td>${{swing.AnglePathStrain}}</td>
-                    <td>${{swing.PositionComplexity}}</td>
                     <td class=""value-buff"">${{swing.NjsBuff}}</td>
                     <td class=""value-tech""><strong>${{swing.SwingTech}}</strong></td>
-                    <td>${{swing.HitDistance}}</td>
                 </tr>
             `).join('');
         }}
