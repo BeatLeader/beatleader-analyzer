@@ -89,7 +89,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 swingData[i].RepositioningDistance = repositioningDistance;
                 swingData[i].RotationAmount = rotationAmount;
-                swingData[i].PathStrain = rotationAmount + repositioningDistance;
             }
 
             // Disable parallel processing when capturing debug data to maintain correct order

@@ -55,11 +55,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Apply linear swing (3 swings in very similar direction in a row) penalty
                 if (swing.IsLinear)
                 {
-                    stress = (swing.AngleStrain * 0.1 + swing.PathStrain * 0.1) * distanceDiff;
+                    stress = (swing.AngleStrain * 0.1 + swing.RepositioningDistance * 0.1 + swing.RotationAmount * 0.1) * distanceDiff;
                 }
                 else
                 {
-                    stress = (swing.AngleStrain * 1 + swing.PathStrain * 1) * distanceDiff;
+                    stress = (swing.AngleStrain * 1 + swing.RepositioningDistance * 1 + swing.RotationAmount * 1) * distanceDiff;
                 }
 
                 // https://www.desmos.com/calculator/nl9wpe3fdo
@@ -168,11 +168,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (i >= WINDOW)
                 {
                     var windowDiff = Average(qDiff.Buffer);
-                    difficultyIndex.Add(new(swingData[i].BpmTime, windowDiff, swingData[i].AngleStrain + swingData[i].PathStrain));
+                    difficultyIndex.Add(new(swingData[i].BpmTime, windowDiff, swingData[i].SwingTech));
                 }
                 else
                 {
-                    difficultyIndex.Add(new(swingData[i].BpmTime, 0, swingData[i].AngleStrain + swingData[i].PathStrain));
+                    difficultyIndex.Add(new(swingData[i].BpmTime, 0, swingData[i].SwingTech));
                 }
             }
 

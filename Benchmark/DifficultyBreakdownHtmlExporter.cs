@@ -187,11 +187,11 @@ namespace Benchmark
             html.AppendLine("            <h3>1. Top 75% Angle + Path Strain</h3>");
             html.AppendLine("            <p class=\"explanation\">Tech rating is based on the top 75% most difficult swings (by AngleStrain + PathStrain), excluding the easiest 25%.</p>");
             
-            var sortedSwings = ratings.SwingData.OrderBy(s => s.AngleStrain + s.PathStrain).ToList();
+            var sortedSwings = ratings.SwingData.OrderBy(s => s.SwingTech).ToList();
             int startIndex = (int)(sortedSwings.Count * 0.25);
             var top75Percent = sortedSwings.Skip(startIndex).ToList();
             
-            double sumAnglePath = top75Percent.Sum(s => s.AngleStrain + s.PathStrain);
+            double sumAnglePath = top75Percent.Sum(s => s.SwingTech);
             double avgAnglePath = sumAnglePath / top75Percent.Count;
             
             html.AppendLine("            <div class=\"calculation-steps\">");
@@ -275,7 +275,6 @@ namespace Benchmark
                 html.AppendLine($"                        <td>{swing.DistanceDiff:F3}</td>");
                 html.AppendLine($"                        <td>{swing.SwingSpeed:F3}</td>");
                 html.AppendLine($"                        <td>{swing.AngleStrain:F3}</td>");
-                html.AppendLine($"                        <td>{swing.PathStrain:F3}</td>");
                 html.AppendLine($"                        <td>{swing.Stress:F3}</td>");
                 html.AppendLine($"                        <td>{swing.IsLinear:F3}</td>");
                 html.AppendLine($"                        <td>{swing.LowSpeedFalloff:F3}</td>");

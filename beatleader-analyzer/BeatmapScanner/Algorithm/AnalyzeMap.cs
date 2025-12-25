@@ -116,12 +116,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     double buff = NjsBuff.CalculateNjsBuff(swing.Cubes[0].Njs, modifiers);
                     swing.AngleStrain *= buff;
-                    swing.PathStrain *= buff;
-                    swing.SwingTech = swing.AngleStrain + swing.PathStrain;
+                    swing.RepositioningDistance *= buff;
+                    swing.RotationAmount *= buff;
+                    swing.SwingTech = swing.AngleStrain + swing.RepositioningDistance + swing.RotationAmount;
                 }
 
-                combinedSwingData.Sort(CompareAngleAndPathStrain);
-                double tech = AverageAnglePath(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
+                combinedSwingData.Sort(CompareSwingTech);
+                double tech = AverageSwingTech(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
 
                 // https://www.desmos.com/calculator/dspid2fyyj
                 balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * BALANCED_TECH_SCALER;
@@ -205,8 +206,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return multiNoteHits / swingCount;
         }
 
-        private static readonly Comparer<SwingData> CompareAngleAndPathStrain = 
-            Comparer<SwingData>.Create((a, b) => (a.AngleStrain + a.PathStrain).CompareTo(b.AngleStrain + b.PathStrain));
+        private static readonly Comparer<SwingData> CompareSwingTech = 
+            Comparer<SwingData>.Create((a, b) => (a.SwingTech).CompareTo(b.SwingTech));
 
         private static double CalculatePeakSustainedEBPM(List<SwingData> swingData, Modifiers modifiers)
         {
@@ -233,12 +234,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return maxEbpm;
         }
 
-        private static double AverageAnglePath(Span<SwingData> list)
+        private static double AverageSwingTech(Span<SwingData> list)
         {
             double sum = 0;
             foreach (SwingData swing in list)
             {
-                sum += swing.AngleStrain + swing.PathStrain;
+                sum += swing.SwingTech;
             }
             return sum / list.Length;
         }

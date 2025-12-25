@@ -2299,8 +2299,6 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 PatternType = s.PatternType,
                 // Tech components
                 AngleStrain = Math.Round(s.AngleStrain, 3),
-                PathStrain = Math.Round(s.PathStrain, 3),
-                // PathStrain components
                 RotationAmount = Math.Round(s.RotationAmount, 3),
                 RepositioningDistance = Math.Round(s.RepositioningDistance, 3),
                 // Final values
