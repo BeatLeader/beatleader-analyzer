@@ -80,6 +80,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     rotationAmount /= 180;
                 }
 
+                // Since rotation and repositioning will be split between the real swing and the implied swing of the reset, the values should halved
+                if (swingData[i].ParityErrors)
+                {
+                    repositioningDistance /= 2;
+                    rotationAmount /= 2;
+                }
+
                 swingData[i].RepositioningDistance = repositioningDistance;
                 swingData[i].RotationAmount = rotationAmount;
                 swingData[i].PathStrain = rotationAmount + repositioningDistance;
