@@ -176,7 +176,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     // Can be considered linear movement, reduce strain
                     if (isLinear)
                     {
-                        swingData[i].AngleStrain *= 0.25;
                         swingData[i].IsLinear = true;
                     }
                     isLinear = true;

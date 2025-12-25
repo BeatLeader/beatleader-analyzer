@@ -51,21 +51,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swingSpeed *= PARITY_ERROR_MULTIPLIER;
                 }
 
-                double stress;
-                // Apply linear swing (3 swings in very similar direction in a row) penalty
-                if (swing.IsLinear)
-                {
-                    stress = (swing.AngleStrain * 0.1 + swing.RepositioningDistance * 0.1 + swing.RotationAmount * 0.1) * distanceDiff;
-                }
-                else
-                {
-                    stress = (swing.AngleStrain * 1 + swing.RepositioningDistance * 1 + swing.RotationAmount * 1) * distanceDiff;
-                }
+                double stress = (swing.AngleStrain * 0.05 + swing.RepositioningDistance * 1.4 + swing.RotationAmount * 0.2) * distanceDiff;
 
                 // https://www.desmos.com/calculator/nl9wpe3fdo
                 double lowSpeedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
                 // https://www.desmos.com/calculator/lcpwvisblz
-                double stressMultiplier = stress / (stress + STRESS_FALLOFF) + 1.0;
+                double stressMultiplier = STRESS_FALLOFF * stress / (stress + STRESS_FALLOFF) + 1.0;
 
                 // Store intermediate values on the swing for debugging/export
                 swing.DistanceDiff = distanceDiff;

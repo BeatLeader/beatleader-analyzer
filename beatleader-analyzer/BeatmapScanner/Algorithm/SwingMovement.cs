@@ -50,7 +50,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                     (double x, double y) posChangeVector = (currentSwingPosition.x - previousSwingPosition.x, currentSwingPosition.y - previousSwingPosition.y);
                     (double x, double y) projectionVector = (Math.Cos((swingData[i].Direction + 90) * Math.PI / 180), Math.Sin((swingData[i].Direction + 90) * Math.PI / 180));
-                    repositioningDistance = Math.Abs(posChangeVector.x * projectionVector.x + posChangeVector.y * projectionVector.y) * 1.0;
+                    repositioningDistance = Math.Abs(posChangeVector.x * projectionVector.x + posChangeVector.y * projectionVector.y) * 0.6875;
                 }
 
                 // 2-swing average total repositioning
@@ -66,7 +66,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     (double x, double y) avgDelta = (avgAB.x - avgBC.x, avgAB.y - avgBC.y);
                     double distance = Math.Sqrt(avgDelta.x * avgDelta.x + avgDelta.y * avgDelta.y);
 
-                    repositioningDistance += distance * 0.5;
+                    repositioningDistance += distance * 0.0625;
                 }
 
                 // Rotation
