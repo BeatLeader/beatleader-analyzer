@@ -55,7 +55,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 // https://www.desmos.com/calculator/nl9wpe3fdo
                 double lowSpeedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
-                // https://www.desmos.com/calculator/lcpwvisblz
+                // https://www.desmos.com/calculator/ikntxtr1mz
                 double stressMultiplier = STRESS_FALLOFF * stress / (stress + STRESS_FALLOFF) + 1.0;
 
                 // Store intermediate values on the swing for debugging/export

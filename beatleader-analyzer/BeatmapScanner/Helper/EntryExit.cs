@@ -153,7 +153,14 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             double sin = Math.Sin(angleRad);
 
             current.EntryPosition = (centerX - cos * NOTE_SIZE, centerY - sin * NOTE_SIZE);
-            current.ExitPosition = (centerX + cos * NOTE_SIZE, centerY + sin * NOTE_SIZE);
+            if (current.Cubes[0].Head && current.Cubes[0].Pattern)
+            {
+                CalcMultiNoteExit(current, modifiers.strictAngles);
+            }
+            else
+            {
+                current.ExitPosition = (centerX + cos * NOTE_SIZE, centerY + sin * NOTE_SIZE);
+            }
         }
     }
 }

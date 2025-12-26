@@ -226,6 +226,8 @@ namespace Benchmark
 
         private static void GeneratePerSwingTable(StringBuilder html, List<SwingData> swingData, float bpm)
         {
+            var bps = bpm / 60;
+
             html.AppendLine("        <div class=\"section\">");
             html.AppendLine("            <h2>Per-Swing Breakdown</h2>");
             html.AppendLine("            <p class=\"explanation\">Detailed breakdown of every swing showing all intermediate calculations.</p>");
@@ -234,24 +236,23 @@ namespace Benchmark
             html.AppendLine("            <table class=\"detailed-table\">");
             html.AppendLine("                <thead>");
             html.AppendLine("                    <tr>");
-            html.AppendLine("                        <th rowspan=\"2\">#</th>");
             html.AppendLine("                        <th rowspan=\"2\">Beat</th>");
             html.AppendLine("                        <th rowspan=\"2\">Hand</th>");
             html.AppendLine("                        <th rowspan=\"2\">Pattern</th>");
             html.AppendLine("                        <th colspan=\"4\">Speed Components</th>");
-            html.AppendLine("                        <th colspan=\"3\">Stress Components</th>");
+            html.AppendLine("                        <th colspan=\"4\">Stress Components</th>");
             html.AppendLine("                        <th colspan=\"3\">Multipliers</th>");
             html.AppendLine("                        <th rowspan=\"2\">Final<br/>SwingDiff</th>");
             html.AppendLine("                    </tr>");
             html.AppendLine("                    <tr>");
             html.AppendLine("                        <th>Frequency</th>");
-            html.AppendLine("                        <th>Hit<br/>Distance</th>");
+            html.AppendLine("                        <th>BPS</th>");
             html.AppendLine("                        <th>Distance<br/>Difficulty</th>");
             html.AppendLine("                        <th>Speed</th>");
             html.AppendLine("                        <th>Angle<br/>Strain</th>");
-            html.AppendLine("                        <th>Path<br/>Strain</th>");
+            html.AppendLine("                        <th>Repo<br/>Distance</th>");
+            html.AppendLine("                        <th>Rota<br/>Amount</th>");
             html.AppendLine("                        <th>Stress</th>");
-            html.AppendLine("                        <th>IsLinear</th>");
             html.AppendLine("                        <th>Speed<br/>Falloff</th>");
             html.AppendLine("                        <th>Stress<br/>Mult</th>");
             html.AppendLine("                        <th>Buffs</th>");
@@ -266,17 +267,17 @@ namespace Benchmark
                 string buffsText = GetBuffsText(swing);
 
                 html.AppendLine("                    <tr>");
-                html.AppendLine($"                        <td>{i + 1}</td>");
                 html.AppendLine($"                        <td>{swing.Cubes[0].JsonTime:F2}</td>");
                 html.AppendLine($"                        <td class=\"{handClass}\">{(swing.Cubes[0].Type == 0 ? "Red" : "Blue")}</td>");
                 html.AppendLine($"                        <td>{swing.PatternType}</td>");
                 html.AppendLine($"                        <td>{swing.SwingFrequency:F3}</td>");
-                html.AppendLine($"                        <td>{swing.HitDistance:F3}</td>");
+                html.AppendLine($"                        <td>{bps:F3}</td>");
                 html.AppendLine($"                        <td>{swing.DistanceDiff:F3}</td>");
                 html.AppendLine($"                        <td>{swing.SwingSpeed:F3}</td>");
-                html.AppendLine($"                        <td>{swing.AngleStrain:F3}</td>");
+                html.AppendLine($"                        <td>{swing.AngleStrain * 0.05:F3}</td>");
+                html.AppendLine($"                        <td>{swing.RepositioningDistance * 1.4:F3}</td>");
+                html.AppendLine($"                        <td>{swing.RotationAmount * 0.2:F3}</td>");
                 html.AppendLine($"                        <td>{swing.Stress:F3}</td>");
-                html.AppendLine($"                        <td>{swing.IsLinear:F3}</td>");
                 html.AppendLine($"                        <td>{swing.LowSpeedFalloff:F3}</td>");
                 html.AppendLine($"                        <td>{swing.StressMultiplier:F3}</td>");
                 html.AppendLine($"                        <td title=\"{buffsText}\">{GetBuffsMultiplier(swing):F3}</td>");

@@ -291,13 +291,11 @@ namespace Benchmark
             string sourceChoice = Console.ReadLine()?.Trim();
 
             string input;
-            bool isFile = false;
 
             if (sourceChoice == "2")
             {
                 Console.Write("Enter path (zip file or extracted folder): ");
                 input = Console.ReadLine()?.Trim();
-                isFile = true;
             }
             else
             {

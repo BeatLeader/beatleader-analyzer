@@ -121,15 +121,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
 
             // Normalize angles between swings based on angle tolerance
-            // Skip multi-note patterns as they are already geometrically normalized in preprocessing
+            // Recalculate entry and exit position
             // Skip notes with bomb avoidance as they have special direction calculation
             for (int i = 1; i < swingData.Count; i++)
             {
-                if (swingData[i].Cubes[0].Pattern && swingData[i].Cubes[0].Head)
-                {
-                    continue;
-                }
-
                 if (swingData[i].Cubes[0].BombAvoidance)
                 {
                     continue;
@@ -280,10 +275,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swing.Cubes[j].Head = j == 0;
                     swing.Cubes[j].Tail = j == swing.Cubes.Count - 1;
                 }
-
-                // Recalculate entry and exit positions based on swing direction and all notes of the group positions
-                CalcEntryExit(swing);
-                CalcMultiNoteExit(swing, strictAngles);
             }
         }
     }
