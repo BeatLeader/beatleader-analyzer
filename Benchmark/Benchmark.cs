@@ -25,7 +25,7 @@ namespace Benchmark
         [GlobalSetup]
         public void Globalsetup()
         {
-            map = new Parse().TryDownloadLink(@"https://r2cdn.beatsaver.com/417f22a92dc4efb0750a4ea538e45eaf50ce628b.zip")[^1];
+            map = new Parse().TryDownloadLink(@"https://r2cdn.beatsaver.com/417f22a92dc4efb0750a4ea538e45eaf50ce628b.zip");
             analyzer = new Analyze();
         }
 

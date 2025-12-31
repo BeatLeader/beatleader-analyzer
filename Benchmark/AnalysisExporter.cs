@@ -57,7 +57,7 @@ namespace Benchmark
         public void ExportFromUrl(string beatSaverUrl, string outputPath = null)
         {
             Console.WriteLine($"Downloading map from: {beatSaverUrl}");
-            var map = new Parse().TryDownloadLink(beatSaverUrl).LastOrDefault();
+            var map = new Parse().TryDownloadLink(beatSaverUrl);
 
             if (map == null)
             {
@@ -93,8 +93,7 @@ namespace Benchmark
                         fileStream.CopyTo(memoryStream);
                         memoryStream.Position = 0;
                         
-                        var maps = parser.TryLoadZip(memoryStream);
-                        map = maps?.LastOrDefault();
+                        map = parser.TryLoadZip(memoryStream);
                     }
                 }
                 else
@@ -145,8 +144,7 @@ namespace Benchmark
                         fileStream.CopyTo(memoryStream);
                         memoryStream.Position = 0;
                         
-                        var maps = parser.TryLoadZip(memoryStream);
-                        map = maps?.LastOrDefault();
+                        map = parser.TryLoadZip(memoryStream);
                     }
                 }
                 else
@@ -885,7 +883,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             outputPath ??= "detailed_swings.html";
 
             Console.WriteLine($"Downloading map from: {beatSaverUrl}");
-            var map = new Parse().TryDownloadLink(beatSaverUrl).LastOrDefault();
+            var map = new Parse().TryDownloadLink(beatSaverUrl);
 
             if (map == null)
             {
@@ -957,7 +955,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             outputPath ??= "detailed_swings_all.html";
 
             Console.WriteLine($"Downloading map from: {beatSaverUrl}");
-            var map = new Parse().TryDownloadLink(beatSaverUrl).LastOrDefault();
+            var map = new Parse().TryDownloadLink(beatSaverUrl);
 
             if (map == null)
             {
@@ -1022,8 +1020,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                         fileStream.CopyTo(memoryStream);
                         memoryStream.Position = 0;
                         
-                        var maps = parser.TryLoadZip(memoryStream);
-                        map = maps?.LastOrDefault();
+                        map = parser.TryLoadZip(memoryStream);
                     }
                 }
                 else
@@ -1093,6 +1090,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                 Parity = s.Forehand ? "Forehand" : "Backhand",
                 PatternType = s.PatternType,
                 ParityError = s.ParityErrors,
+                IsLinear = s.IsLinear,
                 BombAvoidance = s.BombAvoidance,
                 Difficulty = Math.Round(s.SwingDiff, 3)
             }).ToList());
@@ -1336,6 +1334,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                             <th class=""sortable"" data-column=""Parity"" data-type=""string"">Parity</th>
                             <th class=""sortable"" data-column=""PatternType"" data-type=""string"">Pattern Type</th>
                             <th>Flags</th>
+                            <th class=""sortable"" data-column=""IsLinear"" data-type=""bool"">IsLinear</th>
                             <th class=""sortable"" data-column=""Difficulty"" data-type=""number"">Difficulty</th>
                         </tr>
                     </thead>
@@ -1368,6 +1367,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                         ${{swing.ParityError ? '<span class=""badge badge-reset"">PE</span>' : ''}}
                         ${{swing.BombAvoidance ? '<span class=""badge badge-reset"">BA</span>' : ''}}
                     </td>
+                    <td class=""sortable"" data-column=""IsLinear"" data-type=""bool"">${{swing.IsLinear}}</td>
                     <td><strong>${{swing.Difficulty}}</strong></td>
                 </tr>
             `).join('');
@@ -1552,7 +1552,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
             outputPath ??= "difficulty_breakdown.html";
 
             Console.WriteLine($"Downloading map from: {beatSaverUrl}");
-            var map = new Parse().TryDownloadLink(beatSaverUrl).LastOrDefault();
+            var map = new Parse().TryDownloadLink(beatSaverUrl);
 
             if (map == null)
             {
@@ -1605,9 +1605,8 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                     {
                         fileStream.CopyTo(memoryStream);
                         memoryStream.Position = 0;
-                        
-                        var maps = parser.TryLoadZip(memoryStream);
-                        map = maps?.LastOrDefault();
+
+                        map = parser.TryLoadZip(memoryStream);
                     }
                 }
                 else
@@ -1673,8 +1672,7 @@ public void ExportDetailedSwingData(string beatSaverUrl, string characteristic, 
                         fileStream.CopyTo(memoryStream);
                         memoryStream.Position = 0;
                         
-                        var maps = parser.TryLoadZip(memoryStream);
-                        map = maps?.LastOrDefault();
+                        map = parser.TryLoadZip(memoryStream);
                     }
                 }
                 else
