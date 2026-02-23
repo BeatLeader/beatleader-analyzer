@@ -17,7 +17,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class AnalyzeMap
     {
-        private const double PASS_CALIBRATION_FACTOR = 0.795;
+        private const double PASS_CALIBRATION_FACTOR = 0.825;
         private const double ONE_SABER_NERF = 0.5;
         private const double BALANCED_TECH_SCALER = 14.0;
 

@@ -51,7 +51,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swingSpeed *= PARITY_ERROR_MULTIPLIER;
                 }
 
-                double stress = (swing.AngleStrain * 0.05 + swing.RepositioningDistance * 1.4 + swing.RotationAmount * 0.2) * distanceDiff;
+                double stress = (swing.AngleStrain * 0.05 + swing.RepositioningDistance * 0.3 + swing.RotationAmount * 0.2) * distanceDiff;
 
                 // https://www.desmos.com/calculator/nl9wpe3fdo
                 double lowSpeedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
