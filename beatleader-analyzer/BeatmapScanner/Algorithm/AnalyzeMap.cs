@@ -187,10 +187,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return ratings;
         }
 
-        // https://www.desmos.com/calculator/mmn1dmczhz
+        // https://www.desmos.com/calculator/i4mh0n2ttd
         private static double CalculateLowNoteNerf(int noteCount)
         {
-            return 1.0 / (1.0 + Math.Pow(Math.E, -1.4 - (noteCount / 50.0)));
+            double clamped = Math.Max(20, Math.Min(200, noteCount));
+            return 0.6 + (clamped - 20) / 450.0;
         }
 
         private const double STACK_VALUE = 1.05;
