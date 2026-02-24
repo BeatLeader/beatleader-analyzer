@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net48;net9.0</TargetFrameworks>
+    <TargetFrameworks>net9.0</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  <LangVersion>latest</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,13 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\beatleader-analyzer\Analyzer.csproj" />
-  </ItemGroup>
-  
-
-  <ItemGroup>
-    <Reference Include="Parser">
-      <HintPath>..\beatleader-analyzer\dll\Parser.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\Parser\beatleader-parser\Parser.csproj" />
   </ItemGroup>
 
 </Project>

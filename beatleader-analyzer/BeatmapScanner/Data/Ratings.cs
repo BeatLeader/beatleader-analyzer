@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Analyzer.BeatmapScanner.Data;
+using Parser.Map.Difficulty.V3.Grid;
+using System.Collections.Generic;
 
 namespace beatleader_analyzer.BeatmapScanner.Data
 {
@@ -6,33 +8,15 @@ namespace beatleader_analyzer.BeatmapScanner.Data
     {
         public string Characteristic { get; set; }
         public string Difficulty { get; set; }
-        public double Pass { get; set; }
-        public double Tech { get; set; }
-        public double Nerf { get; set; }
-        public List<PerSwing> PerSwing { get; set; }
-
-        public Ratings(string characteristic, string difficulty, List<double> ratings, List<PerSwing> perSwing)
-        {
-            Characteristic = characteristic;
-            Difficulty = difficulty;
-            Pass = ratings[0];
-            Tech = ratings[1];
-            Nerf = ratings[2];
-            PerSwing = perSwing;
-        }
-    }
-
-    public class PerSwing
-    {
-        public double Time { get; set; }
-        public double Pass { get; set; }
-        public double Tech { get; set; }
-
-        public PerSwing(double time, double pass, double tech)
-        {
-            Time = time;
-            Pass = pass;
-            Tech = tech;
-        }
+        public double PassRating { get; set; }
+        public double TechRating { get; set; }
+        public double MultiRating { get; set; }
+        public double LinearPercentage { get; set; }
+        public double PeakSustainedEBPM { get; set; }
+        public double LowNoteNerf { get; set; }
+        public Statistics Statistics { get; set; } = new Statistics();
+        public List<SwingData> SwingData { get; set; } = new List<SwingData>();
+        public List<Wall> DodgeWalls { get; set; } = new List<Wall>();
+        public List<Wall> CrouchWalls { get; set; } = new List<Wall>();
     }
 }
