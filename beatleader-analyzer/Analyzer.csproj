@@ -16,8 +16,8 @@
     <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Parser\beatleader-parser\Parser.csproj" />
+  <ItemGroup Condition="'$(ParserProjectPath)' != ''">
+    <ProjectReference Include="$(ParserProjectPath)" />
   </ItemGroup>
 
 </Project>
