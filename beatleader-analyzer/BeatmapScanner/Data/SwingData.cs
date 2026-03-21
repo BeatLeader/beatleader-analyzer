@@ -17,6 +17,7 @@ namespace Analyzer.BeatmapScanner.Data
         public bool ParityErrors { get; set; } = false;
         public bool BombAvoidance { get; set; } = false;
         public bool IsLinear { get; set; } = false;
+        public bool FalsePositive { get; set; } = false;
         public double AngleStrain { get; set; } = 0;
         public double RepositioningDistance { get; set; } = 0;
         public double RotationAmount { get; set; } = 0;

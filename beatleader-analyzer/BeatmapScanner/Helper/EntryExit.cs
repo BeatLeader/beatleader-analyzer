@@ -136,11 +136,14 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             const double ROLLOFF_MIN = 1.5;
             const double ROLLOFF_MAX = 15.0;
 
-            double bps = modifiers.modifiedBPM / 60;
-            double sps = current.SwingFrequency * bps;
+            double sps = current.SwingFrequency;
 
             // https://www.desmos.com/calculator/cxt6aehw0h
-            double rolloff = Math.Clamp(0.05 * sps * sps + 0.25 * sps + 1.2, ROLLOFF_MIN, ROLLOFF_MAX);
+            double rolloff = Math.Clamp(
+                0.05 * sps * sps + 0.25 * sps + 1.2,
+                ROLLOFF_MIN,
+                ROLLOFF_MAX
+            );
 
             // https://www.desmos.com/calculator/wal5fknd9f
             double angleAdjust = tolerance * angleDiff / Math.Pow(Math.Pow(Math.Abs(angleDiff), rolloff) + Math.Pow(tolerance, rolloff), 1 / rolloff);

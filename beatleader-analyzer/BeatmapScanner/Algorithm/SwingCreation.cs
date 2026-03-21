@@ -114,7 +114,16 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 if (previousSwing != null)
                 {
-                    swing.SwingFrequency = 1 / (swing.BpmTime - previousSwing.BpmTime);
+                    float deltaTime = swing.Cubes[0].Seconds - previousSwing.Cubes[0].Seconds;
+                    if (deltaTime != 0)
+                    {
+                        swing.SwingFrequency = 1 / deltaTime;
+                        if (swing.ParityErrors) swing.SwingFrequency *= 2;
+                    }
+                    else // Error
+                    {
+                        swing.SwingFrequency = 64;
+                    }
                 }
 
                 previousSwing = swing;

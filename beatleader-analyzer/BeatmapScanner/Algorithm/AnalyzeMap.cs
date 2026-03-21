@@ -55,7 +55,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
             
-            combinedSwingData.Sort((a, b) => a.BpmTime.CompareTo(b.BpmTime));
+            combinedSwingData.Sort((a, b) => a.Cubes[0].Seconds.CompareTo(b.Cubes[0].Seconds));
             double balancedPass = 0.0;
             double balancedTech = 0.0;
 
@@ -66,11 +66,23 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (combinedSwingData.Count > 0)
             {
-                // Use all classified walls for difficulty calculation
-                Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
-                
                 redSwingData = combinedSwingData.Where(x => x.Cubes[0].Type == 0).ToList();
                 blueSwingData = combinedSwingData.Where(x => x.Cubes[0].Type == 1).ToList();
+
+                // peakSustainedEBPM will be used to determine if a ParityError is a FalsePositive.
+                if (redSwingData.Count > 1)
+                {
+                    peakSustainedEBPM = CalculatePeakSustainedEBPM(redSwingData);
+                }
+                if (blueSwingData.Count > 1)
+                {
+                    peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData), peakSustainedEBPM);
+                }
+
+                DetermineFalsePositive(combinedSwingData, peakSustainedEBPM);
+
+                // Use all classified walls for difficulty calculation
+                Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
 
                 var windowSizes = new HashSet<int> { 8, 16, 32, 64, 128 };
                 double passDiffRed = 0.0;
@@ -82,12 +94,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     if (redSwingData.Count > 1)
                     {
                         passDiffRed += Difficulty.CalcAverage(redSwingData, windowSize / 2).Select(x => x.Pass).Max();
-                        peakSustainedEBPM = CalculatePeakSustainedEBPM(redSwingData, modifiers);
                     }
                     if (blueSwingData.Count > 1)
                     {
                         passDiffBlue += Difficulty.CalcAverage(blueSwingData, windowSize / 2).Select(x => x.Pass).Max();
-                        peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData, modifiers), peakSustainedEBPM);
                     }
                     passDiffCombined += Difficulty.CalcAverage(combinedSwingData, windowSize).Select(x => x.Pass).Max();
                 }
@@ -119,6 +129,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swing.RepositioningDistance *= buff;
                     swing.RotationAmount *= buff;
                     swing.SwingTech = swing.AngleStrain + swing.RepositioningDistance + swing.RotationAmount;
+                    if (swing.ParityErrors) swing.SwingTech /= 2;
                 }
 
                 combinedSwingData.Sort(CompareSwingTech);
@@ -210,29 +221,51 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private static readonly Comparer<SwingData> CompareSwingTech = 
             Comparer<SwingData>.Create((a, b) => (a.SwingTech).CompareTo(b.SwingTech));
 
-        private static double CalculatePeakSustainedEBPM(List<SwingData> swingData, Modifiers modifiers)
+        private static double CalculatePeakSustainedEBPM(List<SwingData> swingData)
         {
             if (swingData.Count == 0)
                 return 0.0;
 
-            double bpm = modifiers.modifiedBPM;
-
             int windowSize = Math.Min(4, swingData.Count);
             double maxEbpm = 0.0;
+
             for (int i = 0; i <= swingData.Count - windowSize; i++)
             {
-                double ebpmSum = 0.0;
+                double freqSum = 0.0;
+
                 for (int j = i; j < i + windowSize; j++)
                 {
-                    ebpmSum += swingData[j].SwingFrequency * (bpm / 2);
+                    freqSum += swingData[j].SwingFrequency; // already 1 / seconds
                 }
-                double averageEbpm = ebpmSum / windowSize;
-                if (averageEbpm > maxEbpm)
+
+                double avgFrequency = freqSum / windowSize;
+
+                // Convert Hz → BPM
+                // Divided by 2 because it's 1 swing per half beat in Beat Saber
+                double ebpm = avgFrequency * 60.0 / 2;
+
+                if (ebpm > maxEbpm)
                 {
-                    maxEbpm = averageEbpm;
+                    maxEbpm = ebpm;
                 }
             }
+
             return maxEbpm;
+        }
+
+        private static void DetermineFalsePositive(List<SwingData> swingData, double peakSustainedEbpm)
+        {
+            foreach(var swing in swingData)
+            {
+                double swingEbpm = swing.SwingFrequency * 60.0 / 2;
+
+                // The swing is above expected EBPM, flag as FalsePositive
+                if (swingEbpm > peakSustainedEbpm + 1 && swing.ParityErrors)
+                {
+                    swing.FalsePositive = true;
+                    swing.SwingFrequency /= 2;
+                }
+            }
         }
 
         private static double AverageSwingTech(Span<SwingData> list)

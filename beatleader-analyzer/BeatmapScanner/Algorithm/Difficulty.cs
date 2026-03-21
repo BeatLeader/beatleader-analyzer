@@ -32,8 +32,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return;
             }
 
-            // Swing is in BpmTime, so we don't have to worry about BPM changes here
-            double bps = modifiers.modifiedBPM / 60.0;
             int? previousHand = null;
 
             var wallBuffs = (dodgeWalls != null || crouchWalls != null) ? AnalyzeWallInfluence(swingData, dodgeWalls, crouchWalls) : new Dictionary<int, double>();
@@ -45,11 +43,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // https://www.desmos.com/calculator/mshzoffzgs
                 double distanceDiff = swing.HitDistance / (swing.HitDistance + DISTANCE_FALLOFF) + 1;
 
-                double swingSpeed = swing.SwingFrequency * distanceDiff * bps;
-                if (swing.ParityErrors)
-                {
-                    swingSpeed *= PARITY_ERROR_MULTIPLIER;
-                }
+                double swingSpeed = swing.SwingFrequency * distanceDiff * modifiers.speedMult;
 
                 double stress = (swing.AngleStrain * 0.05 + swing.RepositioningDistance * 0.3 + swing.RotationAmount * 0.2) * distanceDiff;
 
