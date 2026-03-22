@@ -36,7 +36,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             {
                 // Classify wall based on what it blocks
                 bool coverX1 = wall.x <= 1 && wall.x + wall.Width > 1;
-                bool coverX2 = wall.x <= 1 && wall.x + wall.Width > 2 || wall.x == 2 && wall.Width >= 1;
+                bool coverX2 = (wall.x <= 1 && wall.x + wall.Width > 2) || (wall.x == 2 && wall.Width >= 1);
 
                 // Clear blocked wall
                 if (X1Wall != null && !coverX1 && isX1Blocked && wall.Seconds > X1Wall.Seconds)
