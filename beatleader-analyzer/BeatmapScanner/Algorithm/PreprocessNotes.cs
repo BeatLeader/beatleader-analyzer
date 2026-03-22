@@ -73,14 +73,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     // 1 = No distance, 2 = window, 3 = full grid
                     float gridDistance = Math.Max(Math.Max(Math.Abs(previous.X - cubes[j].X), Math.Abs(previous.Y - cubes[j].Y)), 1);
 
-                    // Some maps have reversed sliders, so distance <= 0.1f is a catch-all.
+                    // Some maps have reversed sliders, so distance <= 0.2f is a catch-all.
                     // Example map: Meowchine, Break, Grave of the Fireflies.
                     // 1.3f is for G1ll35 d3 R415 specifically (0.070s dot inline at 18NJS).
                     // Might be unnecessary, but it's overweighted otherwise.
                     // Example map with slow sliders: Alone intelligence, Lost It (require 1.2f), etc.
                     // Map with high EBPM dot placement: CHUTEN, Apocalyse Simulator v2.0
                     isSlider = ValidateSliders(previous, cubes[j]);
-                    if ((distance < 1.3f && isSlider && cubes[j].JsonTime - previous.JsonTime <= expectedDuration * gridDistance * 2) || distance <= 0.1f)
+                    if ((distance < 1.3f && isSlider && cubes[j].JsonTime - previous.JsonTime <= expectedDuration * gridDistance * 2) || distance <= 0.2f)
                     {
                         if (expectedDuration == 1000)
                         {
