@@ -27,12 +27,31 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             Wall lastDodgeWall = null;
             Wall lastCrouchWall = null;
 
+            bool isX1Blocked = false;
+            Wall X1Wall = null;
+            bool isX2Blocked = false;
+            Wall X2Wall = null;
+
             foreach (var wall in wallsByTime)
             {
                 // Classify wall based on what it blocks
-                bool coversCenter = wall.x <= 1 && wall.x + wall.Width > 1 || wall.x == 2 && wall.Width >= 1;
-                
-                if (!coversCenter)
+                bool coverX1 = wall.x <= 1 && wall.x + wall.Width > 1;
+                bool coverX2 = wall.x <= 1 && wall.x + wall.Width > 2 || wall.x == 2 && wall.Width >= 1;
+
+                // Clear blocked wall
+                if (X1Wall != null && !coverX1 && isX1Blocked && wall.Seconds > X1Wall.Seconds)
+                {
+                    isX1Blocked = false;
+                    X1Wall = null;
+                }
+
+                if (X2Wall != null && !coverX2 && isX2Blocked && wall.Seconds > X2Wall.Seconds)
+                {
+                    isX2Blocked = false;
+                    X2Wall = null;
+                }
+
+                if (!coverX1 && !coverX2)
                 {
                     // Wall doesn't affect center lanes, skip
                     continue;
@@ -42,11 +61,12 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 bool isOverhead = wall.y + wall.Height > 2 && wall.y == 2;
 
                 // Check if this blocks at standing height (dodge wall)
-                bool blocksStanding = wall.Height + wall.y >= 3;
+                bool blocksStanding = wall.Height + wall.y >= 3 && wall.y <= 0;
 
-                if (isOverhead && !blocksStanding)
+                // The player will only crouch if both side are covered
+                if (isOverhead && !blocksStanding && ((coverX1 && isX2Blocked) || (isX1Blocked && coverX2) || (coverX1 && coverX2)))
                 {
-                    // Pure crouch wall (overhead but doesn't block standing)
+                    // Crouch wall (overhead)
                     if (lastCrouchWall != null && wall.Seconds - (lastCrouchWall.Seconds + lastCrouchWall.DurationInSeconds) < DODGE_COOLDOWN_SECONDS)
                     {
                         // Extend previous crouch by creating a new wall with extended duration
@@ -76,10 +96,21 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                         crouchWallsList.Add(wall);
                         lastCrouchWall = wall;
                     }
+
+                    if (coverX1)
+                    {
+                        isX1Blocked = true;
+                        X1Wall = lastCrouchWall;
+                    }
+                    if (coverX2)
+                    {
+                        isX2Blocked = true;
+                        X2Wall = lastCrouchWall;
+                    }
                 }
                 else if (blocksStanding)
                 {
-                    // Dodge wall (blocks at standing height)
+                    // Dodge wall (blocks full height)
                     if (lastDodgeWall != null && wall.Seconds - (lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds) < TIME_TOLERANCE)
                     {
                         // Extend previous dodge by creating a new wall with extended duration
@@ -108,6 +139,17 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                         // New dodge action
                         dodgeWallsList.Add(wall);
                         lastDodgeWall = wall;
+                    }
+
+                    if (coverX1)
+                    {
+                        isX1Blocked = true;
+                        X1Wall = lastDodgeWall;
+                    }
+                    if (coverX2)
+                    {
+                        isX2Blocked = true;
+                        X2Wall = lastDodgeWall;
                     }
                 }
             }
