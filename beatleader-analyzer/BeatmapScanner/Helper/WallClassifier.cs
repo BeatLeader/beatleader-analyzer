@@ -20,8 +20,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 return (dodgeWallsList, crouchWallsList, 0, 0, 0, 0);
             }
 
-            // Sort walls by time
-            var wallsByTime = walls.OrderBy(w => w.Seconds).ToList();
+            // Sort walls by time, then prioritize non-crouch walls
+            var wallsByTime = walls.OrderBy(w => w.Seconds).ThenBy(x => x.y).ToList();
 
             Wall lastDodgeWall = null;
             Wall lastCrouchWall = null;
@@ -232,8 +232,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                     }
                 }
             }
-
-
 
             float dodgeDuration = 0;
             float crouchDuration = 0;
