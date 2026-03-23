@@ -54,7 +54,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 if (x2Wall != null && wall.Seconds > x2Wall.Seconds + x2Wall.DurationInSeconds + X2ExtraDuration)
                 {
                     if (xPosition == -1) xPosition = 0;
-                    if (X1ExtraDuration == RESET_TO_NEUTRAL_CROUCH) yPosition = 1;
+                    if (X2ExtraDuration == RESET_TO_NEUTRAL_CROUCH) yPosition = 1;
                 }
 
                 // Clear blocked wall
@@ -90,7 +90,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 // The player will only crouch if both side are covered
                 if (isOverhead && !blocksStanding && ((coverX1 && isX2Blocked) || (isX1Blocked && coverX2) || (coverX1 && coverX2)))
                 {
-                    if (lastDodgeWall != null && lastDodgeWall.y + lastDodgeWall.Height > 2 && lastDodgeWall.y == 2 &&
+                    if (lastDodgeWall != null && lastDodgeWall.y == 2 &&
                         wall.Seconds - (lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds) < 0.5)
                     {
                         // Convert previous overhead dodge by creating a new wall with extended duration
@@ -100,6 +100,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                         {
                             newDuration = wallEnd - lastDodgeWall.Seconds;
                         }
+
+                        var oldDodgeWall = lastDodgeWall;
 
                         // Create a new wall object with the extended duration
                         var mergedWall = new Wall
@@ -119,6 +121,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                         lastCrouchWall = mergedWall;
                         dodgeWallsList.Remove(lastDodgeWall);
                         lastDodgeWall = dodgeWallsList.LastOrDefault();
+
+                        // Update lane trackers that pointed at the replaced wall
+                        if (x1Wall == oldDodgeWall) x1Wall = mergedWall;
+                        if (x2Wall == oldDodgeWall) x2Wall = mergedWall;
                     }
                     else if (lastCrouchWall != null && wall.Seconds - (lastCrouchWall.Seconds + lastCrouchWall.DurationInSeconds) < RESET_TO_NEUTRAL_CROUCH)
                     {
@@ -129,7 +135,9 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                         {
                             newDuration = wallEnd - lastCrouchWall.Seconds;
                         }
-                        
+
+                        var oldCrouchWall = lastCrouchWall;
+
                         // Create a new wall object with the extended duration
                         var mergedWall = new Wall
                         {
@@ -146,6 +154,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                         // Replace the last crouch wall with the merged one
                         crouchWallsList[crouchWallsList.Count - 1] = mergedWall;
                         lastCrouchWall = mergedWall;
+
+                        // Update lane trackers that pointed at the replaced wall
+                        if (x1Wall == oldCrouchWall) x1Wall = mergedWall;
+                        if (x2Wall == oldCrouchWall) x2Wall = mergedWall;
                     }
                     else
                     {
@@ -170,7 +182,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 {
                     // Extend dodge, otherwise create new dodge
                     if (lastDodgeWall != null && wall.Seconds - (lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds) < 0.5
-                        && ((coverX1 && xPosition == 1) || (coverX2 && xPosition == -1)))
+                        && ((coverX1 && (xPosition == 1 || xPosition == 2)) || (coverX2 && (xPosition == -1 || xPosition == 2))))
                     {
                         // Extend previous dodge by creating a new wall with extended duration
                         float wallEnd = wall.Seconds + wall.DurationInSeconds;
@@ -179,6 +191,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                         {
                             newDuration = wallEnd - lastDodgeWall.Seconds;
                         }
+
+                        var oldDodgeWall = lastDodgeWall;
 
                         // Create a new wall object with the extended duration
                         var mergedWall = new Wall
@@ -196,6 +210,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                         // Replace the last dodge wall with the merged one
                         dodgeWallsList[dodgeWallsList.Count - 1] = mergedWall;
                         lastDodgeWall = mergedWall;
+
+                        // Update lane trackers that pointed at the replaced wall
+                        if (x1Wall == oldDodgeWall) x1Wall = mergedWall;
+                        if (x2Wall == oldDodgeWall) x2Wall = mergedWall;
                     }
                     else
                     {
