@@ -1,4 +1,3 @@
-using beatleader_parser.Timescale;
 using Parser.Map.Difficulty.V3.Grid;
 using System;
 using System.Collections.Generic;
@@ -11,14 +10,14 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         private const float RESET_TO_NEUTRAL_DODGE = 0.1f;
         private const float RESET_TO_NEUTRAL_CROUCH = 0.5f;
 
-        public static (List<Wall> dodgeWallsAll, List<Wall> crouchWallsAll, int dodgeWallsCount, int crouchWallsCount) ClassifyWalls(List<Wall> walls)
+        public static (List<Wall> dodgeWallsAll, List<Wall> crouchWallsAll, int dodgeWallsCount, int crouchWallsCount, float dodgeDuration, float crouchDuration) ClassifyWalls(List<Wall> walls)
         {
             var dodgeWallsList = new List<Wall>();
             var crouchWallsList = new List<Wall>();
 
             if (walls == null || walls.Count == 0)
             {
-                return (dodgeWallsList, crouchWallsList, 0, 0);
+                return (dodgeWallsList, crouchWallsList, 0, 0, 0, 0);
             }
 
             // Sort walls by time
@@ -28,35 +27,52 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             Wall lastCrouchWall = null;
 
             bool isX1Blocked = false;
-            bool X1Type = false; // If true = crouch wall, if false = dodge wall
-            Wall X1Wall = null;
+            Wall x1Wall = null;
             bool isX2Blocked = false;
-            bool X2Type = false; // If true = crouch wall, if false = dodge wall
-            Wall X2Wall = null;
+            Wall x2Wall = null;
+            int xPosition = 0; // -1 left, 0 neutral, 1 right
+            int yPosition = 1; // 0 crouch, 1 standing
 
             foreach (var wall in wallsByTime)
             {
                 // Classify wall based on what it blocks
                 bool coverX1 = wall.x <= 1 && wall.x + wall.Width > 1;
-                bool coverX2 = (wall.x <= 1 && wall.x + wall.Width > 2) || (wall.x == 2 && wall.Width >= 1);
+                bool coverX2 = wall.x <= 2 && wall.x + wall.Width > 2;
 
                 float X1ExtraDuration = RESET_TO_NEUTRAL_DODGE;
                 float X2ExtraDuration = RESET_TO_NEUTRAL_DODGE;
 
-                if (X1Type) X1ExtraDuration = RESET_TO_NEUTRAL_CROUCH;
-                if (X2Type) X2ExtraDuration = RESET_TO_NEUTRAL_CROUCH;
+                if (yPosition == 0) X1ExtraDuration = RESET_TO_NEUTRAL_CROUCH;
+                if (yPosition == 0) X2ExtraDuration = RESET_TO_NEUTRAL_CROUCH;
 
-                // Clear blocked wall
-                if (X1Wall != null && !coverX1 && isX1Blocked && wall.Seconds > X1Wall.Seconds + X1Wall.DurationInSeconds + X1ExtraDuration)
+                if (x1Wall != null && wall.Seconds > x1Wall.Seconds + x1Wall.DurationInSeconds + X1ExtraDuration)
                 {
-                    isX1Blocked = false;
-                    X1Wall = null;
+                    if (xPosition == 1) xPosition = 0;
+                    if (X1ExtraDuration == RESET_TO_NEUTRAL_CROUCH) yPosition = 1;
                 }
 
-                if (X2Wall != null && !coverX2 && isX2Blocked && wall.Seconds > X2Wall.Seconds + X2Wall.DurationInSeconds + X2ExtraDuration)
+                if (x2Wall != null && wall.Seconds > x2Wall.Seconds + x2Wall.DurationInSeconds + X2ExtraDuration)
+                {
+                    if (xPosition == -1) xPosition = 0;
+                    if (X1ExtraDuration == RESET_TO_NEUTRAL_CROUCH) yPosition = 1;
+                }
+
+                // Clear blocked wall
+                if (x1Wall != null && !coverX1 && isX1Blocked && wall.Seconds > x1Wall.Seconds + x1Wall.DurationInSeconds + X1ExtraDuration)
+                {
+                    isX1Blocked = false;
+                    x1Wall = null;
+                }
+
+                if (x2Wall != null && !coverX2 && isX2Blocked && wall.Seconds > x2Wall.Seconds + x2Wall.DurationInSeconds + X2ExtraDuration)
                 {
                     isX2Blocked = false;
-                    X2Wall = null;
+                    x2Wall = null;
+                }
+
+                if (!isX1Blocked && !isX2Blocked)
+                {
+                    xPosition = 0;
                 }
 
                 if (!coverX1 && !coverX2)
@@ -74,35 +90,16 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 // The player will only crouch if both side are covered
                 if (isOverhead && !blocksStanding && ((coverX1 && isX2Blocked) || (isX1Blocked && coverX2) || (coverX1 && coverX2)))
                 {
-                    // Crouch wall (overhead)
-                    if (lastCrouchWall != null && wall.Seconds - (lastCrouchWall.Seconds + lastCrouchWall.DurationInSeconds) < RESET_TO_NEUTRAL_CROUCH)
+                    if (lastDodgeWall != null && lastDodgeWall.y + lastDodgeWall.Height > 2 && lastDodgeWall.y == 2 &&
+                        wall.Seconds - (lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds) < 0.5)
                     {
-                        // Extend previous crouch by creating a new wall with extended duration
+                        // Convert previous overhead dodge by creating a new wall with extended duration
                         float wallEnd = wall.Seconds + wall.DurationInSeconds;
-                        float newDuration = wallEnd - lastCrouchWall.Seconds;
-                        
-                        // Create a new wall object with the extended duration
-                        var mergedWall = new Wall
+                        float newDuration = lastDodgeWall.DurationInSeconds;
+                        if (wallEnd > lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds)
                         {
-                            Beats = lastCrouchWall.Beats,
-                            Seconds = lastCrouchWall.Seconds,
-                            BpmTime = lastCrouchWall.BpmTime,
-                            DurationInSeconds = newDuration,
-                            x = lastCrouchWall.x,
-                            y = lastCrouchWall.y,
-                            Width = lastCrouchWall.Width,
-                            Height = lastCrouchWall.Height
-                        };
-                        
-                        // Replace the last crouch wall with the merged one
-                        crouchWallsList[crouchWallsList.Count - 1] = mergedWall;
-                        lastCrouchWall = mergedWall;
-                    }
-                    else if (lastDodgeWall != null && wall.Seconds - (lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds) < RESET_TO_NEUTRAL_DODGE)
-                    {
-                        // Extend previous dodge by creating a new wall with extended duration
-                        float wallEnd = wall.Seconds + wall.DurationInSeconds;
-                        float newDuration = wallEnd - lastDodgeWall.Seconds;
+                            newDuration = wallEnd - lastDodgeWall.Seconds;
+                        }
 
                         // Create a new wall object with the extended duration
                         var mergedWall = new Wall
@@ -117,40 +114,22 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                             Height = lastDodgeWall.Height
                         };
 
-                        // Replace the last dodge wall into a crouch wall instead
-                        dodgeWallsList.RemoveAt(dodgeWallsList.Count - 1);
+                        // Replace the last crouch wall with the merged one
                         crouchWallsList.Add(mergedWall);
                         lastCrouchWall = mergedWall;
+                        dodgeWallsList.Remove(lastDodgeWall);
+                        lastDodgeWall = dodgeWallsList.LastOrDefault();
                     }
-                    else
-                    {
-                        // New crouch action
-                        crouchWallsList.Add(wall);
-                        lastCrouchWall = wall;
-                    }
-
-                    if (coverX1)
-                    {
-                        isX1Blocked = true;
-                        X1Type = true;
-                        X1Wall = lastCrouchWall;
-                    }
-                    if (coverX2)
-                    {
-                        isX2Blocked = true;
-                        X2Type = true;
-                        X2Wall = lastCrouchWall;
-                    }
-                }
-                else if (isOverhead || blocksStanding)
-                {
-                    // Extend crouch, otherwise extend dodge, otherwise create new dodge
-                    if (lastCrouchWall != null && wall.Seconds - (lastCrouchWall.Seconds + lastCrouchWall.DurationInSeconds) < RESET_TO_NEUTRAL_CROUCH)
+                    else if (lastCrouchWall != null && wall.Seconds - (lastCrouchWall.Seconds + lastCrouchWall.DurationInSeconds) < RESET_TO_NEUTRAL_CROUCH)
                     {
                         // Extend previous crouch by creating a new wall with extended duration
                         float wallEnd = wall.Seconds + wall.DurationInSeconds;
-                        float newDuration = wallEnd - lastCrouchWall.Seconds;
-
+                        float newDuration = lastCrouchWall.DurationInSeconds;
+                        if (wallEnd > lastCrouchWall.Seconds + lastCrouchWall.DurationInSeconds)
+                        {
+                            newDuration = wallEnd - lastCrouchWall.Seconds;
+                        }
+                        
                         // Create a new wall object with the extended duration
                         var mergedWall = new Wall
                         {
@@ -163,17 +142,44 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                             Width = lastCrouchWall.Width,
                             Height = lastCrouchWall.Height
                         };
-
+                        
                         // Replace the last crouch wall with the merged one
                         crouchWallsList[crouchWallsList.Count - 1] = mergedWall;
                         lastCrouchWall = mergedWall;
                     }
-                    else if (lastDodgeWall != null && wall.Seconds - (lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds) < RESET_TO_NEUTRAL_DODGE)
+                    else
+                    {
+                        // New crouch action
+                        crouchWallsList.Add(wall);
+                        lastCrouchWall = wall;
+                        yPosition = 0;
+                    }
+
+                    if (coverX1)
+                    {
+                        isX1Blocked = true;
+                        x1Wall = lastCrouchWall;
+                    }
+                    if (coverX2)
+                    {
+                        isX2Blocked = true;
+                        x2Wall = lastCrouchWall;
+                    }
+                }
+                else // Potential dodge action
+                {
+                    // Extend dodge, otherwise create new dodge
+                    if (lastDodgeWall != null && wall.Seconds - (lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds) < 0.5
+                        && ((coverX1 && xPosition == 1) || (coverX2 && xPosition == -1)))
                     {
                         // Extend previous dodge by creating a new wall with extended duration
                         float wallEnd = wall.Seconds + wall.DurationInSeconds;
-                        float newDuration = wallEnd - lastDodgeWall.Seconds;
-                        
+                        float newDuration = lastDodgeWall.DurationInSeconds;
+                        if (wallEnd > lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds)
+                        {
+                            newDuration = wallEnd - lastDodgeWall.Seconds;
+                        }
+
                         // Create a new wall object with the extended duration
                         var mergedWall = new Wall
                         {
@@ -193,27 +199,56 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                     }
                     else
                     {
-                        // New dodge action
-                        dodgeWallsList.Add(wall);
-                        lastDodgeWall = wall;
-                    }
+                        if (xPosition == 0 || (xPosition == 1 && coverX2) || (xPosition == -1 && coverX1))
+                        {
+                            // New dodge action
+                            dodgeWallsList.Add(wall);
+                            lastDodgeWall = wall;
 
+                            if (coverX1)
+                            {
+                                xPosition = 1;
+                            }
+                            if (coverX2)
+                            {
+                                xPosition = -1;
+                            }
+                            if (coverX1 && coverX2)
+                            {
+                                xPosition = 2;
+                            }
+                        }
+                    }
+                    
                     if (coverX1)
                     {
                         isX1Blocked = true;
-                        X1Type = false;
-                        X1Wall = lastDodgeWall;
+                        x1Wall = lastDodgeWall;
                     }
                     if (coverX2)
                     {
                         isX2Blocked = true;
-                        X2Type = false;
-                        X2Wall = lastDodgeWall;
+                        x2Wall = lastDodgeWall;
                     }
                 }
             }
 
-            return (dodgeWallsList, crouchWallsList, dodgeWallsList.Count, crouchWallsList.Count);
+
+
+            float dodgeDuration = 0;
+            float crouchDuration = 0;
+
+            foreach (var wall in dodgeWallsList)
+            {
+                dodgeDuration += wall.DurationInSeconds + 0.1f;
+            }
+
+            foreach (var wall in crouchWallsList)
+            {
+                crouchDuration += wall.DurationInSeconds + 0.5f;
+            }
+
+            return (dodgeWallsList, crouchWallsList, dodgeWallsList.Count, crouchWallsList.Count, dodgeDuration, crouchDuration);
         }
     }
 }

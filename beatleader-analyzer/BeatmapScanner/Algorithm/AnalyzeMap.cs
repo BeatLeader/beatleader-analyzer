@@ -60,9 +60,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
             double balancedTech = 0.0;
 
             // Classify all walls (for difficulty calculation) and count unique dodge actions (for statistics)
-            var (dodgeWallsAll, crouchWallsAll, dodgeWallsCount, crouchWallsCount) = walls != null 
+            var (dodgeWallsAll, crouchWallsAll, dodgeWallsCount, crouchWallsCount, dodgeDuration, crouchDuration) = walls != null 
                 ? ClassifyWalls(walls) 
-                : (new List<Wall>(), new List<Wall>(), 0, 0);
+                : (new List<Wall>(), new List<Wall>(), 0, 0, 0, 0);
 
             if (combinedSwingData.Count > 0)
             {
@@ -168,7 +168,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 Windows = redMultiNotes.Windows + blueMultiNotes.Windows,
                 SlantedWindows = redMultiNotes.SlantedWindows + blueMultiNotes.SlantedWindows,
                 DodgeWalls = dodgeWallCount,
+                DodgeWallDuration = dodgeDuration,
                 CrouchWalls = crouchWallCount,
+                CrouchWallDuration = crouchDuration,
                 ParityErrors = parityErrorsCount,
                 BombAvoidances = bombAvoidanceCount,
                 LinearSwings = combinedSwingData.Count(s => s.IsLinear)

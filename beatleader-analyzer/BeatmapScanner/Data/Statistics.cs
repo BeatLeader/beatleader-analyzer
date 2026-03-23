@@ -9,7 +9,9 @@ namespace Analyzer.BeatmapScanner.Data
         public int Windows { get; set; } = 0;
         public int SlantedWindows { get; set; } = 0;
         public int DodgeWalls { get; set; } = 0;
+        public float DodgeWallDuration { get; set; } = 0;
         public int CrouchWalls { get; set; } = 0;
+        public float CrouchWallDuration { get; set; } = 0;
         public int ParityErrors { get; set; } = 0;
         public int BombAvoidances { get; set; } = 0;
         public int LinearSwings { get; set; } = 0;
