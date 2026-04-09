@@ -159,6 +159,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
             int parityErrorsCount = combinedSwingData.Count(s => s.ParityErrors);
             int bombAvoidanceCount = combinedSwingData.Count(s => s.BombAvoidance);
 
+            int chainCount = 0;
+            if (combinedSwingData.Count > 0)
+            {
+                chainCount = combinedSwingData.Where(x => x.Cubes[0].Chain).Count();
+            }
+
             var combinedStatistics = new Statistics
             {
                 Stacks = redMultiNotes.Stacks + blueMultiNotes.Stacks,
@@ -167,6 +173,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 CurvedSliders = redMultiNotes.CurvedSliders + blueMultiNotes.CurvedSliders,
                 Windows = redMultiNotes.Windows + blueMultiNotes.Windows,
                 SlantedWindows = redMultiNotes.SlantedWindows + blueMultiNotes.SlantedWindows,
+                Chains = chainCount,
                 DodgeWalls = dodgeWallCount,
                 DodgeWallDuration = dodgeDuration,
                 CrouchWalls = crouchWallCount,
@@ -177,10 +184,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
             };
 
             combinedSwingData.Sort((x, y) => x.BpmTime.CompareTo(y.BpmTime));
-            double multiRating = 0;
+            double multiPercentage = 0;
             if (combinedSwingData.Count > 0)
             {
-                multiRating = CalculateMultiNoteRating(combinedStatistics, combinedSwingData.Count);
+                multiPercentage = CalculateMultiNotePercentage(combinedStatistics, combinedSwingData.Count);
             }
 
             Ratings ratings = new Ratings
@@ -194,7 +201,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 CrouchWalls = crouchWallsAll,
                 LinearPercentage = combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count,
                 PeakSustainedEBPM = peakSustainedEBPM,
-                MultiRating = multiRating
+                MultiPercentage = multiPercentage
             };
 
             return ratings;
@@ -207,16 +214,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return 0.6 + (clamped - 20) / 450.0;
         }
 
-        private const double STACK_VALUE = 1.05;
-        private const double TOWER_VALUE = 1.1;
-        private const double SLIDER_VALUE = 1.05;
-        private const double CURVED_SLIDER_VALUE = 1.5;
-        private const double WINDOW_VALUE = 1.1;
-
-        private static double CalculateMultiNoteRating(Statistics stats, int swingCount)
+        private static double CalculateMultiNotePercentage(Statistics stats, int swingCount)
         {
-            double multiNoteHits = stats.Stacks * STACK_VALUE + stats.Towers * TOWER_VALUE + stats.Sliders * SLIDER_VALUE + stats.CurvedSliders * CURVED_SLIDER_VALUE +
-                                   (stats.Windows + stats.SlantedWindows) * WINDOW_VALUE;
+            double multiNoteHits = stats.Stacks + stats.Towers + stats.Sliders + stats.CurvedSliders +
+                                   stats.Windows + stats.SlantedWindows + stats.Chains;
             return multiNoteHits / swingCount;
         }
 

@@ -10,7 +10,7 @@ namespace beatleader_analyzer.BeatmapScanner.Data
         public string Difficulty { get; set; }
         public double PassRating { get; set; }
         public double TechRating { get; set; }
-        public double MultiRating { get; set; }
+        public double MultiPercentage { get; set; }
         public double LinearPercentage { get; set; }
         public double PeakSustainedEBPM { get; set; }
         public double LowNoteNerf { get; set; }

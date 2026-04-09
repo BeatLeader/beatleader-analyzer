@@ -8,6 +8,7 @@ namespace Analyzer.BeatmapScanner.Data
         public int CurvedSliders { get; set; } = 0;
         public int Windows { get; set; } = 0;
         public int SlantedWindows { get; set; } = 0;
+        public int Chains { get; set; } = 0;
         public int DodgeWalls { get; set; } = 0;
         public float DodgeWallDuration { get; set; } = 0;
         public int CrouchWalls { get; set; } = 0;
