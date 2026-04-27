@@ -9,6 +9,7 @@ using static beatleader_analyzer.BeatmapScanner.Helper.MultiNoteClassifier;
 using static beatleader_analyzer.BeatmapScanner.Helper.WallClassifier;
 using Parser.Map.Difficulty.V3.Grid;
 using beatleader_analyzer.BeatmapScanner.Helper;
+using beatleader_analyzer.BeatmapScanner.Algorithm;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -190,6 +191,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 multiPercentage = CalculateMultiNotePercentage(combinedStatistics, combinedSwingData.Count);
             }
 
+            // stamina calc
+            double staminaDiffLeft = StaminaCalculator.CalcStamina(redSwingData);
+            double staminaDiffRight = StaminaCalculator.CalcStamina(blueSwingData);
+            double stamina_rating = Math.Max(staminaDiffLeft, staminaDiffRight) * 0.9 + Math.Min(staminaDiffLeft, staminaDiffRight) * 0.1;
+
             Ratings ratings = new Ratings
             {
                 PassRating = balancedPass,
@@ -201,7 +207,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 CrouchWalls = crouchWallsAll,
                 LinearPercentage = combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count,
                 PeakSustainedEBPM = peakSustainedEBPM,
-                MultiPercentage = multiPercentage
+                MultiPercentage = multiPercentage,
+                StaminaRating = stamina_rating
             };
 
             return ratings;

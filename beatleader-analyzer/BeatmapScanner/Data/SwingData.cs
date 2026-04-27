@@ -10,6 +10,7 @@ namespace Analyzer.BeatmapScanner.Data
     {
         public List<Cube> Cubes { get; set; } = null!;
         public double BpmTime { get; set; } = 0;
+        public double Seconds { get; set; } = 0;
         public double Direction { get; set; } = 0;
         public (double x, double y) EntryPosition { get; set; } = (0, 0);
         public (double x, double y) ExitPosition { get; set; } = (0, 0);
@@ -28,6 +29,7 @@ namespace Analyzer.BeatmapScanner.Data
         public double Stress { get; set; } = 0;
         public double LowSpeedFalloff { get; set; } = 0;
         public double StressMultiplier { get; set; } = 0;
+        public double EnergyCost { get; set; } = 0;
         public double NjsBuff { get; set; } = 1.0;
         public double WallBuff { get; set; } = 1.0;
         public bool IsStream { get; set; } = false;
@@ -40,6 +42,7 @@ namespace Analyzer.BeatmapScanner.Data
             var start = cubes[0];
             Cubes = cubes;
             BpmTime = start.BpmTime;
+            Seconds = start.Seconds;
             Direction = start.Direction;
             Forehand = start.Forehand;
             ParityErrors = start.ParityErrors;
@@ -51,6 +54,7 @@ namespace Analyzer.BeatmapScanner.Data
             var start = cubes[0];
             Cubes = cubes;
             BpmTime = start.BpmTime;
+            Seconds = start.Seconds;
             Direction = direction;
             Forehand = forehand;
             ParityErrors = start.ParityErrors;
