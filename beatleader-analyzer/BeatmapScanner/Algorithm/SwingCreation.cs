@@ -284,6 +284,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swing.Cubes[j].Head = j == 0;
                     swing.Cubes[j].Tail = j == swing.Cubes.Count - 1;
                 }
+
+                // Keep SwingData.BpmTime in sync with the (possibly reordered) head cube
+                swing.BpmTime = swing.Cubes[0].BpmTime;
             }
         }
     }

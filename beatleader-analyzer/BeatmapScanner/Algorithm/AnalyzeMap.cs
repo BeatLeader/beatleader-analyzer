@@ -55,7 +55,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
             
-            combinedSwingData.Sort((a, b) => a.Cubes[0].Seconds.CompareTo(b.Cubes[0].Seconds));
+            combinedSwingData.Sort((a, b) =>
+            {
+                int cmp = a.Cubes[0].Seconds.CompareTo(b.Cubes[0].Seconds);
+                if (cmp != 0) return cmp;
+                return a.Cubes[0].Type.CompareTo(b.Cubes[0].Type);
+            });
+
             double balancedPass = 0.0;
             double balancedTech = 0.0;
 
@@ -183,7 +189,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 LinearSwings = combinedSwingData.Count(s => s.IsLinear)
             };
 
-            combinedSwingData.Sort((x, y) => x.BpmTime.CompareTo(y.BpmTime));
+            combinedSwingData.Sort((x, y) =>
+            {
+                int cmp = x.Cubes[0].BpmTime.CompareTo(y.Cubes[0].BpmTime);
+                if (cmp != 0) return cmp;
+                return x.Cubes[0].Type.CompareTo(y.Cubes[0].Type);
+            });
+
             double multiPercentage = 0;
             if (combinedSwingData.Count > 0)
             {
