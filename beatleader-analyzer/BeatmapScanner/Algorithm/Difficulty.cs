@@ -140,7 +140,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         {
             if (swingData.Count < 2)
             {
-                return [];
+                return new List<PerSwing> { new(swingData[0].BpmTime, 0, 0) };
             }
 
             var qDiff = new CircularBuffer(stackalloc double[WINDOW]);

@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace beatleader_analyzer
 {
-    public class Analyze
+    public static class Analyze
     {
         /// <summary>
         /// Analyzer entry point (for single difficulty)
@@ -21,7 +21,7 @@ namespace beatleader_analyzer
         /// <param name="njsMult">NJS Multiplier for custom modifiers</param>
         /// <param name="strictAngle">Strict Angle modifier</param>
         /// <returns>Filled Ratings object</returns>
-        public Ratings GetRating(DifficultyV3 diff, string characteristic, string difficulty, float bpm, float speedMult = 1, float njsMult = 1, bool strictAngle = false)
+        public static Ratings GetRating(DifficultyV3 diff, string characteristic, string difficulty, float bpm, float speedMult = 1, float njsMult = 1, bool strictAngle = false)
         {
             try
             {
@@ -58,7 +58,7 @@ namespace beatleader_analyzer
         /// <param name="njsMult">NJS Multiplier for custom modifiers</param>
         /// <param name="strictAngle">Strict Angle modifier</param>
         /// <returns>Filled Ratings object</returns>
-        public List<Ratings> GetRating(BeatmapV3 beatmap, string characteristic, float speedMult = 1, float njsMult = 1, bool strictAngle = false)
+        public static List<Ratings> GetRating(BeatmapV3 beatmap, string characteristic, float speedMult = 1, float njsMult = 1, bool strictAngle = false)
         {
             List<Ratings> ratings = [];
             var data = beatmap.Info._difficultyBeatmapSets.FirstOrDefault(x => x._beatmapCharacteristicName == characteristic);
