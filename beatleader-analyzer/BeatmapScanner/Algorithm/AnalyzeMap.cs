@@ -78,14 +78,23 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // peakSustainedEBPM will be used to determine if a ParityError is a FalsePositive.
                 if (redSwingData.Count > 1)
                 {
+                    peakSustainedEBPM = CalculatePeakSustainedEBPM(redSwingData, 8);
+                }
+                if (blueSwingData.Count > 1)
+                {
+                    peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData, 8), peakSustainedEBPM);
+                }
+
+                DetermineFalsePositive(combinedSwingData, peakSustainedEBPM);
+
+                if (redSwingData.Count > 1)
+                {
                     peakSustainedEBPM = CalculatePeakSustainedEBPM(redSwingData);
                 }
                 if (blueSwingData.Count > 1)
                 {
                     peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData), peakSustainedEBPM);
                 }
-
-                DetermineFalsePositive(combinedSwingData, peakSustainedEBPM);
 
                 // Use all classified walls for difficulty calculation
                 Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
@@ -236,12 +245,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private static readonly Comparer<SwingData> CompareSwingTech = 
             Comparer<SwingData>.Create((a, b) => (a.SwingTech).CompareTo(b.SwingTech));
 
-        private static double CalculatePeakSustainedEBPM(List<SwingData> swingData)
+        private static double CalculatePeakSustainedEBPM(List<SwingData> swingData, int count = 4)
         {
             if (swingData.Count == 0)
                 return 0.0;
 
-            int windowSize = Math.Min(4, swingData.Count);
+            int windowSize = Math.Min(count, swingData.Count);
             double maxEbpm = 0.0;
 
             for (int i = 0; i <= swingData.Count - windowSize; i++)
@@ -274,7 +283,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 double swingEbpm = swing.SwingFrequency * 60.0 / 2;
 
-                // The swing is above expected EBPM, flag as FalsePositive
+                // The swing is above expected EBPM, flag as FalsePositive for EBPM and ratings purpose.
                 if (swingEbpm > peakSustainedEbpm + 1 && swing.ParityErrors)
                 {
                     swing.FalsePositive = true;
