@@ -62,15 +62,18 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double swingDiff = swingSpeed * lowSpeedFalloff * stressMultiplier;
 
                 swing.SwingDiff = swingDiff;
+                swing.PassDiff = swingSpeed * lowSpeedFalloff * PassEnergy.PatternMultiplier(swing, stress);
 
                 double njsBuff = NjsBuff.CalculateNjsBuff(swing.Cubes[0].Njs, modifiers);
                 swing.NjsBuff = njsBuff;
                 swing.SwingDiff *= njsBuff;
+                swing.PassDiff *= njsBuff;
 
                 int currentHand = swing.Cubes[0].Type;
                 if (previousHand.HasValue && previousHand.Value != currentHand)
                 {
                     swing.SwingDiff *= STREAM_BONUS;
+                    swing.PassDiff *= STREAM_BONUS;
                     swing.IsStream = true;
                 }
                 previousHand = currentHand;
@@ -78,6 +81,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (wallBuffs.TryGetValue(i, out double wallBuff))
                 {
                     swing.SwingDiff *= wallBuff;
+                    swing.PassDiff *= wallBuff;
                     swing.WallBuff = wallBuff;
                 }
             }
