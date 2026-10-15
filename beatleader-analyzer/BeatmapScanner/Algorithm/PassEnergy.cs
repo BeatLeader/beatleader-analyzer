@@ -31,22 +31,22 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
         // per-swing pass difficulty: swing speed and stress from the swing's raw metrics (own constants, independent of the classic
         // SwingDiff), stress multiplier with STRESS_SCALE inside, and pattern terms
-        public const double DISTANCE_FALLOFF = 2.668;
-        public const double SPEED_FALLOFF_BASE = 1.4;
-        public const double ANGLE_STRAIN_STRESS = 0.05, REPOSITIONING_STRESS = 0.3, ROTATION_STRESS = 0.2;
-        public const double STRESS_SCALE = 6.52;      // the classic SwingDiff under-weights angle strain / repositioning / rotation
-        public const double STREAM = 1.05;            // alternating hands
-        public const double DODGE_WALL = 1.1, CROUCH_WALL = 1.2;
-        public const double CROSSOVER = 0.59;         // red note in the rightmost lane or blue in the leftmost: x1.59
-        public const double HORIZONTAL = 0.37;        // left / right cuts
-        public const double DIAGONAL = 0.29;          // diagonal cuts
-        public const double PARITY_BREAK = -0.14;     // resets were over-counted (SwingFrequency already doubles on them)
+        public const double DISTANCE_FALLOFF = 1.765;
+        public const double SPEED_FALLOFF_BASE = 3.623;
+        public const double ANGLE_STRAIN_STRESS = 0.4291, REPOSITIONING_STRESS = 1.493, ROTATION_STRESS = 0;   // rotation adds nothing once angle strain and repositioning are in (fit at 0)
+        public const double STRESS_SCALE = 1.0;      // folded into the three stress weights above
+        public const double STREAM = 1.082;         // alternating hands
+        public const double DODGE_WALL = 1.193, CROUCH_WALL = 1.552;
+        public const double CROSSOVER = 0.5632;      // red note in the rightmost lane or blue in the leftmost: x1.56
+        public const double HORIZONTAL = 0.3309;     // left / right cuts
+        public const double DIAGONAL = 0.2589;       // diagonal cuts
+        public const double PARITY_BREAK = -0.1517;  // resets were over-counted (SwingFrequency already doubles on them)
 
         // energy model (game rules) and the one fitted slope
         public const double MISS_SLOPE = 2.5;
         public const int START_ENERGY = 50, HIT_GAIN = 1, MISS_LOSS = 15, MAX_ENERGY = 100;
-        public const double SCALE = 0.2332;           // exp(skill50) -> today's pass-rating scale (equal medians on Standard maps)
-        public const double ONE_SABER = 0.74;         // maps whose other hand has no swings (the classic formula halves them)
+        public const double SCALE = 0.2039;           // exp(skill50) -> today's pass-rating scale (equal medians on Standard maps)
+        public const double ONE_SABER = 0.79;         // maps whose other hand has no swings (the classic formula halves them)
 
         /// <summary>Pass difficulty of one swing before the NJS, stream and wall terms.</summary>
         public static double SwingPassDiff(SwingData swing, double speedMult)
