@@ -46,7 +46,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         public const double MISS_SLOPE = 2.5;
         public const int START_ENERGY = 50, HIT_GAIN = 1, MISS_LOSS = 15, MAX_ENERGY = 100;
         public const double SCALE = 0.2039;           // exp(skill50) -> today's pass-rating scale (equal medians on Standard maps)
-        public const double ONE_SABER = 0.79;         // maps whose other hand has no swings (the classic formula halves them)
+        public const double ONE_SABER = 0.74;         // maps whose other hand has no swings (v2 value; the v6 attempts fit gives 0.79, but One Saber maps are already worth more than Standard)
 
         /// <summary>Pass difficulty of one swing before the NJS, stream and wall terms.</summary>
         public static double SwingPassDiff(SwingData swing, double speedMult)
