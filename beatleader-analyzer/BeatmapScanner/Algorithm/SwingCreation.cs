@@ -1,12 +1,12 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.EntryExit;
 using static beatleader_analyzer.BeatmapScanner.Helper.Common;
 using static beatleader_analyzer.BeatmapScanner.Helper.AngleStrain;
 using beatleader_analyzer.BeatmapScanner.Data;
+using beatleader_analyzer.BeatmapScanner.Helper;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -73,36 +73,18 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return new List<SwingData>();
             }
             
-            var swingData = new List<SwingData>(groups.Count)
+            // One swing per group, each with its own entry/exit; multi-note swings get their multi-note exit.
+            var swingData = new List<SwingData>(groups.Count);
+            foreach (var group in groups)
             {
-                new SwingData(groups[0])
-            };
-
-            int groupIndex = 0;
-
-            for (int i = 0; i < cubes.Count; i++)
-            {
-                var currentBeat = cubes[i].BpmTime;
-
-                if (!cubes[i].Pattern || cubes[i].Head)
+                var swing = new SwingData(group);
+                // This also take into account individual note with a chain.
+                CalcEntryExit(swing);
+                if (group.Count > 1)
                 {
-                    groupIndex++;
-                    
-                    if (groupIndex >= groups.Count)
-                    {
-                        break;
-                    }
-
-                    swingData.Add(new SwingData(groups[groupIndex]));
-                    // This also take into account individual note with a chain.
-                    CalcEntryExit(swingData[^1]);
+                    CalcMultiNoteExit(swing, modifiers.strictAngles);
                 }
-                else
-                {
-                    // Calculate multi-note exit position with averaged angle
-                    Cube headCube = groupIndex >= 0 ? groups[groupIndex][0] : null;
-                    CalcMultiNoteExit(swingData[^1], modifiers.strictAngles);
-                }
+                swingData.Add(swing);
             }
 
             // Second pass: verify that direction match geometry for multi-note swings
@@ -118,6 +100,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     if (deltaTime != 0)
                     {
                         swing.SwingFrequency = 1 / deltaTime;
+                        // A reset adds a motion in the same time
                         if (swing.ParityErrors) swing.SwingFrequency *= 2;
                     }
                     else // Error
@@ -131,15 +114,21 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             // Normalize angles between swings based on angle tolerance
             // Recalculate entry and exit position
-            // Skip notes with bomb avoidance as they have special direction calculation
+            // Skip notes with bomb avoidance as they have special direction calculation, and single dots (below)
             for (int i = 1; i < swingData.Count; i++)
             {
-                if (swingData[i].Cubes[0].BombAvoidance)
+                if (swingData[i].Cubes[0].BombAvoidance || DotDirections.IsSingleDot(swingData[i]))
                 {
                     continue;
                 }
 
                 NormalizeAngle(swingData[i - 1], swingData[i], modifiers);
+            }
+
+            // Single dots take the direction top players cut them at
+            foreach (var swing in swingData)
+            {
+                if (DotDirections.IsSingleDot(swing)) DotDirections.Apply(swing);
             }
 
             // Calculate hit distance

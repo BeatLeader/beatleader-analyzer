@@ -17,9 +17,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class AnalyzeMap
     {
-        private const double PASS_CALIBRATION_FACTOR = 0.825;
-        private const double ONE_SABER_NERF = 0.5;
-        private const double BALANCED_TECH_SCALER = 14.0;
+        // Set by BalanceTuner after the formula was refitted
+        private const double PASS_CALIBRATION_FACTOR = 0.664;
+        private const double ONE_SABER_NERF = 0.28;
+        // Puts the highest tech rating of ranked maps at about 17
+        private const double BALANCED_TECH_SCALER = 17.6;
 
         public static Ratings UseAlgorithm(List<Cube> red, List<Cube> blue, 
             Modifiers modifiers, List<Wall> walls = null, List<Bomb> bombs = null)
@@ -32,7 +34,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             if (red.Count > 2)
             {
                 PreprocessNotes.Detect(red, bombs, false);
-                ParityPredictor.Predict(red, false, bombs);
+                ParityPredictor.Predict(red, false);
                 redSwingData = SwingCreation.Process(red, false, modifiers);
                 
                 if (redSwingData.Count > 0)
@@ -45,7 +47,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             if (blue.Count > 2)
             {
                 PreprocessNotes.Detect(blue, bombs, true);
-                ParityPredictor.Predict(blue, true, bombs);
+                ParityPredictor.Predict(blue, true);
                 blueSwingData = SwingCreation.Process(blue, true, modifiers);
                 
                 if (blueSwingData.Count > 0)
@@ -85,6 +87,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData, 8), peakSustainedEBPM);
                 }
 
+                // Resets faster than the map's peak sustained EBPM are probably not real: their frequency shouldn't be doubled
                 DetermineFalsePositive(combinedSwingData, peakSustainedEBPM);
 
                 if (redSwingData.Count > 1)
@@ -99,7 +102,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Use all classified walls for difficulty calculation
                 Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
 
-                var windowSizes = new HashSet<int> { 8, 16, 32, 64, 128 };
+                // Longer windows than before: how long the hard parts last matters for failing (fitted on attempts)
+                var windowSizes = new HashSet<int> { 16, 32, 64, 128, 256 };
                 double passDiffRed = 0.0;
                 double passDiffBlue = 0.0;
                 double passDiffCombined = 0.0;
@@ -143,7 +147,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swing.AngleStrain *= buff;
                     swing.RepositioningDistance *= buff;
                     swing.RotationAmount *= buff;
-                    swing.SwingTech = swing.AngleStrain + swing.RepositioningDistance + swing.RotationAmount;
+                    // Tech is the wrist work: angle strain and rotation. Repositioning (arm movement) is part of pass; fitted on
+                    // ~3800 ranked maps against how much accuracy players lose beyond the Acc AI prediction (accounting for who
+                    // played each map), tech explains ~15% more without it.
+                    swing.SwingTech = swing.AngleStrain + swing.RotationAmount;
+                    // Resets aren't tech in the players' eyes: without this, reset maps (e.g. Speedcore Paradise) get top tech
+                    // ratings. Costs almost nothing in the fit (accuracy loss explained about the same either way).
                     if (swing.ParityErrors) swing.SwingTech /= 2;
                 }
 

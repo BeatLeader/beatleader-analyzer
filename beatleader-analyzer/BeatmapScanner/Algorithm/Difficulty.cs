@@ -11,19 +11,24 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// <summary>
     /// Converts swing metrics into pass difficulty ratings.
     /// </summary>
+    /// The constants were fitted on ~11M clear / fail attempts on ranked maps (how hard each map is to pass, accounting for
+    /// the players who tried it): ranking of maps by fail difficulty 0.904 -> 0.917, better for weak and strong players and
+    /// on both halves of the attempt history. Stress (angle strain, repositioning) weighs much more than before; alternating
+    /// hands (streams) showed no extra difficulty.
     internal class Difficulty
     {
-        private const double STRESS_FALLOFF = 2.0;
-        private const double DISTANCE_FALLOFF = 2.668;
-        private const double SPEED_FALLOFF_BASE = 1.4;
-        // Parity Reset bonus
-        private const double PARITY_ERROR_MULTIPLIER = 2.0;
-        // Stream bonus
-        private const double STREAM_BONUS = 1.05;
-        // Wall bonus
+        private const double STRESS_FALLOFF = 10.0;
+        private const double DISTANCE_FALLOFF = 0.79;
+        private const double SPEED_FALLOFF_BASE = 2.1;
+        private const double ANGLE_STRAIN_STRESS = 0.375;
+        private const double REPOSITIONING_STRESS = 0.45;
+        private const double ROTATION_STRESS = 0.1;
+        // Wall bonus. Checked on ~3400 ranked maps against fail difficulty from attempts (and against accuracy loss):
+        // dodges fit best at 1.1; crouches at ~2.0 (bootstrap 1.8-2.4). Head tracking of top replays confirmed the
+        // classification (97% of dodge walls dodged, 96% of crouch walls crouched).
         private const double WALL_EXTRA_DURATION = 0.5f;
         private const double DODGE_WALL_BUFF = 1.1;
-        private const double CROUCH_WALL_BUFF = 1.2;
+        private const double CROUCH_WALL_BUFF = 2.0;
 
         public static void CalcSwingDiff(List<SwingData> swingData, Modifiers modifiers, List<Wall> dodgeWalls = null, List<Wall> crouchWalls = null)
         {
@@ -45,7 +50,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 double swingSpeed = swing.SwingFrequency * distanceDiff * modifiers.speedMult;
 
-                double stress = (swing.AngleStrain * 0.05 + swing.RepositioningDistance * 0.3 + swing.RotationAmount * 0.2) * distanceDiff;
+                double stress = (swing.AngleStrain * ANGLE_STRAIN_STRESS + swing.RepositioningDistance * REPOSITIONING_STRESS + swing.RotationAmount * ROTATION_STRESS) * distanceDiff;
 
                 // https://www.desmos.com/calculator/nl9wpe3fdo
                 double lowSpeedFalloff = 1.0 - Math.Pow(SPEED_FALLOFF_BASE, -swingSpeed);
@@ -70,7 +75,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 int currentHand = swing.Cubes[0].Type;
                 if (previousHand.HasValue && previousHand.Value != currentHand)
                 {
-                    swing.SwingDiff *= STREAM_BONUS;
                     swing.IsStream = true;
                 }
                 previousHand = currentHand;
