@@ -238,7 +238,6 @@ namespace Benchmark
                 {
                     Pass = Math.Round(rating.PassRating, 3),
                     Tech = Math.Round(rating.TechRating, 3),
-                    Nerf = Math.Round(rating.LowNoteNerf, 3)
                 },
                 Patterns = new
                 {

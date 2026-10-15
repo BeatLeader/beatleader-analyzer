@@ -13,7 +13,6 @@ namespace beatleader_analyzer.BeatmapScanner.Data
         public double MultiPercentage { get; set; }
         public double LinearPercentage { get; set; }
         public double PeakSustainedEBPM { get; set; }
-        public double LowNoteNerf { get; set; }
         public Statistics Statistics { get; set; } = new Statistics();
         public List<SwingData> SwingData { get; set; } = new List<SwingData>();
         public List<Wall> DodgeWalls { get; set; } = new List<Wall>();

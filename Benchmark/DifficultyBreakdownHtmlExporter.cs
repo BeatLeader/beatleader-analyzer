@@ -74,7 +74,6 @@ namespace Benchmark
             html.AppendLine($"                </div>");
             html.AppendLine("            </div>");
             html.AppendLine($"            <div class=\"info-box\">");
-            html.AppendLine($"                <p><strong>Low Note Nerf:</strong> {ratings.LowNoteNerf:F4} (applied to final rating)</p>");
             html.AppendLine($"                <p><strong>Total Swings:</strong> {ratings.SwingData.Count}</p>");
             html.AppendLine($"            </div>");
             html.AppendLine("        </div>");
@@ -173,7 +172,7 @@ namespace Benchmark
             html.AppendLine("            <div class=\"calculation-steps\">");
             html.AppendLine($"                <p><strong>Formula:</strong> Combined Average × Nerf Multiplier × Calibration Factor</p>");
             html.AppendLine($"                <p><strong>Calculation:</strong> {passDiffCombined:F4} × {nerfMultiplier:F4} × {PASS_CALIBRATION_FACTOR} = <strong class=\"highlight\">{balancedPass:F4}</strong></p>");
-            html.AppendLine($"                <p><strong>With Low Note Nerf Applied:</strong> {balancedPass:F4} × {ratings.LowNoteNerf:F4} = <strong class=\"highlight\">{ratings.PassRating:F2}</strong></p>");
+            html.AppendLine($"                <p><strong>With Low Note Nerf Applied:</strong> {balancedPass:F4} = <strong class=\"highlight\">{ratings.PassRating:F2}</strong></p>");
             html.AppendLine("            </div>");
             
             html.AppendLine("        </div>");
@@ -218,7 +217,7 @@ namespace Benchmark
             html.AppendLine("            <div class=\"calculation-steps\">");
             html.AppendLine($"                <p><strong>Formula:</strong> Average × Pass Scaler × Tech Scaler Constant</p>");
             html.AppendLine($"                <p><strong>Calculation:</strong> {avgAnglePath:F4} × {passScaler:F4} × {BALANCED_TECH_SCALER} = <strong class=\"highlight\">{balancedTech:F4}</strong></p>");
-            html.AppendLine($"                <p><strong>With Low Note Nerf Applied:</strong> {balancedTech:F4} × {ratings.LowNoteNerf:F4} = <strong class=\"highlight\">{ratings.TechRating:F2}</strong></p>");
+            html.AppendLine($"                <p><strong>With Low Note Nerf Applied:</strong> {balancedTech:F4} ×  = <strong class=\"highlight\">{ratings.TechRating:F2}</strong></p>");
             html.AppendLine("            </div>");
             
             html.AppendLine("        </div>");

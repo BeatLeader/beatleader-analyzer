@@ -224,7 +224,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 PassRating = balancedPass,
                 TechRating = balancedTech,
-                LowNoteNerf = CalculateLowNoteNerf(combinedSwingData.Count),
                 Statistics = combinedStatistics,
                 SwingData = combinedSwingData,
                 DodgeWalls = dodgeWallsAll,
@@ -235,13 +234,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
             };
 
             return ratings;
-        }
-
-        // https://www.desmos.com/calculator/i4mh0n2ttd
-        private static double CalculateLowNoteNerf(int noteCount)
-        {
-            double clamped = Math.Max(20, Math.Min(200, noteCount));
-            return 0.6 + (clamped - 20) / 450.0;
         }
 
         private static double CalculateMultiNotePercentage(Statistics stats, int swingCount)
