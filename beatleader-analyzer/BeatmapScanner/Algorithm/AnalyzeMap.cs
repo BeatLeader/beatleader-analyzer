@@ -17,9 +17,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class AnalyzeMap
     {
-        // Set by BalanceTuner after the formula was refitted
-        private const double PASS_CALIBRATION_FACTOR = 0.664;
-        private const double ONE_SABER_NERF = 0.28;
+        // Balance tuner suggestion after the time-based windows
+        private const double PASS_CALIBRATION_FACTOR = 0.655;
+        private const double ONE_SABER_NERF = 0.42;
         // Puts the highest tech rating of ranked maps at about 17
         private const double BALANCED_TECH_SCALER = 17.6;
 
@@ -102,28 +102,29 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Use all classified walls for difficulty calculation
                 Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
 
-                // Longer windows than before: how long the hard parts last matters for failing (fitted on attempts)
-                var windowSizes = new HashSet<int> { 16, 32, 64, 128, 256 };
+                // Windows in seconds (real time), not in swings: how long the hard parts last matters for failing, and swing
+                // counts made the windows much shorter on very fast maps (fitted on attempts, see Difficulty.MaxAverageOverSeconds)
+                double[] windowSeconds = { 8, 16, 32, 64, 128 };
                 double passDiffRed = 0.0;
                 double passDiffBlue = 0.0;
                 double passDiffCombined = 0.0;
 
-                foreach (var windowSize in windowSizes)
+                foreach (var seconds in windowSeconds)
                 {
                     if (redSwingData.Count > 1)
                     {
-                        passDiffRed += Difficulty.CalcAverage(redSwingData, windowSize / 2).Select(x => x.Pass).Max();
+                        passDiffRed += Difficulty.MaxAverageOverSeconds(redSwingData, seconds, modifiers);
                     }
                     if (blueSwingData.Count > 1)
                     {
-                        passDiffBlue += Difficulty.CalcAverage(blueSwingData, windowSize / 2).Select(x => x.Pass).Max();
+                        passDiffBlue += Difficulty.MaxAverageOverSeconds(blueSwingData, seconds, modifiers);
                     }
-                    passDiffCombined += Difficulty.CalcAverage(combinedSwingData, windowSize).Select(x => x.Pass).Max();
+                    passDiffCombined += Difficulty.MaxAverageOverSeconds(combinedSwingData, seconds, modifiers);
                 }
-                
-                passDiffRed /= windowSizes.Count;
-                passDiffBlue /= windowSizes.Count;
-                passDiffCombined /= windowSizes.Count;
+
+                passDiffRed /= windowSeconds.Length;
+                passDiffBlue /= windowSeconds.Length;
+                passDiffCombined /= windowSeconds.Length;
 
                 double easierHand = Math.Min(passDiffRed, passDiffBlue);
                 double harderHand = Math.Max(passDiffRed, passDiffBlue);
@@ -222,7 +223,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             Ratings ratings = new Ratings
             {
-                PassRating = balancedPass,
+                // Displayed value; balancedPass (used for tech above) is the internal pass
+                PassRating = balancedPass * Ratings.PassDisplayScale,
                 TechRating = balancedTech,
                 Statistics = combinedStatistics,
                 SwingData = combinedSwingData,

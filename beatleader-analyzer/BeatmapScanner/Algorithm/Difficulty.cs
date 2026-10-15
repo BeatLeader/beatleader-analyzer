@@ -140,6 +140,65 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return swing.Cubes[0].Seconds >= wallStart && swing.Cubes[0].Seconds <= wallEnd;
         }
 
+        /// <summary>
+        /// Highest average swing difficulty over any stretch of the map lasting <paramref name="seconds"/> (real time, so
+        /// speed modifiers shorten the map). Windows used to be counts of swings, which made them much shorter in time on
+        /// very fast maps: a 10-second burst filled every window (The Purple Dimension, Feral). In seconds, the fit to fail
+        /// difficulty from attempts improved (out-of-fold R2 0.628 -> 0.664, ranking of maps above 10 pass 0.567 -> 0.615,
+        /// overall ranking unchanged at 0.916), and short maps are no longer underrated.
+        /// When the map is shorter than the window, the whole map is averaged.
+        /// </summary>
+        public static double MaxAverageOverSeconds(List<SwingData> swingData, double seconds, Modifiers modifiers)
+        {
+            int count = swingData.Count;
+            if (count < 2)
+            {
+                return 0;
+            }
+
+            // Note times are song time; with a speed modifier the same real-time window covers more of the song
+            double window = seconds * Math.Max(modifiers.speedMult, 0.01);
+            double last = swingData[count - 1].Cubes[0].Seconds;
+
+            double best = double.MinValue;
+            double sum = 0;
+            int end = 0;
+            for (int start = 0; start < count; start++)
+            {
+                double windowEnd = swingData[start].Cubes[0].Seconds + window;
+                if (windowEnd > last)
+                {
+                    break;
+                }
+                if (end < start)
+                {
+                    end = start;
+                    sum = 0;
+                }
+                while (end < count && swingData[end].Cubes[0].Seconds < windowEnd)
+                {
+                    sum += swingData[end].SwingDiff;
+                    end++;
+                }
+                if (end > start)
+                {
+                    best = Math.Max(best, sum / (end - start));
+                }
+                sum -= swingData[start].SwingDiff;
+            }
+
+            if (best == double.MinValue)
+            {
+                double total = 0;
+                foreach (var swing in swingData)
+                {
+                    total += swing.SwingDiff;
+                }
+                return total / count;
+            }
+            return Math.Max(best, 0);
+        }
+
         public static List<PerSwing> CalcAverage(List<SwingData> swingData, int WINDOW)
         {
             if (swingData.Count < 2)
