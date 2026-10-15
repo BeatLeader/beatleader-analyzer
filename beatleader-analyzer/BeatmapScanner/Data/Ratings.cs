@@ -9,6 +9,8 @@ namespace beatleader_analyzer.BeatmapScanner.Data
         public string Characteristic { get; set; }
         public string Difficulty { get; set; }
         public double PassRating { get; set; }
+        /// <summary>The peak-window pass rating (production formula), whatever PassRatingModel selects for PassRating.</summary>
+        public double ClassicPassRating { get; set; }
         public double TechRating { get; set; }
         public double MultiPercentage { get; set; }
         public double LinearPercentage { get; set; }

@@ -65,6 +65,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             });
 
             double balancedPass = 0.0;
+            double energyPass = 0.0;
             double balancedTech = 0.0;
 
             // Classify all walls (for difficulty calculation) and count unique dodge actions (for statistics)
@@ -137,6 +138,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // https://www.desmos.com/calculator/ibkvqjsuoo
                 double nerfMultiplier = 1.0 - (1.0 - handsRatio) * ONE_SABER_NERF;
                 balancedPass = passDiffCombined * nerfMultiplier * PASS_CALIBRATION_FACTOR;
+                if (PassEnergy.Model == PassRatingModel.Energy)
+                {
+                    energyPass = PassEnergy.Rating(combinedSwingData, redSwingData.Count == 0 || blueSwingData.Count == 0);
+                }
             }
 
             if (combinedSwingData.Count > 2)
@@ -222,7 +227,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             Ratings ratings = new Ratings
             {
-                PassRating = balancedPass,
+                // tech keeps using the classic pass, so switching the pass model changes pass rating only
+                PassRating = PassEnergy.Model == PassRatingModel.Energy ? energyPass : balancedPass,
+                ClassicPassRating = balancedPass,
                 TechRating = balancedTech,
                 LowNoteNerf = CalculateLowNoteNerf(combinedSwingData.Count),
                 Statistics = combinedStatistics,

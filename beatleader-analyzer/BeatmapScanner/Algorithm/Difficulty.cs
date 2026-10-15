@@ -67,14 +67,18 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double swingDiff = swingSpeed * lowSpeedFalloff * stressMultiplier;
 
                 swing.SwingDiff = swingDiff;
+                // pass difficulty has its own swing speed / stress constants (fitted on attempts with the energy-bar model)
+                swing.PassDiff = PassEnergy.SwingPassDiff(swing, modifiers.speedMult);
 
                 double njsBuff = NjsBuff.CalculateNjsBuff(swing.Cubes[0].Njs, modifiers);
                 swing.NjsBuff = njsBuff;
                 swing.SwingDiff *= njsBuff;
+                swing.PassDiff *= njsBuff;
 
                 int currentHand = swing.Cubes[0].Type;
                 if (previousHand.HasValue && previousHand.Value != currentHand)
                 {
+                    swing.PassDiff *= PassEnergy.STREAM;
                     swing.IsStream = true;
                 }
                 previousHand = currentHand;
@@ -82,6 +86,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (wallBuffs.TryGetValue(i, out double wallBuff))
                 {
                     swing.SwingDiff *= wallBuff;
+                    swing.PassDiff *= PassEnergy.WallBuff(wallBuff, CROUCH_WALL_BUFF);
                     swing.WallBuff = wallBuff;
                 }
             }
