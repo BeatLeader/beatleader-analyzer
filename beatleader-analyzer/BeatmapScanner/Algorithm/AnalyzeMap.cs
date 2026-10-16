@@ -19,7 +19,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         // Balance tuner suggestion after the time-based windows
         private const double PASS_CALIBRATION_FACTOR = 0.655;
-        private const double ONE_SABER_NERF = 0.42;
+        private const double ONE_SABER_NERF = 0.4;
         // Puts the highest tech rating of ranked maps at about 17
         private const double BALANCED_TECH_SCALER = 17.6;
 
