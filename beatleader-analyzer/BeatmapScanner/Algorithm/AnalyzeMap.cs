@@ -109,22 +109,45 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double passDiffBlue = 0.0;
                 double passDiffCombined = 0.0;
 
-                foreach (var seconds in windowSeconds)
+                if (beatleader_analyzer.Analyze.UseSwingCountPassWindows)
                 {
-                    if (redSwingData.Count > 1)
+                    // The previous windows, in swings (comparison only, see Analyze.UseSwingCountPassWindows)
+                    int[] windowSwings = { 8, 16, 32, 64, 128 };
+                    foreach (var swings in windowSwings)
                     {
-                        passDiffRed += Difficulty.MaxAverageOverSeconds(redSwingData, seconds, modifiers);
+                        if (redSwingData.Count > 1)
+                        {
+                            passDiffRed += Difficulty.CalcAverage(redSwingData, swings / 2).Select(x => x.Pass).DefaultIfEmpty(0).Max();
+                        }
+                        if (blueSwingData.Count > 1)
+                        {
+                            passDiffBlue += Difficulty.CalcAverage(blueSwingData, swings / 2).Select(x => x.Pass).DefaultIfEmpty(0).Max();
+                        }
+                        passDiffCombined += Difficulty.CalcAverage(combinedSwingData, swings).Select(x => x.Pass).DefaultIfEmpty(0).Max();
                     }
-                    if (blueSwingData.Count > 1)
-                    {
-                        passDiffBlue += Difficulty.MaxAverageOverSeconds(blueSwingData, seconds, modifiers);
-                    }
-                    passDiffCombined += Difficulty.MaxAverageOverSeconds(combinedSwingData, seconds, modifiers);
+                    passDiffRed /= windowSwings.Length;
+                    passDiffBlue /= windowSwings.Length;
+                    passDiffCombined /= windowSwings.Length;
                 }
+                else
+                {
+                    foreach (var seconds in windowSeconds)
+                    {
+                        if (redSwingData.Count > 1)
+                        {
+                            passDiffRed += Difficulty.MaxAverageOverSeconds(redSwingData, seconds, modifiers);
+                        }
+                        if (blueSwingData.Count > 1)
+                        {
+                            passDiffBlue += Difficulty.MaxAverageOverSeconds(blueSwingData, seconds, modifiers);
+                        }
+                        passDiffCombined += Difficulty.MaxAverageOverSeconds(combinedSwingData, seconds, modifiers);
+                    }
 
-                passDiffRed /= windowSeconds.Length;
-                passDiffBlue /= windowSeconds.Length;
-                passDiffCombined /= windowSeconds.Length;
+                    passDiffRed /= windowSeconds.Length;
+                    passDiffBlue /= windowSeconds.Length;
+                    passDiffCombined /= windowSeconds.Length;
+                }
 
                 double easierHand = Math.Min(passDiffRed, passDiffBlue);
                 double harderHand = Math.Max(passDiffRed, passDiffBlue);
