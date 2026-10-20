@@ -17,11 +17,24 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class AnalyzeMap
     {
-        // Balance tuner suggestion after the time-based windows
-        private const double PASS_CALIBRATION_FACTOR = 0.655;
-        private const double ONE_SABER_NERF = 0.4;
-        // Puts the highest tech rating of ranked maps at about 17
-        private const double BALANCED_TECH_SCALER = 17.6;
+        // Puts the median pass of ranked maps at prod's (with the windows below); recalibrate when the windows change
+        private const double PASS_CALIBRATION_FACTOR = 0.829;
+        private const double ONE_SABER_NERF = 0.53;
+        // Tech ratings on about prod's scale (tech is flatter than prod's: median ~8% lower, the top ~18)
+        private const double BALANCED_TECH_SCALER = 22.0;
+        // Pass windows (see UseAlgorithm). In seconds: 16-128 s gave the smoothest pp vs stars curves and star bands of the
+        // sets tried (2-32, 4-64, 16-128 s; swings 8-128, 16-128), and removes the outliers swing windows created on maps
+        // with short dense bursts (prod's 8-128 swings last only 1-19 s on a typical map, under 10 s on 10+ stars).
+        private static readonly double[] WindowSeconds = { 16, 32, 64, 128 };
+        private static readonly int[] WindowSwings = { 16, 32, 64, 128 };
+        // Weight of the windows in seconds in the pass: 1 = seconds only, 0 = swings only (prod). Changing it or the windows
+        // changes the pass scale, so recalibrate PASS_CALIBRATION_FACTOR and check the balance after.
+        private static readonly double SECONDS_WINDOW_WEIGHT = 1.0;
+        // Swing density in the seconds windows: each window's average swing difficulty times (swings per second /
+        // DENSITY_REFERENCE)^DENSITY_WEIGHT (half the reference for one hand, and for both when only one hand plays, as on
+        // OneSaber). 0 = average per swing only.
+        private static readonly double DENSITY_WEIGHT = 0.25;
+        private const double DENSITY_REFERENCE = 8;
 
         public static Ratings UseAlgorithm(List<Cube> red, List<Cube> blue, 
             Modifiers modifiers, List<Wall> walls = null, List<Bomb> bombs = null)
@@ -102,57 +115,47 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // Use all classified walls for difficulty calculation
                 Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
 
-                // Windows in seconds (real time), not in swings: how long the hard parts last matters for failing, and swing
-                // counts made the windows much shorter on very fast maps (fitted on attempts, see Difficulty.MaxAverageOverSeconds)
-                double[] windowSeconds = { 8, 16, 32, 64, 128 };
+                // Blend of windows in seconds (real time: how long the hard parts last matters for failing, and very fast maps
+                // aren't rated on a few seconds of burst) and windows in swings (prod: dense sections count more)
                 double passDiffRed = 0.0;
                 double passDiffBlue = 0.0;
                 double passDiffCombined = 0.0;
 
-                if (beatleader_analyzer.Analyze.UseSwingCountPassWindows)
+                double combinedDensityReference = redSwingData.Count > 1 && blueSwingData.Count > 1 ? DENSITY_REFERENCE : DENSITY_REFERENCE / 2;
+                // A kind of window with no weight is skipped (the swing windows cost as much as the seconds ones)
+                foreach (var seconds in SECONDS_WINDOW_WEIGHT > 0 ? WindowSeconds : [])
                 {
-                    // The previous windows, in swings (comparison only, see Analyze.UseSwingCountPassWindows)
-                    int[] windowSwings = { 8, 16, 32, 64, 128 };
-                    foreach (var swings in windowSwings)
+                    double weight = SECONDS_WINDOW_WEIGHT / WindowSeconds.Length;
+                    if (redSwingData.Count > 1)
                     {
-                        if (redSwingData.Count > 1)
-                        {
-                            passDiffRed += Difficulty.CalcAverage(redSwingData, swings / 2).Select(x => x.Pass).DefaultIfEmpty(0).Max();
-                        }
-                        if (blueSwingData.Count > 1)
-                        {
-                            passDiffBlue += Difficulty.CalcAverage(blueSwingData, swings / 2).Select(x => x.Pass).DefaultIfEmpty(0).Max();
-                        }
-                        passDiffCombined += Difficulty.CalcAverage(combinedSwingData, swings).Select(x => x.Pass).DefaultIfEmpty(0).Max();
+                        passDiffRed += Difficulty.MaxAverageOverSeconds(redSwingData, seconds, modifiers, DENSITY_REFERENCE / 2, DENSITY_WEIGHT) * weight;
                     }
-                    passDiffRed /= windowSwings.Length;
-                    passDiffBlue /= windowSwings.Length;
-                    passDiffCombined /= windowSwings.Length;
+                    if (blueSwingData.Count > 1)
+                    {
+                        passDiffBlue += Difficulty.MaxAverageOverSeconds(blueSwingData, seconds, modifiers, DENSITY_REFERENCE / 2, DENSITY_WEIGHT) * weight;
+                    }
+                    passDiffCombined += Difficulty.MaxAverageOverSeconds(combinedSwingData, seconds, modifiers, combinedDensityReference, DENSITY_WEIGHT) * weight;
                 }
-                else
-                {
-                    foreach (var seconds in windowSeconds)
-                    {
-                        if (redSwingData.Count > 1)
-                        {
-                            passDiffRed += Difficulty.MaxAverageOverSeconds(redSwingData, seconds, modifiers);
-                        }
-                        if (blueSwingData.Count > 1)
-                        {
-                            passDiffBlue += Difficulty.MaxAverageOverSeconds(blueSwingData, seconds, modifiers);
-                        }
-                        passDiffCombined += Difficulty.MaxAverageOverSeconds(combinedSwingData, seconds, modifiers);
-                    }
 
-                    passDiffRed /= windowSeconds.Length;
-                    passDiffBlue /= windowSeconds.Length;
-                    passDiffCombined /= windowSeconds.Length;
+                foreach (var swings in SECONDS_WINDOW_WEIGHT < 1 ? WindowSwings : [])
+                {
+                    double weight = (1 - SECONDS_WINDOW_WEIGHT) / WindowSwings.Length;
+                    // Half of the window per hand
+                    if (redSwingData.Count > 1)
+                    {
+                        passDiffRed += Difficulty.MaxAverageOverSwings(redSwingData, swings / 2) * weight;
+                    }
+                    if (blueSwingData.Count > 1)
+                    {
+                        passDiffBlue += Difficulty.MaxAverageOverSwings(blueSwingData, swings / 2) * weight;
+                    }
+                    passDiffCombined += Difficulty.MaxAverageOverSwings(combinedSwingData, swings) * weight;
                 }
 
                 double easierHand = Math.Min(passDiffRed, passDiffBlue);
                 double harderHand = Math.Max(passDiffRed, passDiffBlue);
                 double handsRatio = 1.0;
-                
+
                 if (harderHand > 0 || passDiffCombined > 0)
                 {
                     handsRatio = Math.Min(easierHand / Math.Max(Math.Min(harderHand, passDiffCombined), 0.0001), 1.0);
@@ -247,7 +250,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             Ratings ratings = new Ratings
             {
                 // Displayed value; balancedPass (used for tech above) is the internal pass
-                PassRating = balancedPass * Ratings.PassDisplayScale,
+                PassRating = Ratings.DisplayPass(balancedPass),
                 TechRating = balancedTech,
                 Statistics = combinedStatistics,
                 SwingData = combinedSwingData,

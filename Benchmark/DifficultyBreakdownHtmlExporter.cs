@@ -12,8 +12,8 @@ namespace Benchmark
     /// </summary>
     public static class DifficultyBreakdownHtmlExporter
     {
-        private const double PASS_CALIBRATION_FACTOR = 0.8;
-        private const double ONE_SABER_NERF = 0.28;
+        private const double PASS_CALIBRATION_FACTOR = 0.866;
+        private const double ONE_SABER_NERF = 0.51;
         private const double BALANCED_TECH_SCALER = 10.0;
 
         public static string GenerateBreakdownHtml(Ratings ratings, float bpm)

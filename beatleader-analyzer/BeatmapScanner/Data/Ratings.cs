@@ -7,14 +7,21 @@ namespace beatleader_analyzer.BeatmapScanner.Data
     public class Ratings
     {
         /// <summary>
-        /// Display scale of the pass rating: PassRating is the internal pass times this, so the hardest ranked map shows
-        /// about 17. Purely cosmetic: every formula that uses the pass rating (pass pp, stars, acc rating) divides it back
-        /// out, and tech uses the internal pass. Change only this value to rescale the displayed pass.
+        /// Display of the pass rating: PassRating = PassDisplayScale x internal pass ^ PassDisplayExponent, fitted so ranked
+        /// maps show prod's pass at every level (median, p90, p99 and the hardest map within ~3%; the internal pass is steeper
+        /// at the top than prod's). Purely cosmetic: every formula that uses the pass rating (pass pp, stars, acc rating)
+        /// converts it back with InternalPass, and tech uses the internal pass.
         /// </summary>
-        public const double PassDisplayScale = 1.26;
+        public const double PassDisplayScale = 1.68;
+        public const double PassDisplayExponent = 0.844;
+
+        /// <summary>Displayed pass rating from the internal pass.</summary>
+        public static double DisplayPass(double internalPass) =>
+            internalPass > 0 ? PassDisplayScale * System.Math.Pow(internalPass, PassDisplayExponent) : internalPass;
 
         /// <summary>Internal pass (what the formulas expect) from a displayed pass rating.</summary>
-        public static double InternalPass(double displayedPass) => displayedPass / PassDisplayScale;
+        public static double InternalPass(double displayedPass) =>
+            displayedPass > 0 ? System.Math.Pow(displayedPass / PassDisplayScale, 1 / PassDisplayExponent) : displayedPass;
 
         public string Characteristic { get; set; }
         public string Difficulty { get; set; }

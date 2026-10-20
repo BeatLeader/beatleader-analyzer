@@ -4,6 +4,7 @@ using beatleader_analyzer.BeatmapScanner.Helper;
 using Parser.Map.Difficulty.V3.Grid;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
 
 namespace Analyzer.BeatmapScanner.Algorithm
@@ -11,21 +12,19 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// <summary>
     /// Converts swing metrics into pass difficulty ratings.
     /// </summary>
-    /// The constants were fitted on ~11M clear / fail attempts on ranked maps (how hard each map is to pass, accounting for
-    /// the players who tried it): ranking of maps by fail difficulty 0.904 -> 0.917, better for weak and strong players and
-    /// on both halves of the attempt history. Stress (angle strain, repositioning) weighs much more than before; alternating
-    /// hands (streams) showed no extra difficulty.
     internal class Difficulty
     {
-        private const double STRESS_FALLOFF = 10.0;
-        private const double DISTANCE_FALLOFF = 0.79;
-        private const double SPEED_FALLOFF_BASE = 2.1;
-        private const double ANGLE_STRAIN_STRESS = 0.375;
-        private const double REPOSITIONING_STRESS = 0.45;
-        private const double ROTATION_STRESS = 0.1;
-        // Wall bonus. Checked on ~3400 ranked maps against fail difficulty from attempts (and against accuracy loss):
-        // dodges fit best at 1.1; crouches at ~2.0 (bootstrap 1.8-2.4). Head tracking of top replays confirmed the
-        // classification (97% of dodge walls dodged, 96% of crouch walls crouched).
+        // Prod values. Resets have no multiplier here: SwingCreation already doubles their SwingFrequency (except false positives).
+        private const double STRESS_FALLOFF = 2.0;
+        private const double DISTANCE_FALLOFF = 2.668;
+        private const double SPEED_FALLOFF_BASE = 1.4;
+        private const double ANGLE_STRAIN_STRESS = 0.05;
+        private const double REPOSITIONING_STRESS = 0.3;
+        private const double ROTATION_STRESS = 0.2;
+        // Stream bonus
+        private const double STREAM_BONUS = 1.05;
+        // Wall bonus. Checked on ~3400 ranked maps against fail difficulty from attempts: dodges fit best at 1.1, crouches
+        // at ~2.0 (bootstrap 1.8-2.4; prod has 1.2). Head tracking of top replays confirmed the classification.
         private const double WALL_EXTRA_DURATION = 0.5f;
         private const double DODGE_WALL_BUFF = 1.1;
         private const double CROUCH_WALL_BUFF = 2.0;
@@ -75,6 +74,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 int currentHand = swing.Cubes[0].Type;
                 if (previousHand.HasValue && previousHand.Value != currentHand)
                 {
+                    swing.SwingDiff *= STREAM_BONUS;
                     swing.IsStream = true;
                 }
                 previousHand = currentHand;
@@ -146,10 +146,23 @@ namespace Analyzer.BeatmapScanner.Algorithm
         /// very fast maps: a 10-second burst filled every window (The Purple Dimension, Feral). In seconds, the fit to fail
         /// difficulty from attempts improved (out-of-fold R2 0.628 -> 0.664, ranking of maps above 10 pass 0.567 -> 0.615,
         /// overall ranking unchanged at 0.916), and short maps are no longer underrated.
-        /// When the map is shorter than the window, the whole map is averaged.
+        /// When the map is shorter than the window, the rest of the window counts as rest: the whole map's average times
+        /// its length / the window (whole-map averages made very short maps outliers).
         /// </summary>
-        public static double MaxAverageOverSeconds(List<SwingData> swingData, double seconds, Modifiers modifiers)
+        /// With densityWeight > 0, each window's average is multiplied by (swings per second / densityReference)^weight, so a
+        /// stretch with more swings counts more than one with the same swings and rests in between. Swings per second of song
+        /// time: the swing difficulty already includes the speed modifier, real time would count it twice.
+        // Highest density counted, in reference densities: denser stretches made the hardest maps worth too much for their
+        // stars (Megametric75 +0.19 above their star range for the 5% that gained most from density)
+        public const double DENSITY_CAP = 2.0;
+
+        public static double MaxAverageOverSeconds(List<SwingData> swingData, double seconds, Modifiers modifiers,
+            double densityReference = 0, double densityWeight = 0)
         {
+            double Density(double swingsPerSecond) => densityWeight > 0 && densityReference > 0
+                ? Math.Pow(Math.Min(swingsPerSecond / densityReference, DENSITY_CAP), densityWeight)
+                : 1;
+
             int count = swingData.Count;
             if (count < 2)
             {
@@ -182,7 +195,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
                 if (end > start)
                 {
-                    best = Math.Max(best, sum / (end - start));
+                    best = Math.Max(best, sum / (end - start) * Density((end - start) / window));
                 }
                 sum -= swingData[start].SwingDiff;
             }
@@ -194,9 +207,21 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     total += swing.SwingDiff;
                 }
-                return total / count;
+                // The map is shorter than the window: the rest of the window counts as rest, so a 23-second map isn't rated
+                // as if it lasted the whole window
+                double length = last - swingData[0].Cubes[0].Seconds;
+                return total / count * Math.Min(1, length / window) * Density(count / Math.Max(length, 1));
             }
             return Math.Max(best, 0);
+        }
+
+        /// <summary>
+        /// Highest average swing difficulty over any <paramref name="swings"/> consecutive swings (0 when the map has no more
+        /// swings than that, as in prod).
+        /// </summary>
+        public static double MaxAverageOverSwings(List<SwingData> swingData, int swings)
+        {
+            return CalcAverage(swingData, swings).Select(x => x.Pass).DefaultIfEmpty(0).Max();
         }
 
         public static List<PerSwing> CalcAverage(List<SwingData> swingData, int WINDOW)

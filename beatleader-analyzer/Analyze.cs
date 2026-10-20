@@ -11,13 +11,6 @@ namespace beatleader_analyzer
     public class Analyze
     {
         /// <summary>
-        /// Comparison only (portaBLe Refresh/Tools/PassWindowCheck): pass windows in swings (8-128 swings for both hands, half
-        /// of it per hand), as before the windows in seconds. Off by default. Per thread, so parallel runs don't mix.
-        /// </summary>
-        [ThreadStatic]
-        public static bool UseSwingCountPassWindows;
-
-        /// <summary>
         /// Analyzer entry point (for single difficulty)
         /// </summary>
         /// <param name="diff">Map data from Beatleader-Parser</param>
