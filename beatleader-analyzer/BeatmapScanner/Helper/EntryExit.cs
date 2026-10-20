@@ -93,6 +93,28 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             }
         }
 
+        // How much of the pull towards the path from the previous swing a single arrow gets, fitted on the cut directions
+        // recorded in top players' replays (portaBLe ParityCheck, ~3.3M single arrows on 3886 maps): mean error against the
+        // players 15.9 -> 10.2 degrees (within 30 degrees 85% -> 96%) against the full pull, and rotation / angle strain follow
+        // the players' real wrist roll (controller roll in the replays) much better: R2 0.27 -> 0.50 / 0.52 -> 0.64.
+        // Best scale by time to the previous swing on a row change: ~0.8 under 0.08 s, 0.7 under 0.11 s, 0.6 under 0.15 s, 0.5
+        // under 0.2 s, 0.4 under 0.3 s, 0.3 above (the line below); on the same row 0.15 (0 when the note doesn't move).
+        // Players cut arrows close to the way they point: they get to the next note with the arm, between the swings. The full
+        // pull overshoots, more so when the swings are slow (more time to move the arm) and above all on the same row, where
+        // the path from the previous exit runs sideways: on a bottom row stream, it bent every up and down arrow into ~50
+        // degree diagonals, so the stream looked like constant wrist rotation and angle strain (too much tech).
+        private const double SAME_ROW_ADJUST_SCALE = 0.15;
+        private const double ROW_CHANGE_ADJUST_BASE = 0.25;
+        private const double ROW_CHANGE_ADJUST_PER_SPS = 0.045;
+        private const double ROW_CHANGE_ADJUST_MIN = 0.3;
+        private const double ROW_CHANGE_ADJUST_MAX = 0.85;
+
+        private static double SingleNoteAdjustScale(SwingData previous, SwingData current, double sps)
+        {
+            if (current.Cubes[0].Y == previous.Cubes[^1].Y) return SAME_ROW_ADJUST_SCALE;
+            return Math.Clamp(ROW_CHANGE_ADJUST_BASE + ROW_CHANGE_ADJUST_PER_SPS * sps, ROW_CHANGE_ADJUST_MIN, ROW_CHANGE_ADJUST_MAX);
+        }
+
         public static void NormalizeAngle(SwingData previous, SwingData current, Modifiers modifiers)
         {
             // Calculate the geometric angle from previous swing exit to current note center
@@ -147,6 +169,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
             // https://www.desmos.com/calculator/wal5fknd9f
             double angleAdjust = tolerance * angleDiff / Math.Pow(Math.Pow(Math.Abs(angleDiff), rolloff) + Math.Pow(tolerance, rolloff), 1 / rolloff);
+            if (current.Cubes.Count == 1) angleAdjust *= SingleNoteAdjustScale(previous, current, sps);
             current.Direction = Mod(current.Direction + angleAdjust, 360);
 
             (double centerX, double centerY) = GridToMeters(current.Cubes[0].X, current.Cubes[0].Y);

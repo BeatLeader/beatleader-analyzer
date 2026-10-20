@@ -7,21 +7,20 @@ namespace beatleader_analyzer.BeatmapScanner.Data
     public class Ratings
     {
         /// <summary>
-        /// Display of the pass rating: PassRating = PassDisplayScale x internal pass ^ PassDisplayExponent, fitted so ranked
-        /// maps show prod's pass at every level (median, p90, p99 and the hardest map within ~3%; the internal pass is steeper
-        /// at the top than prod's). Purely cosmetic: every formula that uses the pass rating (pass pp, stars, acc rating)
-        /// converts it back with InternalPass, and tech uses the internal pass.
+        /// Pass factor of the tech rating: TechRating = BALANCED_TECH_SCALER x (average swing tech x TechPassFactor(pass)) ^
+        /// TechExponent (AnalyzeMap). The base is 1.4^(1 / 1.4862): it was 1.4 on a pass 1.4862 times smaller, before the pass
+        /// display curve was folded into the pass (PASS_CALIBRATION_FACTOR), so the factor is the same for the same map.
         /// </summary>
-        public const double PassDisplayScale = 1.68;
-        public const double PassDisplayExponent = 0.844;
+        public const double TechPassBase = 1.25408;
 
-        /// <summary>Displayed pass rating from the internal pass.</summary>
-        public static double DisplayPass(double internalPass) =>
-            internalPass > 0 ? PassDisplayScale * System.Math.Pow(internalPass, PassDisplayExponent) : internalPass;
+        /// <summary>
+        /// Power of the tech rating: the average swing tech's top end is much steeper than prod's tech ratings, fitted on the
+        /// quantiles of prod's ranked tech (median 3.88 vs 3.75, p95 8.86 vs 8.98, p99 11.86 vs 11.21). portaBLe's tech pp
+        /// takes the tech rating to the inverse power (PpFormula.TechRatingPower), so tech pp is what it was with the power 1.
+        /// </summary>
+        public const double TechExponent = 0.8015;
 
-        /// <summary>Internal pass (what the formulas expect) from a displayed pass rating.</summary>
-        public static double InternalPass(double displayedPass) =>
-            displayedPass > 0 ? System.Math.Pow(displayedPass / PassDisplayScale, 1 / PassDisplayExponent) : displayedPass;
+        public static double TechPassFactor(double pass) => 1.0 - System.Math.Pow(TechPassBase, -pass);
 
         public string Characteristic { get; set; }
         public string Difficulty { get; set; }
@@ -30,6 +29,9 @@ namespace beatleader_analyzer.BeatmapScanner.Data
         public double MultiPercentage { get; set; }
         public double LinearPercentage { get; set; }
         public double PeakSustainedEBPM { get; set; }
+        // Mean distance between the entries of consecutive swings of a hand (SwingData.HitDistance), in meters: how far the
+        // hands travel. RatingAPI's acc rating uses it (AccRating.EffectiveAcc).
+        public double HitDistance { get; set; }
         public Statistics Statistics { get; set; } = new Statistics();
         public List<SwingData> SwingData { get; set; } = new List<SwingData>();
         public List<Wall> DodgeWalls { get; set; } = new List<Wall>();

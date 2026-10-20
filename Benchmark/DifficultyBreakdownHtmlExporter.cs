@@ -202,11 +202,11 @@ namespace Benchmark
 
             // Pass dependency
             html.AppendLine("            <h3>2. Pass-Dependent Scaling</h3>");
-            double passScaler = 1.0 - Math.Pow(1.4, -ratings.PassRating);
+            double passScaler = beatleader_analyzer.BeatmapScanner.Data.Ratings.TechPassFactor(ratings.PassRating);
             
             html.AppendLine("            <div class=\"calculation-steps\">");
-            html.AppendLine($"                <p><strong>Formula:</strong> 1.0 - 1.4<sup>-BalancedPass</sup></p>");
-            html.AppendLine($"                <p><strong>Calculation:</strong> 1.0 - 1.4<sup>-{ratings.PassRating:F4}</sup> = <strong>{passScaler:F4}</strong></p>");
+            html.AppendLine($"                <p><strong>Formula:</strong> 1.0 - {beatleader_analyzer.BeatmapScanner.Data.Ratings.TechPassBase}<sup>-BalancedPass</sup></p>");
+            html.AppendLine($"                <p><strong>Calculation:</strong> 1.0 - {beatleader_analyzer.BeatmapScanner.Data.Ratings.TechPassBase}<sup>-{ratings.PassRating:F4}</sup> = <strong>{passScaler:F4}</strong></p>");
             html.AppendLine($"                <p class=\"explanation\">This scaling ensures tech rating increases with pass difficulty (harder maps have more impactful tech).</p>");
             html.AppendLine("            </div>");
 

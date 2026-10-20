@@ -17,15 +17,23 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class AnalyzeMap
     {
-        // Puts the median pass of ranked maps at prod's (with the windows below); recalibrate when the windows change
-        private const double PASS_CALIBRATION_FACTOR = 0.829;
-        private const double ONE_SABER_NERF = 0.53;
-        // Tech ratings on about prod's scale (tech is flatter than prod's: median ~8% lower, the top ~18)
-        private const double BALANCED_TECH_SCALER = 22.0;
-        // Pass windows (see UseAlgorithm). In seconds: 16-128 s gave the smoothest pp vs stars curves and star bands of the
-        // sets tried (2-32, 4-64, 16-128 s; swings 8-128, 16-128), and removes the outliers swing windows created on maps
-        // with short dense bursts (prod's 8-128 swings last only 1-19 s on a typical map, under 10 s on 10+ stars).
-        private static readonly double[] WindowSeconds = { 16, 32, 64, 128 };
+        // Scale of the pass: ranked maps' pass on prod's (median 4.47 vs 4.44, p99 12.96 vs 13.39). Includes what used to be a
+        // display curve on the pass (1.4937 x pass^0.9954, so x1.4862: 0.5195 -> 0.7721). When the swing difficulty or the
+        // windows change, bring the median back with it, then check the balance.
+        private const double PASS_CALIBRATION_FACTOR = 0.7721;
+        private const double ONE_SABER_NERF = 0.548;
+        // Scale of the tech: TechRating = BALANCED_TECH_SCALER x (average swing tech x Ratings.TechPassFactor(pass)) ^
+        // Ratings.TechExponent, on prod's scale. Tech pp is proportional to it, so changing it changes tech pp unless portaBLe's
+        // PpFormula.TechWeight compensates.
+        private const double BALANCED_TECH_SCALER = 20.611;
+        // Pass windows (see UseAlgorithm), in seconds. Windows in swings (prod's 8-128) last only 1-19 s on a typical map and
+        // under 10 s on 10+ stars, so short dense bursts set the pass; 16-128 s fixed that, but then long dense streams were
+        // overvalued (Ascension to Heaven Expert) and peak-driven speed maps undervalued (The Purple Dimension). 4-32 s, against
+        // 16-128 s (Megametric75 relative to the star range): Ascension Expert +1.57 -> +1.41, The Purple Dimension -0.13 ->
+        // +0.08, pass share gap 0.016 -> 0.008, OneSaber gap 0.020 -> 0.005 (tech share slope 0.008 -> 0.071 until portaBLe's
+        // PpFormula.TechWeight 0.1695 -> 0.1485). 8-64 s did less on all of these; shorter windows still let a few seconds
+        // of burst count more than the longer ones did.
+        private static readonly double[] WindowSeconds = { 4, 8, 16, 32 };
         private static readonly int[] WindowSwings = { 16, 32, 64, 128 };
         // Weight of the windows in seconds in the pass: 1 = seconds only, 0 = swings only (prod). Changing it or the windows
         // changes the pass scale, so recalibrate PASS_CALIBRATION_FACTOR and check the balance after.
@@ -186,8 +194,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 combinedSwingData.Sort(CompareSwingTech);
                 double tech = AverageSwingTech(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
 
-                // https://www.desmos.com/calculator/dspid2fyyj
-                balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * BALANCED_TECH_SCALER;
+                // https://www.desmos.com/calculator/dspid2fyyj (with the power, see Ratings.TechExponent)
+                balancedTech = BALANCED_TECH_SCALER * Math.Pow(tech * Ratings.TechPassFactor(balancedPass), Ratings.TechExponent);
             }
 
             var redMultiNotes = redSwingData.Count > 0 ? CountMultiNoteHits(redSwingData) : new Statistics();
@@ -249,8 +257,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             Ratings ratings = new Ratings
             {
-                // Displayed value; balancedPass (used for tech above) is the internal pass
-                PassRating = Ratings.DisplayPass(balancedPass),
+                PassRating = balancedPass,
                 TechRating = balancedTech,
                 Statistics = combinedStatistics,
                 SwingData = combinedSwingData,
@@ -258,6 +265,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 CrouchWalls = crouchWallsAll,
                 LinearPercentage = combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count,
                 PeakSustainedEBPM = peakSustainedEBPM,
+                HitDistance = combinedSwingData.Count > 0 ? combinedSwingData.Average(s => s.HitDistance) : 0,
                 MultiPercentage = multiPercentage
             };
 

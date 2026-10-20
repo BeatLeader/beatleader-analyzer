@@ -14,9 +14,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class Difficulty
     {
-        // Prod values. Resets have no multiplier here: SwingCreation already doubles their SwingFrequency (except false positives).
+        // Prod values, except DISTANCE_FALLOFF. Resets have no multiplier here: SwingCreation already doubles their SwingFrequency
+        // (except false positives).
         private const double STRESS_FALLOFF = 2.0;
-        private const double DISTANCE_FALLOFF = 2.668;
+        // Prod 2.668 made the distance between swings almost irrelevant (0.65 vs 0.74 m: +1.7%), and maps with longer hit
+        // distances were worth less than others of their stars. 1.0: closer worth across map kinds (with the 16-128 s windows
+        // then used: pass share gap 0.052 -> 0.042, worth spread 0.4937 -> 0.4919). 0.5 went further on pass but left
+        // tech-heavy maps overvalued.
+        private const double DISTANCE_FALLOFF = 1.0;
         private const double SPEED_FALLOFF_BASE = 1.4;
         private const double ANGLE_STRAIN_STRESS = 0.05;
         private const double REPOSITIONING_STRESS = 0.3;
@@ -153,8 +158,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
         /// stretch with more swings counts more than one with the same swings and rests in between. Swings per second of song
         /// time: the swing difficulty already includes the speed modifier, real time would count it twice.
         // Highest density counted, in reference densities: denser stretches made the hardest maps worth too much for their
-        // stars (Megametric75 +0.19 above their star range for the 5% that gained most from density)
-        public const double DENSITY_CAP = 2.0;
+        // stars (Megametric75 +0.19 above their star range for the 5% that gained most from density). 1: sparse stretches
+        // still count less, dense ones no more than the reference: with 2, long dense streams were overvalued (with the 16-128 s
+        // windows: Ascension to Heaven Expert Megametric75 +2.04 above its star range, 1.81 with 1; maps with the densest peaks
+        // systematically above theirs). Keeping the bonus and discounting short bursts instead (vibro) hurt the balance and
+        // the maps players find hardest (The Purple Dimension has more short vibro bursts than any).
+        public const double DENSITY_CAP = 1.0;
 
         public static double MaxAverageOverSeconds(List<SwingData> swingData, double seconds, Modifiers modifiers,
             double densityReference = 0, double densityWeight = 0)
