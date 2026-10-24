@@ -48,9 +48,31 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private static readonly double DENSITY_WEIGHT = 0.25;
         private const double DENSITY_REFERENCE = 8;
 
+        // Inline: a note hidden behind the previous note in the same column and row (either color), at most 1/4 beat after it
+        // (JsonTime). Notes at the same time aren't inlines.
+        public const double INLINE_MAX_GAP = 0.25;
+        public const double INLINE_MIN_GAP = 0.001;
+
+        private static int CountInlines(List<Cube> red, List<Cube> blue)
+        {
+            int count = 0;
+            foreach (var spot in red.Concat(blue).GroupBy(c => (c.X, c.Y)))
+            {
+                var ordered = spot.OrderBy(c => c.JsonTime).ToList();
+                for (int i = 1; i < ordered.Count; i++)
+                {
+                    double gap = ordered[i].JsonTime - ordered[i - 1].JsonTime;
+                    if (gap >= INLINE_MIN_GAP && gap <= INLINE_MAX_GAP + INLINE_MIN_GAP) count++;
+                }
+            }
+            return count;
+        }
+
         public static Ratings UseAlgorithm(List<Cube> red, List<Cube> blue, 
             Modifiers modifiers, List<Wall> walls = null, List<Bomb> bombs = null)
         {
+            // Before the preprocessing, on the notes as mapped
+            int inlines = CountInlines(red, blue);
             List<SwingData> redSwingData = [];
             List<SwingData> blueSwingData = [];
             List<SwingData> combinedSwingData = [];
@@ -243,7 +265,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 CrouchWallDuration = crouchDuration,
                 ParityErrors = parityErrorsCount,
                 BombAvoidances = bombAvoidanceCount,
-                LinearSwings = combinedSwingData.Count(s => s.IsLinear)
+                LinearSwings = combinedSwingData.Count(s => s.IsLinear),
+                Inlines = inlines,
             };
 
             combinedSwingData.Sort((x, y) =>

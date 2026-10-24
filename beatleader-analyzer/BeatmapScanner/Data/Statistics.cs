@@ -16,5 +16,7 @@ namespace Analyzer.BeatmapScanner.Data
         public int ParityErrors { get; set; } = 0;
         public int BombAvoidances { get; set; } = 0;
         public int LinearSwings { get; set; } = 0;
+        // Inlines (AnalyzeMap.CountInlines)
+        public int Inlines { get; set; } = 0;
     }
 }
