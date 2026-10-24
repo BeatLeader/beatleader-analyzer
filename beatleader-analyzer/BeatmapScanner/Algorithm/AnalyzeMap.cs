@@ -22,8 +22,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
         // windows change, bring the median back with it, then check the balance.
         private const double PASS_CALIBRATION_FACTOR = 0.7721;
         // 0.548 -> 0.49 with portaBLe's AccCurvePower 0.9 (OneSaber maps were worth 0.058 less than Standard maps of their
-        // stars; -0.003 with it)
-        private const double ONE_SABER_NERF = 0.49;
+        // stars; -0.003 with it). -> 0.44 with RatingAPI's hard swing correction (AccRating.HardSwingMultiplier), which
+        // leaves one hand maps out: it raised Standard maps, so OneSaber maps went from -0.003 to -0.007 (balance tuner's
+        // zero crossing 0.44, +0.000).
+        private const double ONE_SABER_NERF = 0.44;
         // Scale of the tech: TechRating = BALANCED_TECH_SCALER x (average swing tech x Ratings.TechPassFactor(pass)) ^
         // Ratings.TechExponent, on prod's scale. Tech pp is proportional to it, so changing it changes tech pp unless portaBLe's
         // PpFormula.TechWeight compensates.
@@ -268,10 +270,35 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 LinearPercentage = combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count,
                 PeakSustainedEBPM = peakSustainedEBPM,
                 HitDistance = combinedSwingData.Count > 0 ? combinedSwingData.Average(s => s.HitDistance) : 0,
+                HardSwingRatio = redSwingData.Count > 1 && blueSwingData.Count > 1 ? HardSwingRatio(combinedSwingData) : 0,
                 MultiPercentage = multiPercentage
             };
 
             return ratings;
+        }
+
+        // Ratings.HardSwingRatio: the hardest 10% of swings' mean difficulty over the highest average of any 8 s of the map
+        // (song time, from each swing on; no density factor). swingData in time order.
+        private const double HARD_SWING_WINDOW = 8;
+        private static double HardSwingRatio(List<SwingData> swingData)
+        {
+            int count = swingData.Count;
+            if (count < 2) return 0;
+            double last = swingData[count - 1].Cubes[0].Seconds;
+            double peak = 0, sum = 0;
+            int end = 0;
+            for (int start = 0; start < count; start++)
+            {
+                double windowEnd = swingData[start].Cubes[0].Seconds + HARD_SWING_WINDOW;
+                if (windowEnd > last) break;
+                if (end < start) { end = start; sum = 0; }
+                while (end < count && swingData[end].Cubes[0].Seconds < windowEnd) { sum += swingData[end].SwingDiff; end++; }
+                if (end > start) peak = Math.Max(peak, sum / (end - start));
+                sum -= swingData[start].SwingDiff;
+            }
+            if (peak <= 0) return 0;
+            var hardest = swingData.Select(s => s.SwingDiff).OrderByDescending(d => d).Take(Math.Max(1, count / 10));
+            return hardest.Average() / peak;
         }
 
         private static double CalculateMultiNotePercentage(Statistics stats, int swingCount)
