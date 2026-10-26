@@ -30,6 +30,19 @@ namespace Analyzer.BeatmapScanner.Algorithm
         // Ratings.TechExponent, on prod's scale. Tech pp is proportional to it, so changing it changes tech pp unless portaBLe's
         // PpFormula.TechWeight compensates.
         private const double BALANCED_TECH_SCALER = 20.611;
+        // Linear maps: pass x (1 + LINEAR_PASS_SLOPE x (linear share of the swings - LINEAR_PASS_KNEE)) above the knee (after
+        // the tech, which doesn't change). In a linear run each swing goes on where the last one came from (the hand cuts
+        // through the top row, travels back down along the same line, cuts the bottom note), so the swings have almost no
+        // stress (repositioning only counts movement across the swing, no rotation or angle strain) though the arm covers
+        // the whole height every time. Dev (26 Oct, no acc reweight), player-adjusted worth: speed / midspeed maps of 8+ stars
+        // by linear share 0-0.15 / 0.15-0.25 / 0.25-0.35 / 0.35-0.45 / 0.45+: +0.000, +0.006, +0.003, -0.006, -0.024 (in
+        // every pass and tech range; prod +0.022 at 0.45+); DA'AT Expert -0.067. Counting the travel along the swing as stress
+        // on linear swings fixed the most linear maps only by overpaying the 0.25-0.45 ones (the hardest windows of those are
+        // linear too, but the shortfall comes from the whole map being linear), and widened the worth spread. 0.375: -0.001,
+        // +0.005, +0.003, -0.001, -0.003, DA'AT -0.018 (the rest is the Acc AI's), worth spread 0.0377 -> 0.0376; 0.5 overshot
+        // (+0.006 at 0.45+).
+        private const double LINEAR_PASS_KNEE = 0.3;
+        private const double LINEAR_PASS_SLOPE = 0.375;
         // Pass windows (see UseAlgorithm), in seconds. Windows in swings (prod's 8-128) last only 1-19 s on a typical map and
         // under 10 s on 10+ stars, so short dense bursts set the pass; 16-128 s fixed that, but then long dense streams were
         // overvalued (Ascension to Heaven Expert) and peak-driven speed maps undervalued (The Purple Dimension). 4-32 s, against
@@ -224,6 +237,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 balancedTech = BALANCED_TECH_SCALER * Math.Pow(tech * Ratings.TechPassFactor(balancedPass), Ratings.TechExponent);
             }
 
+            double linearPercentage = combinedSwingData.Count > 0 ? combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count : 0;
+            balancedPass *= 1 + LINEAR_PASS_SLOPE * Math.Max(0, linearPercentage - LINEAR_PASS_KNEE);
+
             var redMultiNotes = redSwingData.Count > 0 ? CountMultiNoteHits(redSwingData) : new Statistics();
             var blueMultiNotes = blueSwingData.Count > 0 ? CountMultiNoteHits(blueSwingData) : new Statistics();
 
@@ -290,7 +306,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 SwingData = combinedSwingData,
                 DodgeWalls = dodgeWallsAll,
                 CrouchWalls = crouchWallsAll,
-                LinearPercentage = combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count,
+                LinearPercentage = linearPercentage,
                 PeakSustainedEBPM = peakSustainedEBPM,
                 HitDistance = combinedSwingData.Count > 0 ? combinedSwingData.Average(s => s.HitDistance) : 0,
                 HardSwingRatio = redSwingData.Count > 1 && blueSwingData.Count > 1 ? HardSwingRatio(combinedSwingData) : 0,
