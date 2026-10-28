@@ -20,12 +20,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
         // Scale of the pass: ranked maps' pass on prod's (median 4.47 vs 4.44, p99 12.96 vs 13.39). Includes what used to be a
         // display curve on the pass (1.4937 x pass^0.9954, so x1.4862: 0.5195 -> 0.7721). When the swing difficulty or the
         // windows change, bring the median back with it, then check the balance.
-        private const double PASS_CALIBRATION_FACTOR = 0.7721;
+        private const double PASS_CALIBRATION_FACTOR = 0.7115;
         // 0.548 -> 0.49 with portaBLe's AccCurvePower 0.9 (OneSaber maps were worth 0.058 less than Standard maps of their
         // stars; -0.003 with it). -> 0.44 with RatingAPI's hard swing correction (AccRating.HardSwingMultiplier), which
         // leaves one hand maps out: it raised Standard maps, so OneSaber maps went from -0.003 to -0.007 (balance tuner's
         // zero crossing 0.44, +0.000).
-        private const double ONE_SABER_NERF = 0.44;
+        private const double ONE_SABER_NERF = 0.39;
         // Scale of the tech: TechRating = BALANCED_TECH_SCALER x (average swing tech x Ratings.TechPassFactor(pass)) ^
         // Ratings.TechExponent, on prod's scale. Tech pp is proportional to it, so changing it changes tech pp unless portaBLe's
         // PpFormula.TechWeight compensates.

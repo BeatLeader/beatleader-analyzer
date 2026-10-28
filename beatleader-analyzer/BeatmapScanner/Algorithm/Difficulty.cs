@@ -28,6 +28,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private const double ROTATION_STRESS = 0.2;
         // Stream bonus
         private const double STREAM_BONUS = 1.05;
+        // Both hands busy: a swing with a swing of the other hand at most BOTH_HANDS_GAP seconds away (real time) is worth
+        // BOTH_HANDS_BUFF more. A burst played while the other hand keeps playing (Distortion ExpertPlus: the Expert's bursts
+        // plus 1/2-1 beat notes for the resting hand) is harder than the same burst with the other hand resting, but its slow
+        // notes diluted the windows' averages, so it rated under its Expert on the 4-8 s windows.
+        private const double BOTH_HANDS_GAP = 0.2;
+        private const double BOTH_HANDS_BUFF = 1.1;
         // Wall bonus. Checked on ~3400 ranked maps against fail difficulty from attempts: dodges fit best at 1.1, crouches
         // at ~2.0 (bootstrap 1.8-2.4; prod has 1.2). Head tracking of top replays confirmed the classification.
         private const double WALL_EXTRA_DURATION = 0.5f;
@@ -44,6 +50,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             int? previousHand = null;
 
             var wallBuffs = (dodgeWalls != null || crouchWalls != null) ? AnalyzeWallInfluence(swingData, dodgeWalls, crouchWalls) : new Dictionary<int, double>();
+            var otherHandGap = OtherHandGaps(swingData);
 
             for (int i = 0; i < swingData.Count; i++)
             {
@@ -84,6 +91,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
                 previousHand = currentHand;
 
+                if (otherHandGap[i] / Math.Max(modifiers.speedMult, 0.01) <= BOTH_HANDS_GAP)
+                {
+                    swing.SwingDiff *= BOTH_HANDS_BUFF;
+                }
+
                 if (wallBuffs.TryGetValue(i, out double wallBuff))
                 {
                     swing.SwingDiff *= wallBuff;
@@ -91,6 +103,32 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
         }
+        // Seconds from each swing to the nearest swing of the other hand (infinity when the other hand has none). swingData in
+        // time order.
+        private static double[] OtherHandGaps(List<SwingData> swingData)
+        {
+            int count = swingData.Count;
+            var gaps = new double[count];
+            double[] last = { double.NegativeInfinity, double.NegativeInfinity };
+            for (int i = 0; i < count; i++)
+            {
+                int hand = swingData[i].Cubes[0].Type;
+                double time = swingData[i].Cubes[0].Seconds;
+                gaps[i] = hand is 0 or 1 ? time - last[1 - hand] : double.PositiveInfinity;
+                if (hand is 0 or 1) last[hand] = time;
+            }
+            double[] next = { double.PositiveInfinity, double.PositiveInfinity };
+            for (int i = count - 1; i >= 0; i--)
+            {
+                int hand = swingData[i].Cubes[0].Type;
+                double time = swingData[i].Cubes[0].Seconds;
+                if (hand is not (0 or 1)) continue;
+                gaps[i] = Math.Min(gaps[i], next[1 - hand] - time);
+                next[hand] = time;
+            }
+            return gaps;
+        }
+
         private static Dictionary<int, double> AnalyzeWallInfluence(List<SwingData> swingData, List<Wall> dodgeWalls, List<Wall> crouchWalls)
         {
             var wallBuffs = new Dictionary<int, double>();
