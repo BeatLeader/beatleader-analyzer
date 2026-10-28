@@ -6,8 +6,7 @@ using System.Linq;
 namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     /// <summary>
-    /// Unified classifier for multi-note hits that handles both counting (for statistics) and labeling (for swing data).
-    /// Provides single source of truth for all multi-note hit type classification logic.
+    /// Classifies multi-note hits (stacks, windows, towers, sliders), both for statistics counts and swing labels.
     /// </summary>
     internal class MultiNoteClassifier
     {
@@ -17,8 +16,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         private const float SIMULTANEOUS_TIME_TOLERANCE = 0.001f;
 
         /// <summary>
-        /// Analyzes swing data and returns statistics with counts of each multi-note hit type.
-        /// Also labels each swing with its pattern type.
+        /// Returns statistics with counts of each multi-note hit type. Does not label swings.
         /// </summary>
         public static Statistics CountMultiNoteHits(List<SwingData> swingData)
         {
@@ -207,7 +205,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         }
 
         /// <summary>
-        /// Checks if three consecutive notes form a Tower (vertical, horizontal, or diagonal line).
+        /// Checks if three notes form a Tower: adjacent cells in one vertical, horizontal, or diagonal line.
         /// </summary>
         private static bool IsTower(SwingData swing)
         {
@@ -234,7 +232,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 return lines[1] - lines[0] == 1 && lines[2] - lines[1] == 1;
             }
 
-            // Check for diagonal tower
+            // Diagonal tower
             int vec1X = note2.X - note1.X;
             int vec1Y = note2.Y - note1.Y;
             int vec2X = note3.X - note2.X;
@@ -250,8 +248,8 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
         /// <summary>
         /// Checks if two notes form a Window (notes with gaps, aligned in swing direction).
-        /// Regular windows: Notes directly aligned with their CutDirection or with similar directions.
-        /// Slanted windows: Notes with same CutDirection but snap angle differs from CutDirection.
+        /// Slanted windows: same arrow direction, but the note-to-note angle differs from it and is not cardinal or pure
+        /// diagonal. Everything else that is gapped and aligned with the swing direction is a regular window.
         /// </summary>
         private static bool IsWindow(SwingData swing, out bool isSlanted)
         {
@@ -275,38 +273,30 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 return false;
             }
 
-            // Check if notes have same CutDirection (potential slanted window)
+            // Same arrow direction: potential slanted window
             if (HaveSameCutDirection(note1, note2))
             {
                 double snapAngle = CalculateSnapAngle(note1, note2);
                 
-                // Get the CutDirection's intended angle
                 double cutDirectionAngle = Common.DirectionToDegree[note1.CutDirection] + note1.AngleOffset;
                 cutDirectionAngle = (cutDirectionAngle + 360.0) % 360.0;
 
-                // Calculate angular difference (shortest path)
                 double angleDiff = Math.Abs(snapAngle - cutDirectionAngle);
                 if (angleDiff > 180) angleDiff = 360 - angleDiff;
 
-                // Check if snap angle is directly aligned with CutDirection
                 bool isDirectlyAligned = angleDiff < 5.0; // Small tolerance for floating point
                 
-                // Check if notes are at pure cardinal or diagonal positions
-                // Pure cardinal: exactly horizontal or vertical (one diff is 0)
-                // Pure diagonal: line diff equals layer diff (e.g., (0,0) to (2,2))
+                // Cardinal: one diff is 0. Pure diagonal: line diff equals layer diff, e.g. (0,0) to (2,2).
                 bool isCardinalOrPureDiagonal = lineDiff == 0 || layerDiff == 0 ||  // Cardinal
                                                 lineDiff == layerDiff;                // Pure diagonal
 
-                // Slanted window: BOTH conditions must be true:
-                // 1. Snap angle differs from CutDirection (not directly aligned)
-                // 2. Notes are NOT at cardinal/pure diagonal positions
+                // Slanted: snap angle differs from the arrow and the offset is not cardinal/pure diagonal
                 if (!isDirectlyAligned && !isCardinalOrPureDiagonal && IsAlignedInSwingDirection(note1, note2, swing.Direction))
                 {
                     isSlanted = true;
                     return true;
                 }
                 
-                // If at cardinal/diagonal positions OR directly aligned, it's a regular window (if aligned)
                 if (IsAlignedInSwingDirection(note1, note2, swing.Direction))
                 {
                     isSlanted = false;
@@ -314,7 +304,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 }
             }
 
-            // Regular window - check if directions are similar (within tolerance)
+            // Regular window if the notes line up with the swing direction
             isSlanted = false;
             return IsAlignedInSwingDirection(note1, note2, swing.Direction);
         }
@@ -356,7 +346,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         /// </summary>
         private static bool HaveSameCutDirection(Cube note1, Cube note2)
         {
-            // Both must have arrow directions (not dots)
+            // Dots never count
             if (note1.CutDirection == 8 || note2.CutDirection == 8)
             {
                 return false;
@@ -380,8 +370,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         }
 
         /// <summary>
-        /// Checks if notes are aligned in the given swing direction (order-independent).
-        /// For dot notes or uncertain cases, returns true (lenient).
+        /// Checks if the note offset lies along the given swing direction (order-independent), using 45 degree sectors.
         /// </summary>
         private static bool IsAlignedInSwingDirection(Cube note1, Cube note2, double direction)
         {

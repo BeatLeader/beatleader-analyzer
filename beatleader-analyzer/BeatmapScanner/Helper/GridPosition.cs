@@ -4,14 +4,14 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     /// <summary>
     /// Converts Beat Saber grid positions to meter-based world coordinates.
-    /// Grid Y=0 starts at the bottom of the play space.
+    /// Row 0's center is at y = 0 m; columns are centered on x = 0 m.
     /// </summary>
     internal class GridPosition
     {
         // X-axis spacing: 0.6m between adjacent columns
         private const double X_SPACING = 0.6;
         
-        // Y-axis: Grid Y=0 is at -0.275m (bottom of bottom row)
+        // Half a note's height: row 0's bottom edge is at -0.275 m, row 2's top edge at 1.325 m
         private const double Y_NOTE_HALF_HEIGHT = 0.275;
         
         // Y-axis spacing between row centers
@@ -25,9 +25,6 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         /// </summary>
         public static double GridXToMeters(int gridX)
         {
-            // Grid x=0 is at -0.9m (left of center)
-            // Grid x=1.5 would be at 0m (center)
-            // Each grid unit is 0.6m
             return (gridX - 1.5) * X_SPACING;
         }
 
@@ -41,12 +38,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
         /// <summary>
         /// Converts a grid Y coordinate to meters.
-        /// Grid Y=0 starts at bottom (-0.275m), row centers at 0, 0.55, 1.05m.
-        /// Y values outside [0, 2] range return the edge values.
+        /// Row centers are at 0, 0.55 and 1.05 m; values outside [0, 2] return the grid's outer edges (-0.275 / 1.325 m).
         /// </summary>
         public static double GridYToMeters(int gridY)
         {
-            // Clamp to valid range
             if (gridY < 0)
             {
                 return -Y_NOTE_HALF_HEIGHT;
@@ -67,13 +62,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
         /// <summary>
         /// Converts a grid Y coordinate (with decimal precision) to meters.
-        /// Grid Y=0 is at center of bottom row (0m).
-        /// Y values outside [0, 2] range are clamped.
-        /// Linear interpolation between rows.
+        /// Linear between row centers; values outside [0, 2] return the grid's outer edges like the int overload.
         /// </summary>
         public static double GridYToMeters(double gridY)
         {
-            // Clamp to valid range
             if (gridY < 0.0)
             {
                 return -Y_NOTE_HALF_HEIGHT;
@@ -85,12 +77,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             
             if (gridY <= 1.0)
             {
-                // Between row 0 and row 1: linear interpolation
                 return gridY * Y_BOTTOM_TO_MIDDLE;
             }
             else
             {
-                // Between row 1 and row 2: linear interpolation
                 double fraction = gridY - 1.0;
                 return Y_BOTTOM_TO_MIDDLE + fraction * Y_MIDDLE_TO_TOP;
             }

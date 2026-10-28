@@ -17,39 +17,28 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class AnalyzeMap
     {
-        // Scale of the pass: ranked maps' pass on prod's (median 4.47 vs 4.44, p99 12.96 vs 13.39). Includes what used to be a
-        // display curve on the pass (1.4937 x pass^0.9954, so x1.4862: 0.5195 -> 0.7721). When the swing difficulty or the
-        // windows change, bring the median back with it, then check the balance.
+        // Scale of the pass, calibrated so ranked maps' pass matches prod's distribution (median and top end). When the swing
+        // difficulty or the windows change, recalibrate the median with it, then check the balance.
         private const double PASS_CALIBRATION_FACTOR = 0.7115;
-        // 0.548 -> 0.49 with portaBLe's AccCurvePower 0.9 (OneSaber maps were worth 0.058 less than Standard maps of their
-        // stars; -0.003 with it). -> 0.44 with RatingAPI's hard swing correction (AccRating.HardSwingMultiplier), which
-        // leaves one hand maps out: it raised Standard maps, so OneSaber maps went from -0.003 to -0.007 (balance tuner's
-        // zero crossing 0.44, +0.000).
+        // Pass nerf when one hand is much easier than the other (OneSaber and one-sided maps), tuned so OneSaber maps are
+        // worth the same as Standard maps of their stars. Retune with the balance tuner when the acc curve or
+        // AccRating.HardSwingMultiplier (which leaves one hand maps out) changes.
         private const double ONE_SABER_NERF = 0.39;
         // Scale of the tech: TechRating = BALANCED_TECH_SCALER x (average swing tech x Ratings.TechPassFactor(pass)) ^
         // Ratings.TechExponent, on prod's scale. Tech pp is proportional to it, so changing it changes tech pp unless portaBLe's
         // PpFormula.TechWeight compensates.
         private const double BALANCED_TECH_SCALER = 20.611;
-        // Linear maps: pass x (1 + LINEAR_PASS_SLOPE x (linear share of the swings - LINEAR_PASS_KNEE)) above the knee (after
-        // the tech, which doesn't change). In a linear run each swing goes on where the last one came from (the hand cuts
-        // through the top row, travels back down along the same line, cuts the bottom note), so the swings have almost no
-        // stress (repositioning only counts movement across the swing, no rotation or angle strain) though the arm covers
-        // the whole height every time. Dev (26 Oct, no acc reweight), player-adjusted worth: speed / midspeed maps of 8+ stars
-        // by linear share 0-0.15 / 0.15-0.25 / 0.25-0.35 / 0.35-0.45 / 0.45+: +0.000, +0.006, +0.003, -0.006, -0.024 (in
-        // every pass and tech range; prod +0.022 at 0.45+); DA'AT Expert -0.067. Counting the travel along the swing as stress
-        // on linear swings fixed the most linear maps only by overpaying the 0.25-0.45 ones (the hardest windows of those are
-        // linear too, but the shortfall comes from the whole map being linear), and widened the worth spread. 0.375: -0.001,
-        // +0.005, +0.003, -0.001, -0.003, DA'AT -0.018 (the rest is the Acc AI's), worth spread 0.0377 -> 0.0376; 0.5 overshot
-        // (+0.006 at 0.45+).
+        // Linear maps: pass x (1 + LINEAR_PASS_SLOPE x (linear share of the swings - LINEAR_PASS_KNEE)) above the knee,
+        // applied after the tech so tech is unaffected. In a linear run each swing continues where the last one came from
+        // (cut the top row, travel back down along the same line, cut the bottom note), so the swings register almost no
+        // stress (repositioning only counts movement across the swing, no rotation or angle strain) even though the arm
+        // covers the whole height every time. Without this, mostly linear maps are underpaid. Counting the travel along the
+        // swing as stress instead overpays moderately linear maps, since the shortfall comes from the whole map being linear.
         private const double LINEAR_PASS_KNEE = 0.3;
         private const double LINEAR_PASS_SLOPE = 0.375;
-        // Pass windows (see UseAlgorithm), in seconds. Windows in swings (prod's 8-128) last only 1-19 s on a typical map and
-        // under 10 s on 10+ stars, so short dense bursts set the pass; 16-128 s fixed that, but then long dense streams were
-        // overvalued (Ascension to Heaven Expert) and peak-driven speed maps undervalued (The Purple Dimension). 4-32 s, against
-        // 16-128 s (Megametric75 relative to the star range): Ascension Expert +1.57 -> +1.41, The Purple Dimension -0.13 ->
-        // +0.08, pass share gap 0.016 -> 0.008, OneSaber gap 0.020 -> 0.005 (tech share slope 0.008 -> 0.071 until portaBLe's
-        // PpFormula.TechWeight 0.1695 -> 0.1485). 8-64 s did less on all of these; shorter windows still let a few seconds
-        // of burst count more than the longer ones did.
+        // Pass windows (see UseAlgorithm), in seconds. Windows in swings (prod) last only a few seconds on fast maps, so short
+        // dense bursts set the pass; much longer windows overvalue long dense streams and undervalue peak-driven speed maps.
+        // 4-32 s balances the two. Changing them shifts the tech share, so recheck portaBLe's PpFormula.TechWeight.
         private static readonly double[] WindowSeconds = { 4, 8, 16, 32 };
         private static readonly int[] WindowSwings = { 16, 32, 64, 128 };
         // Weight of the windows in seconds in the pass: 1 = seconds only, 0 = swings only (prod). Changing it or the windows
@@ -84,7 +73,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
         public static Ratings UseAlgorithm(List<Cube> red, List<Cube> blue, 
             Modifiers modifiers, List<Wall> walls = null, List<Bomb> bombs = null)
         {
-            // Before the preprocessing, on the notes as mapped
+            // Counted before the preprocessing, on the notes as mapped
             int inlines = CountInlines(red, blue);
             List<SwingData> redSwingData = [];
             List<SwingData> blueSwingData = [];
@@ -137,7 +126,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 redSwingData = combinedSwingData.Where(x => x.Cubes[0].Type == 0).ToList();
                 blueSwingData = combinedSwingData.Where(x => x.Cubes[0].Type == 1).ToList();
 
-                // peakSustainedEBPM will be used to determine if a ParityError is a FalsePositive.
+                // Peak over 8 swings, only used to flag false positive parity errors; recomputed below once they're fixed
                 if (redSwingData.Count > 1)
                 {
                     peakSustainedEBPM = CalculatePeakSustainedEBPM(redSwingData, 8);
@@ -147,7 +136,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData, 8), peakSustainedEBPM);
                 }
 
-                // Resets faster than the map's peak sustained EBPM are probably not real: their frequency shouldn't be doubled
+                // Resets faster than the map's peak sustained EBPM are probably not real: halve their doubled frequency
                 DetermineFalsePositive(combinedSwingData, peakSustainedEBPM);
 
                 if (redSwingData.Count > 1)
@@ -159,7 +148,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData), peakSustainedEBPM);
                 }
 
-                // Use all classified walls for difficulty calculation
                 Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
 
                 // Blend of windows in seconds (real time: how long the hard parts last matters for failing, and very fast maps
@@ -221,12 +209,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swing.AngleStrain *= buff;
                     swing.RepositioningDistance *= buff;
                     swing.RotationAmount *= buff;
-                    // Tech is the wrist work: angle strain and rotation. Repositioning (arm movement) is part of pass; fitted on
-                    // ~3800 ranked maps against how much accuracy players lose beyond the Acc AI prediction (accounting for who
-                    // played each map), tech explains ~15% more without it.
+                    // Tech is the wrist work: angle strain and rotation. Repositioning (arm movement) belongs to pass; tech
+                    // fits players' accuracy loss beyond the Acc AI prediction better without it.
                     swing.SwingTech = swing.AngleStrain + swing.RotationAmount;
-                    // Resets aren't tech in the players' eyes: without this, reset maps (e.g. Speedcore Paradise) get top tech
-                    // ratings. Costs almost nothing in the fit (accuracy loss explained about the same either way).
+                    // Resets aren't tech in the players' eyes: without this, reset-heavy maps get top tech ratings
                     if (swing.ParityErrors) swing.SwingTech /= 2;
                 }
 
@@ -243,7 +229,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
             var redMultiNotes = redSwingData.Count > 0 ? CountMultiNoteHits(redSwingData) : new Statistics();
             var blueMultiNotes = blueSwingData.Count > 0 ? CountMultiNoteHits(blueSwingData) : new Statistics();
 
-            // Label multi-note hit types for each swing
             if (redSwingData.Count > 0)
             {
                 LabelSwingMultiNoteHits(redSwingData);
@@ -253,7 +238,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 LabelSwingMultiNoteHits(blueSwingData);
             }
 
-            // Use the counted walls (respecting cooldown) for statistics
+            // Statistics use the counted walls (respecting cooldown)
             int dodgeWallCount = dodgeWallsCount;
             int crouchWallCount = crouchWallsCount;
 
@@ -369,8 +354,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 double avgFrequency = freqSum / windowSize;
 
-                // Convert Hz → BPM
-                // Divided by 2 because it's 1 swing per half beat in Beat Saber
+                // Hz to BPM, divided by 2 because EBPM counts one swing per half beat
                 double ebpm = avgFrequency * 60.0 / 2;
 
                 if (ebpm > maxEbpm)
@@ -388,7 +372,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 double swingEbpm = swing.SwingFrequency * 60.0 / 2;
 
-                // The swing is above expected EBPM, flag as FalsePositive for EBPM and ratings purpose.
+                // A reset above the expected EBPM is flagged FalsePositive for EBPM and ratings
                 if (swingEbpm > peakSustainedEbpm + 1 && swing.ParityErrors)
                 {
                     swing.FalsePositive = true;

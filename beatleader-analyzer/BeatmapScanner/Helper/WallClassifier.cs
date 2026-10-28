@@ -30,7 +30,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             Wall x1Wall = null;
             bool isX2Blocked = false;
             Wall x2Wall = null;
-            int xPosition = 0; // -1 left, 0 neutral, 1 right
+            int xPosition = 0; // -1 left, 0 neutral, 1 right, 2 both center lanes blocked
             int yPosition = 1; // 0 crouch, 1 standing
 
             foreach (var wall in wallsByTime)
@@ -93,7 +93,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                     if (lastDodgeWall != null && lastDodgeWall.y == 2 &&
                         wall.Seconds - (lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds) < 0.5)
                     {
-                        // Convert previous overhead dodge by creating a new wall with extended duration
+                        // Previous overhead dodge wall becomes a crouch, extended to cover this wall
                         float wallEnd = wall.Seconds + wall.DurationInSeconds;
                         float newDuration = lastDodgeWall.DurationInSeconds;
                         if (wallEnd > lastDodgeWall.Seconds + lastDodgeWall.DurationInSeconds)
@@ -116,7 +116,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                             Height = lastDodgeWall.Height
                         };
 
-                        // Replace the last crouch wall with the merged one
+                        // Move the merged wall from the dodge list to the crouch list
                         crouchWallsList.Add(mergedWall);
                         lastCrouchWall = mergedWall;
                         dodgeWallsList.Remove(lastDodgeWall);

@@ -19,18 +19,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
     ///   bombs push the hand away;
     /// - BACKHAND_COST on every backhand (players reset into forehands when they have the time).
     ///
-    /// The weights were fitted on top players' replays (portaBLe ParityCheck, 198 maps). With pair resets (default,
-    /// UsePairResets) the reset cost also depends on the two arrows (RESET_PAIR_ADJUSTMENT), fitted on every ranked map
-    /// (3.88M swings): players almost never reset after "up then right" but nearly always after "down then down". On maps
-    /// the fit didn't see: 99.75% of swings match the players (99.71% without the table, 14% fewer errors), reset-heavy
-    /// maps 96.1% (95.6%). A version that also refitted the other weights matched wrist-roll maps better (Sanity Krush,
-    /// SONG REQUEST) but missed many resets on speed reset maps (Speedcore Paradise), so it wasn't kept.
-    /// UsePairResets = false: no pair table.
+    /// The weights are fitted on top players' replays (portaBLe ParityCheck). With UsePairResets the reset cost also
+    /// depends on the two arrows (RESET_PAIR_ADJUSTMENT): players almost never reset after "up then right" but nearly
+    /// always after "down then down".
     /// </summary>
     public class ParityPredictor
     {
-        /// <summary>true: pair resets (default). false: without the pair table. Set it before rating maps, e.g. from
-        /// portaBLe: Analyzer.BeatmapScanner.Algorithm.ParityPredictor.UsePairResets = false;</summary>
+        /// <summary>true (default): reset cost includes RESET_PAIR_ADJUSTMENT. Set before rating maps.</summary>
         public static bool UsePairResets { get; set; } = true;
 
         private const double COMFORT_WEIGHT = 1.5;
@@ -75,7 +70,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             // Kept for portaBLe's ParityCheck (swing creation can change Direction afterwards)
             foreach (var cube in cubes) cube.ParityDirection = cube.Direction;
 
-            // Build list of swing indices
+            // One swing per single note or pattern head
             var swingIndices = new List<int>();
             for (int i = 0; i < n; i++)
             {

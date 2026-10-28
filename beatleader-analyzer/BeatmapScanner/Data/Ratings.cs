@@ -8,15 +8,15 @@ namespace beatleader_analyzer.BeatmapScanner.Data
     {
         /// <summary>
         /// Pass factor of the tech rating: TechRating = BALANCED_TECH_SCALER x (average swing tech x TechPassFactor(pass)) ^
-        /// TechExponent (AnalyzeMap). The base is 1.4^(1 / 1.4862): it was 1.4 on a pass 1.4862 times smaller, before the pass
-        /// display curve was folded into the pass (PASS_CALIBRATION_FACTOR), so the factor is the same for the same map.
+        /// TechExponent (AnalyzeMap). The base is 1.4^(1 / 1.4862), matching the pass scale that includes
+        /// PASS_CALIBRATION_FACTOR.
         /// </summary>
         public const double TechPassBase = 1.25408;
 
         /// <summary>
-        /// Power of the tech rating: the average swing tech's top end is much steeper than prod's tech ratings, fitted on the
-        /// quantiles of prod's ranked tech (median 3.88 vs 3.75, p95 8.86 vs 8.98, p99 11.86 vs 11.21). portaBLe's tech pp
-        /// takes the tech rating to the inverse power (PpFormula.TechRatingPower), so tech pp is what it was with the power 1.
+        /// Power of the tech rating: compresses the steep top end of average swing tech, fitted on the quantiles of prod's
+        /// ranked tech ratings. portaBLe's tech pp applies the inverse power (PpFormula.TechRatingPower), so tech pp is
+        /// unaffected.
         /// </summary>
         public const double TechExponent = 0.8015;
 

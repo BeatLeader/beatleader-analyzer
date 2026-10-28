@@ -83,8 +83,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     rotationAmount /= 180;
                 }
 
-                // Since rotation and repositioning will be split between the real swing and the implied swing of the reset, the values should halved.
-                // Checked on ~3800 ranked maps: without it, pass + tech explain top players' accuracy loss worse.
+                // A reset splits rotation and repositioning between the real swing and the implied reset swing: halve them
                 if (swingData[i].ParityErrors)
                 {
                     repositioningDistance /= 2;
@@ -95,7 +94,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 swingData[i].RotationAmount = rotationAmount;
             }
 
-            // Disable parallel processing when capturing debug data to maintain correct order
+            // UseParallel = false runs sequentially (e.g. for debug capture or benchmarking)
             if (UseParallel)
             {
                 Parallel.For(1, swingData.Count, ForContent);

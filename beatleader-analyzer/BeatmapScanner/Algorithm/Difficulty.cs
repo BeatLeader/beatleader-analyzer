@@ -14,28 +14,25 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class Difficulty
     {
-        // Prod values, except DISTANCE_FALLOFF. Resets have no multiplier here: SwingCreation already doubles their SwingFrequency
-        // (except false positives).
+        // Swing difficulty constants: prod values, except DISTANCE_FALLOFF. Resets have no multiplier here: SwingCreation
+        // already doubles their SwingFrequency (except false positives).
         private const double STRESS_FALLOFF = 2.0;
-        // Prod 2.668 made the distance between swings almost irrelevant (0.65 vs 0.74 m: +1.7%), and maps with longer hit
-        // distances were worth less than others of their stars. 1.0: closer worth across map kinds (with the 16-128 s windows
-        // then used: pass share gap 0.052 -> 0.042, worth spread 0.4937 -> 0.4919). 0.5 went further on pass but left
-        // tech-heavy maps overvalued.
+        // Lower than prod's 2.668, which made hit distance almost irrelevant and underpaid maps with long hit distances.
+        // Lower still overvalues tech-heavy maps.
         private const double DISTANCE_FALLOFF = 1.0;
         private const double SPEED_FALLOFF_BASE = 1.4;
         private const double ANGLE_STRAIN_STRESS = 0.05;
         private const double REPOSITIONING_STRESS = 0.3;
         private const double ROTATION_STRESS = 0.2;
-        // Stream bonus
+        // Swings that alternate hands
         private const double STREAM_BONUS = 1.05;
         // Both hands busy: a swing with a swing of the other hand at most BOTH_HANDS_GAP seconds away (real time) is worth
-        // BOTH_HANDS_BUFF more. A burst played while the other hand keeps playing (Distortion ExpertPlus: the Expert's bursts
-        // plus 1/2-1 beat notes for the resting hand) is harder than the same burst with the other hand resting, but its slow
-        // notes diluted the windows' averages, so it rated under its Expert on the 4-8 s windows.
+        // BOTH_HANDS_BUFF more. A burst played while the other hand keeps playing is harder than the same burst with the
+        // other hand resting, but the other hand's slow notes dilute the windows' averages, which would rate it lower.
         private const double BOTH_HANDS_GAP = 0.2;
         private const double BOTH_HANDS_BUFF = 1.1;
-        // Wall bonus. Checked on ~3400 ranked maps against fail difficulty from attempts: dodges fit best at 1.1, crouches
-        // at ~2.0 (bootstrap 1.8-2.4; prod has 1.2). Head tracking of top replays confirmed the classification.
+        // Wall bonus for swings within WALL_EXTRA_DURATION s of a wall. Buffs fitted against fail difficulty from attempts:
+        // crouches are much harder than dodges (prod uses 1.2 for crouches).
         private const double WALL_EXTRA_DURATION = 0.5f;
         private const double DODGE_WALL_BUFF = 1.1;
         private const double CROUCH_WALL_BUFF = 2.0;
@@ -68,7 +65,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 // https://www.desmos.com/calculator/ikntxtr1mz
                 double stressMultiplier = STRESS_FALLOFF * stress / (stress + STRESS_FALLOFF) + 1.0;
 
-                // Store intermediate values on the swing for debugging/export
+                // Intermediate values kept on the swing for debugging/export
                 swing.DistanceDiff = distanceDiff;
                 swing.SwingSpeed = swingSpeed;
                 swing.Stress = stress;
@@ -183,26 +180,20 @@ namespace Analyzer.BeatmapScanner.Algorithm
             return swing.Cubes[0].Seconds >= wallStart && swing.Cubes[0].Seconds <= wallEnd;
         }
 
-        /// <summary>
-        /// Highest average swing difficulty over any stretch of the map lasting <paramref name="seconds"/> (real time, so
-        /// speed modifiers shorten the map). Windows used to be counts of swings, which made them much shorter in time on
-        /// very fast maps: a 10-second burst filled every window (The Purple Dimension, Feral). In seconds, the fit to fail
-        /// difficulty from attempts improved (out-of-fold R2 0.628 -> 0.664, ranking of maps above 10 pass 0.567 -> 0.615,
-        /// overall ranking unchanged at 0.916), and short maps are no longer underrated.
-        /// When the map is shorter than the window, the rest of the window counts as rest: the whole map's average times
-        /// its length / the window (whole-map averages made very short maps outliers).
-        /// </summary>
-        /// With densityWeight > 0, each window's average is multiplied by (swings per second / densityReference)^weight, so a
-        /// stretch with more swings counts more than one with the same swings and rests in between. Swings per second of song
-        /// time: the swing difficulty already includes the speed modifier, real time would count it twice.
-        // Highest density counted, in reference densities: denser stretches made the hardest maps worth too much for their
-        // stars (Megametric75 +0.19 above their star range for the 5% that gained most from density). 1: sparse stretches
-        // still count less, dense ones no more than the reference: with 2, long dense streams were overvalued (with the 16-128 s
-        // windows: Ascension to Heaven Expert Megametric75 +2.04 above its star range, 1.81 with 1; maps with the densest peaks
-        // systematically above theirs). Keeping the bonus and discounting short bursts instead (vibro) hurt the balance and
-        // the maps players find hardest (The Purple Dimension has more short vibro bursts than any).
+        // Highest density counted, in reference densities. At 1, sparse stretches still count less but dense ones no more
+        // than the reference: a higher cap overvalues long dense streams and the maps with the densest peaks.
         public const double DENSITY_CAP = 1.0;
 
+        /// <summary>
+        /// Highest average swing difficulty over any stretch of the map lasting <paramref name="seconds"/> (real time, so
+        /// speed modifiers shorten the map). Unlike windows counted in swings, these don't shrink to a few seconds of burst
+        /// on very fast maps, and fit fail difficulty from attempts better.
+        /// With densityWeight > 0, each window's average is multiplied by (swings per second / densityReference)^weight,
+        /// capped at DENSITY_CAP, so a stretch with more swings counts more than one with the same swings and rests in
+        /// between. Swings per second are in song time: the swing difficulty already includes the speed modifier.
+        /// When the map is shorter than the window, the rest of the window counts as rest: the whole map's average times
+        /// its length / the window.
+        /// </summary>
         public static double MaxAverageOverSeconds(List<SwingData> swingData, double seconds, Modifiers modifiers,
             double densityReference = 0, double densityWeight = 0)
         {
@@ -254,8 +245,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     total += swing.SwingDiff;
                 }
-                // The map is shorter than the window: the rest of the window counts as rest, so a 23-second map isn't rated
-                // as if it lasted the whole window
+                // The map is shorter than the window: the rest of the window counts as rest, so a short map isn't rated as
+                // if it lasted the whole window
                 double length = last - swingData[0].Cubes[0].Seconds;
                 return total / count * Math.Min(1, length / window) * Density(count / Math.Max(length, 1));
             }

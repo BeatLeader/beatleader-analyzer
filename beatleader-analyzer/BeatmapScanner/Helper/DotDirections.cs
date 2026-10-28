@@ -7,8 +7,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 {
     /// <summary>
     /// Direction of single dots as top players cut them, fitted on the cut directions recorded in their replays (portaBLe
-    /// ParityCheck, about 16k single dots on 198 maps): mean error against the players 23.8 -> 12 degrees, dots cut the wrong
-    /// way 3.7% -> 1.4%.
+    /// ParityCheck).
     /// A dot's direction (guessed by PreprocessNotes) is pulled towards the natural direction of its parity, then gets a
     /// per-position offset: the arc of the arm, which depends on where the note is. The offset changes where the saber goes
     /// (entry / exit points) but isn't wrist work, so angle strain and rotation leave it out (DifficultyDirection).
