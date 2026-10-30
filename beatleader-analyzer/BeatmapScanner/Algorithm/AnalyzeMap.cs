@@ -1,4 +1,4 @@
-using Analyzer.BeatmapScanner.Data;
+﻿using Analyzer.BeatmapScanner.Data;
 using System.Collections.Generic;
 using System;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
@@ -22,12 +22,21 @@ namespace Analyzer.BeatmapScanner.Algorithm
         private const double PASS_CALIBRATION_FACTOR = 0.7115;
         // Pass nerf when one hand is much easier than the other (OneSaber and one-sided maps), tuned so OneSaber maps are
         // worth the same as Standard maps of their stars. Retune with the balance tuner when the acc curve or
-        // AccRating.HardSwingMultiplier (which leaves one hand maps out) changes.
-        private const double ONE_SABER_NERF = 0.39;
+        // AccRating.HardSwingMultiplier (which leaves one hand maps out) changes. 0.474 (was 0.39): the balance tuner on the
+        // P75 worth with the new parity (OneSaber gap +0.010 -> 0). It nerfs any map by how one-handed its pass is, so Standard
+        // maps with one-handed parts move too (pass of 2138 maps lower, P75 worth spread unchanged at 0.0292).
+        private const double ONE_SABER_NERF = 0.474;
         // Scale of the tech: TechRating = BALANCED_TECH_SCALER x (average swing tech x Ratings.TechPassFactor(pass)) ^
         // Ratings.TechExponent, on prod's scale. Tech pp is proportional to it, so changing it changes tech pp unless portaBLe's
         // PpFormula.TechWeight compensates.
-        private const double BALANCED_TECH_SCALER = 20.611;
+        // 14.707 (was 20.611 with swing tech = strain + rotation): the same p99 tech with the soft capped strain and rotation^1.5
+        private const double BALANCED_TECH_SCALER = 14.707;
+        // Swing tech's rotation part: ROTATION_TECH_SCALE x rotation^ROTATION_TECH_POWER. Large turns count more than small ones
+        // (4.649: twice the plain rotation on average over all swings), with angle strain soft capped (AngleStrain): maps whose
+        // tech is turns rank over maps of extreme wrist angles (stasis ExpertPlus over Sanity Krush ExpertPlus, which leads with
+        // strain + rotation on inverted forehands 160 degrees off their natural direction).
+        private const double ROTATION_TECH_SCALE = 4.649;
+        private const double ROTATION_TECH_POWER = 1.5;
         // Linear maps: pass x (1 + LINEAR_PASS_SLOPE x (linear share of the swings - LINEAR_PASS_KNEE)) above the knee,
         // applied after the tech so tech is unaffected. In a linear run each swing continues where the last one came from
         // (cut the top row, travel back down along the same line, cut the bottom note), so the swings register almost no
@@ -83,7 +92,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             if (red.Count > 2)
             {
                 PreprocessNotes.Detect(red, bombs, false);
-                ParityPredictor.Predict(red, false);
+                ParityPredictor.Predict(red, false, bombs);
                 redSwingData = SwingCreation.Process(red, false, modifiers);
                 
                 if (redSwingData.Count > 0)
@@ -96,7 +105,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             if (blue.Count > 2)
             {
                 PreprocessNotes.Detect(blue, bombs, true);
-                ParityPredictor.Predict(blue, true);
+                ParityPredictor.Predict(blue, true, bombs);
                 blueSwingData = SwingCreation.Process(blue, true, modifiers);
                 
                 if (blueSwingData.Count > 0)
@@ -207,11 +216,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     double buff = NjsBuff.CalculateNjsBuff(swing.Cubes[0].Njs, modifiers);
                     swing.AngleStrain *= buff;
+                    swing.AngleStrainTech *= buff;
                     swing.RepositioningDistance *= buff;
                     swing.RotationAmount *= buff;
-                    // Tech is the wrist work: angle strain and rotation. Repositioning (arm movement) belongs to pass; tech
-                    // fits players' accuracy loss beyond the Acc AI prediction better without it.
-                    swing.SwingTech = swing.AngleStrain + swing.RotationAmount;
+                    // Tech is the wrist work: angle strain and rotation (ROTATION_TECH_SCALE x rotation^ROTATION_TECH_POWER).
+                    // Repositioning (arm movement) belongs to pass; tech fits players' accuracy loss beyond the Acc AI prediction
+                    // better without it.
+                    swing.SwingTech = swing.AngleStrainTech + ROTATION_TECH_SCALE * Math.Pow(swing.RotationAmount, ROTATION_TECH_POWER);
                     // Resets aren't tech in the players' eyes: without this, reset-heavy maps get top tech ratings
                     if (swing.ParityErrors) swing.SwingTech /= 2;
                 }
@@ -221,6 +232,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 // https://www.desmos.com/calculator/dspid2fyyj (with the power, see Ratings.TechExponent)
                 balancedTech = BALANCED_TECH_SCALER * Math.Pow(tech * Ratings.TechPassFactor(balancedPass), Ratings.TechExponent);
+                // The rating as shown, compressed at the top (Ratings.CompressTech; tech pp undoes it)
+                balancedTech = Ratings.CompressTech(balancedTech);
             }
 
             double linearPercentage = combinedSwingData.Count > 0 ? combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count : 0;

@@ -144,11 +144,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
 
             swingData[0].AngleStrain = SwingAngleStrainCalc(swingData[0], null, isRightHand) * 4;
+            swingData[0].AngleStrainTech = SwingAngleStrainCalc(swingData[0], null, isRightHand, softCap: true) * 4;
             bool isLinear = true;
 
             for (int i = 1; i < swingData.Count; i++)
             {
                 swingData[i].AngleStrain = SwingAngleStrainCalc(swingData[i], swingData[i - 1], isRightHand) * 4;
+                swingData[i].AngleStrainTech = SwingAngleStrainCalc(swingData[i], swingData[i - 1], isRightHand, softCap: true) * 4;
 
                 // Linear: the swing reverses the previous direction and the notes move along it.
                 // IsLinear is only set when the previous swing was linear too.

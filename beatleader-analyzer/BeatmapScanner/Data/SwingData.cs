@@ -33,6 +33,8 @@ namespace Analyzer.BeatmapScanner.Data
         public bool IsStream { get; set; } = false;
         public double SwingDiff { get; set; } = 0;
         public double SwingTech { get; set; } = 0;
+        // Angle strain as tech counts it: soft capped (AngleStrain.SwingAngleStrainCalc softCap); AngleStrain itself is pass's
+        public double AngleStrainTech { get; set; } = 0;
         // Part of Direction that only comes from where the note is (natural arc of the arm), see Helper/DotDirections
         public double ArcOffset { get; set; } = 0;
         public string PatternType { get; set; } = "Single";
