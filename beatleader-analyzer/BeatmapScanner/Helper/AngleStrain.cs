@@ -11,15 +11,9 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
         const double LEFT_BACKHAND_NEUTRAL = 112.5;
         const double RIGHT_BACKHAND_NEUTRAL = 67.5;
 
-        // Tech's soft cap of the angle part (softCap; on the scale of SwingData.AngleStrain, which is 4x this): STRAIN_SOFT_CAP x
-        // tanh(4 x (degrees / 180)^2 / STRAIN_SOFT_CAP). Unchanged for ordinary swings (22.5 degrees off: 0.06, 45: 0.25 -> 0.24),
-        // squeezed towards 1.5 for the extreme ones (90: 1.0 -> 0.86, 160: 3.16 -> 1.46), which led the tech ratings. The pass
-        // rating's stress keeps the plain square.
-        const double STRAIN_SOFT_CAP = 1.5;
-
         /// <summary>
-        /// Angle strain of a swing: how far its direction is from the natural direction of its parity, ((degrees) / 180)^2
-        /// (softCap: soft capped, STRAIN_SOFT_CAP), lowered when there's time between the swings.
+        /// Angle strain of a swing: how far its direction is from the natural direction of its parity, ((degrees) / 180)^2,
+        /// lowered when there's time between the swings.
         /// </summary>
         public static double SwingAngleStrainCalc(SwingData current, SwingData previous, bool isRightHand, bool softCap = false)
         {
@@ -40,8 +34,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
 
             double deviation = AngleDeviation(neutralAngle, DotDirections.DifficultyDirection(current));
             double normalizedStrain = deviation / 180.0;
-            swingStrain += softCap ? STRAIN_SOFT_CAP * Math.Tanh(4 * normalizedStrain * normalizedStrain / STRAIN_SOFT_CAP) / 4
-                : normalizedStrain * normalizedStrain;
+            swingStrain += normalizedStrain * normalizedStrain;
 
             // Add falloff based on delta time between swings in seconds
             double deltaTime = Math.Abs(current.Cubes[0].Seconds - previous.Cubes[^1].Seconds);

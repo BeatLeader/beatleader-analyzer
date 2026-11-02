@@ -24,15 +24,16 @@ namespace Analyzer.BeatmapScanner.Algorithm
         // worth the same as Standard maps of their stars. Retune with the balance tuner when the acc curve or
         // AccRating.HardSwingMultiplier (which leaves one hand maps out) changes. 0.474 (was 0.39): the balance tuner on the
         // P75 worth with the new parity (OneSaber gap +0.010 -> 0). It nerfs any map by how one-handed its pass is, so Standard
-        // maps with one-handed parts move too (pass of 2138 maps lower, P75 worth spread unchanged at 0.0292).
-        private const double ONE_SABER_NERF = 0.474;
-        // Scale of the tech: TechRating = BALANCED_TECH_SCALER x (average swing tech x Ratings.TechPassFactor(pass)) ^
-        // Ratings.TechExponent, on prod's scale. Tech pp is proportional to it, so changing it changes tech pp unless portaBLe's
-        // PpFormula.TechWeight compensates.
-        // 14.707 (was 20.611 with swing tech = strain + rotation): the same p99 tech with the soft capped strain and rotation^1.5
-        private const double BALANCED_TECH_SCALER = 14.707;
+        // maps with one-handed parts move too (pass of 2138 maps lower, P75 worth spread unchanged at 0.0292). 0.343 with the
+        // parity model's directions (ModelDirections; OneSaber gap -0.014 at 0.474 -> about 0).
+        private const double ONE_SABER_NERF = 0.343;
+        // Scale of the tech: TechRating = BALANCED_TECH_SCALER x average swing tech x Ratings.TechPassFactor(pass), linear (no
+        // power or top compression to look like prod's). Tech pp is proportional to it, so changing it changes tech pp unless
+        // RatingAPI's PpFormula.TechWeight compensates (and PpFormula.TechTopKnee, in tech units, moves with it). 10 (was
+        // 43.948 right after the old power 0.8015 was removed): median tech about 2.1, p99 about 8.9.
+        private const double BALANCED_TECH_SCALER = 10;
         // Swing tech's rotation part: ROTATION_TECH_SCALE x rotation^ROTATION_TECH_POWER. Large turns count more than small ones
-        // (4.649: twice the plain rotation on average over all swings), with angle strain soft capped (AngleStrain): maps whose
+        // (4.649: twice the plain rotation on average over all swings), with angle strain (AngleStrain): maps whose
         // tech is turns rank over maps of extreme wrist angles (stasis ExpertPlus over Sanity Krush ExpertPlus, which leads with
         // strain + rotation on inverted forehands 160 degrees off their natural direction).
         private const double ROTATION_TECH_SCALE = 4.649;
@@ -43,8 +44,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
         // stress (repositioning only counts movement across the swing, no rotation or angle strain) even though the arm
         // covers the whole height every time. Without this, mostly linear maps are underpaid. Counting the travel along the
         // swing as stress instead overpays moderately linear maps, since the shortfall comes from the whole map being linear.
+        // 0.15 (was 0.375) with the parity model's directions: real cut directions find more linear swings and the swings
+        // register some of the travel, so 0.375 overpaid linear maps (worth slope by linear share above 0.3 +0.054, now -0.021).
         private const double LINEAR_PASS_KNEE = 0.3;
-        private const double LINEAR_PASS_SLOPE = 0.375;
+        private const double LINEAR_PASS_SLOPE = 0.15;
         // Pass windows (see UseAlgorithm), in seconds. Windows in swings (prod) last only a few seconds on fast maps, so short
         // dense bursts set the pass; much longer windows overvalue long dense streams and undervalue peak-driven speed maps.
         // 4-32 s balances the two. Changing them shifts the tech share, so recheck portaBLe's PpFormula.TechWeight.
@@ -89,7 +92,40 @@ namespace Analyzer.BeatmapScanner.Algorithm
             List<SwingData> combinedSwingData = [];
             double peakSustainedEBPM = 0.0;
 
-            if (red.Count > 2)
+            if (ParityModel.Current != null)
+            {
+                // External parity model (ParityModel.cs): it reads both hands, so both are preprocessed first
+                if (red.Count > 2) PreprocessNotes.Detect(red, bombs, false);
+                if (blue.Count > 2) PreprocessNotes.Detect(blue, bombs, true);
+                ParityModel.Current.Predict(new ParityModelInput
+                {
+                    Red = red.Count > 2 ? red : [],
+                    Blue = blue.Count > 2 ? blue : [],
+                    Bombs = bombs ?? [],
+                    Walls = walls ?? [],
+                    Bpm = modifiers.baseBPM,
+                    MapVersion = modifiers.MapVersion,
+                });
+                if (red.Count > 2)
+                {
+                    redSwingData = SwingCreation.Process(red, false, modifiers);
+                    if (redSwingData.Count > 0)
+                    {
+                        SwingMovement.Calc(redSwingData, false);
+                        combinedSwingData.AddRange(redSwingData);
+                    }
+                }
+                if (blue.Count > 2)
+                {
+                    blueSwingData = SwingCreation.Process(blue, true, modifiers);
+                    if (blueSwingData.Count > 0)
+                    {
+                        SwingMovement.Calc(blueSwingData, true);
+                        combinedSwingData.AddRange(blueSwingData);
+                    }
+                }
+            }
+            else if (red.Count > 2)
             {
                 PreprocessNotes.Detect(red, bombs, false);
                 ParityPredictor.Predict(red, false, bombs);
@@ -102,7 +138,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
 
-            if (blue.Count > 2)
+            if (ParityModel.Current == null && blue.Count > 2)
             {
                 PreprocessNotes.Detect(blue, bombs, true);
                 ParityPredictor.Predict(blue, true, bombs);
@@ -228,12 +264,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
 
                 combinedSwingData.Sort(CompareSwingTech);
-                double tech = AverageSwingTech(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
+                double tech = AverageSwingTech(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.50)..]);
 
-                // https://www.desmos.com/calculator/dspid2fyyj (with the power, see Ratings.TechExponent)
-                balancedTech = BALANCED_TECH_SCALER * Math.Pow(tech * Ratings.TechPassFactor(balancedPass), Ratings.TechExponent);
-                // The rating as shown, compressed at the top (Ratings.CompressTech; tech pp undoes it)
-                balancedTech = Ratings.CompressTech(balancedTech);
+                balancedTech = BALANCED_TECH_SCALER * tech * Ratings.TechPassFactor(balancedPass);
             }
 
             double linearPercentage = combinedSwingData.Count > 0 ? combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count : 0;

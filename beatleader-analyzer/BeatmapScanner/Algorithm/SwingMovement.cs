@@ -14,6 +14,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
     {
         public static bool UseParallel { get; set; } = true;
 
+        // Small turns between two swings count almost nothing (see Calc): rotation x (1 - e^(-(rotation / ROTATION_SOFT_SCALE)^3)),
+        // 16 degrees -> 2.3, 30 -> 19, 45 -> 43.5, 90 and more about whole
+        private const double ROTATION_SOFT_SCALE = 30;
+
         public static void Calc(List<SwingData> swingData, bool isRightHand)
         {
             CalcInternal(swingData, isRightHand);
@@ -80,6 +84,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     rotationAmount = Math.Abs(angleDifference);
                     if (!swingData[i].ParityErrors) rotationAmount = Math.Abs(rotationAmount - 180);
 
+                    // The parity model's directions are top players' real cut directions: on a plain down / up stream they
+                    // turn about 16 degrees between swings (median; 19 mean). Real, but not the wrist work tech is about:
+                    // small turns are kept with almost no weight, large ones whole
+                    rotationAmount *= 1 - Math.Exp(-Math.Pow(rotationAmount / ROTATION_SOFT_SCALE, 3));
                     rotationAmount /= 180;
                 }
 

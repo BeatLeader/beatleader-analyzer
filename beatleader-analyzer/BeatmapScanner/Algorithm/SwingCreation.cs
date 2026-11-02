@@ -129,6 +129,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (DotDirections.IsSingleDot(swing)) DotDirections.Apply(swing);
             }
 
+            // The parity model's directions, when it gave them (top players' cut directions; ModelDirections)
+            foreach (var swing in swingData) ModelDirections.Apply(swing, modifiers.strictAngles);
+
             // Hit distance: straight-line distance between consecutive entry positions
             previousSwing = null;
             foreach (SwingData swing in swingData)

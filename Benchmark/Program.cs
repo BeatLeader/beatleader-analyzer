@@ -18,6 +18,13 @@ namespace Benchmark
                 return;
             }
 
+            // The parity model's tools (ParityTools): paritymaps, parityml-verify, paritybench
+            if (args.Length > 0 && ParityTools.IsCommand(args[0]))
+            {
+                ParityTools.Run(args);
+                return;
+            }
+
             if (args.Length == 0)
             {
                 ShowMainMenu();
