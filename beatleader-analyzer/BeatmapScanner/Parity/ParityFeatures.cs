@@ -94,6 +94,44 @@ namespace Analyzer.BeatmapScanner.Parity
         // The model was trained on portaBLe paritymaps' export, which rounds times, NJS and directions to 4 decimals. Rounded
         // the same way, notes exactly half a second apart stay exactly 0.5 s apart (dens_1s, ... compare with <=).
         static double R(double v) => double.IsFinite(v) ? Math.Round(v, 4) : 0;
+
+        // Slack of the time windows, far over the rounding of the tests
+        const double WindowSlack = 0.01;
+
+        static bool IsSorted(double[] times)
+        {
+            for (int k = 1; k < times.Length; k++) if (!(times[k] >= times[k - 1])) return false;
+            return true;
+        }
+
+        // First index whose time is at least t
+        static int LowerBound(double[] times, double t)
+        {
+            int lo = 0, hi = times.Length;
+            while (lo < hi)
+            {
+                int mid = (lo + hi) >> 1;
+                if (times[mid] < t) lo = mid + 1; else hi = mid;
+            }
+            return lo;
+        }
+
+        // The items whose time is in [from, to] (plus the slack), in order: all of them when the times aren't sorted
+        static IEnumerable<T> Window<T>(T[] items, double[] times, bool sorted, double from, double to)
+        {
+            if (!sorted) return items;
+            int start = LowerBound(times, from - WindowSlack), end = LowerBound(times, to + WindowSlack);
+            return new ArraySegment<T>(items, start, Math.Max(end - start, 0));
+        }
+
+        // Count of the sorted times with |t - center| <= radius
+        static int CountNear(double[] sorted, double center, double radius)
+        {
+            int count = 0;
+            for (int k = LowerBound(sorted, center - radius - WindowSlack); k < sorted.Length && sorted[k] <= center + radius + WindowSlack; k++)
+                if (Math.Abs(sorted[k] - center) <= radius) count++;
+            return count;
+        }
         static double MirrorAngle(double a) => Mod(180 - a, 360);
         static double Mod(double a, double m) => ((a % m) + m) % m;
         // As numpy (radians / degrees multiply by the constant): the trees split on sin / cos rounding noise (cos 90 deg =
@@ -119,6 +157,14 @@ namespace Analyzer.BeatmapScanner.Parity
             var allTimes = headTimes[0].Concat(headTimes[1]).OrderBy(t => t).ToArray();
             var bombs = input.Bombs.OrderBy(b => b.BpmTime).Select(b => (T: R(b.Seconds), X: (double)b.x, Y: (double)b.y)).ToArray();
             var walls = input.Walls.OrderBy(w => w.BpmTime).Select(w => (T: R(w.Seconds), D: R(w.DurationInSeconds), X: (double)w.x, Y: (double)w.y, W: (double)w.Width)).ToArray();
+            // Per swing, only the bombs, walls and head times near it are tested (binary search on the times, with some slack;
+            // the same tests as over the whole map, in the same order). Seconds follow the beats, so the bombs and walls sorted
+            // by beat are sorted by time too; if not, whole scans
+            var bombTimes = bombs.Select(b => b.T).ToArray();
+            var wallTimes = walls.Select(w => w.T).ToArray();
+            bool sortedTimes = IsSorted(bombTimes) && IsSorted(wallTimes);
+            double longestWall = walls.Length > 0 ? Math.Max(walls.Max(w => w.D), 0) : 0;
+            var sortedHeadTimes = headTimes.Select(t => t.OrderBy(v => v).ToArray()).ToArray();
 
             var hands = new HandInputs?[2];
             for (int hand = 0; hand < 2; hand++)
@@ -187,7 +233,7 @@ namespace Analyzer.BeatmapScanner.Parity
                         x[F["other_dt"]] = 1; x[F["other_gap_log"]] = Math.Log(4);
                     }
                     double tFrom = k > 0 ? sw[k - 1].T1 : i.T0 - 1;
-                    var bb = bombs.Where(b => b.T > tFrom + 1e-4 && b.T < i.T0 - 1e-4).ToArray();
+                    var bb = Window(bombs, bombTimes, sortedTimes, tFrom, i.T0).Where(b => b.T > tFrom + 1e-4 && b.T < i.T0 - 1e-4).ToArray();
                     if (bb.Length > 0)
                     {
                         var bx = bb.Select(b => mx(b.X)).ToArray();
@@ -207,7 +253,7 @@ namespace Analyzer.BeatmapScanner.Parity
                         if (k > 0) BombGeometry(x, bb.Select(b => (b.T, b.Y)).ToArray(), bx, sw[k - 1], i, mx, mc, ma);
                     }
                     x[F["bomb_avoid"]] = i.BombAvoid ? 1 : 0;
-                    var active = walls.Where(w => w.T <= i.T0 && w.T + w.D >= i.T0).ToArray();
+                    var active = Window(walls, wallTimes, sortedTimes, i.T0 - longestWall, i.T0).Where(w => w.T <= i.T0 && w.T + w.D >= i.T0).ToArray();
                     if (active.Length > 0)
                     {
                         x[F["walls"]] = Math.Log(1 + active.Length);
@@ -215,10 +261,10 @@ namespace Analyzer.BeatmapScanner.Parity
                         x[F["wall_crouch"]] = active.Any(w => w.Y >= 2 && w.W >= 3) ? 1 : 0;
                         x[F["wall_dx"]] = (active.Average(w => mx(w.X + w.W / 2 - 0.5)) - 1.5) / 3;
                     }
-                    var ht = headTimes[hand];
-                    x[F["dens_1s"]] = ht.Count(t => Math.Abs(t - i.T0) <= 0.5);
-                    x[F["dens_4s"]] = ht.Count(t => Math.Abs(t - i.T0) <= 2) / 4.0;
-                    x[F["dens_all_1s"]] = allTimes.Count(t => Math.Abs(t - i.T0) <= 0.5);
+                    var ht = sortedHeadTimes[hand];
+                    x[F["dens_1s"]] = CountNear(ht, i.T0, 0.5);
+                    x[F["dens_4s"]] = CountNear(ht, i.T0, 2) / 4.0;
+                    x[F["dens_all_1s"]] = CountNear(allTimes, i.T0, 0.5);
                     x[F["pos"]] = i.T0 / duration;
                 }
                 hands[hand] = new HandInputs

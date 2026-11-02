@@ -18,8 +18,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
     internal class AnalyzeMap
     {
         // Scale of the pass, calibrated so ranked maps' pass matches prod's distribution (median and top end). When the swing
-        // difficulty or the windows change, recalibrate the median with it, then check the balance.
-        private const double PASS_CALIBRATION_FACTOR = 0.7115;
+        // difficulty or the windows change, recalibrate the median with it, then check the balance. 0.6917 (was 0.7115) with the
+        // linear angle strain: it raised the pass 2.8% about evenly (median 4.49 -> 4.62).
+        private const double PASS_CALIBRATION_FACTOR = 0.6917;
         // Pass nerf when one hand is much easier than the other (OneSaber and one-sided maps), tuned so OneSaber maps are
         // worth the same as Standard maps of their stars. Retune with the balance tuner when the acc curve or
         // AccRating.HardSwingMultiplier (which leaves one hand maps out) changes. 0.474 (was 0.39): the balance tuner on the
@@ -30,14 +31,20 @@ namespace Analyzer.BeatmapScanner.Algorithm
         // Scale of the tech: TechRating = BALANCED_TECH_SCALER x average swing tech x Ratings.TechPassFactor(pass), linear (no
         // power or top compression to look like prod's). Tech pp is proportional to it, so changing it changes tech pp unless
         // RatingAPI's PpFormula.TechWeight compensates (and PpFormula.TechTopKnee, in tech units, moves with it). 10 (was
-        // 43.948 right after the old power 0.8015 was removed): median tech about 2.1, p99 about 8.9.
-        private const double BALANCED_TECH_SCALER = 10;
-        // Swing tech's rotation part: ROTATION_TECH_SCALE x rotation^ROTATION_TECH_POWER. Large turns count more than small ones
-        // (4.649: twice the plain rotation on average over all swings), with angle strain (AngleStrain): maps whose
-        // tech is turns rank over maps of extreme wrist angles (stasis ExpertPlus over Sanity Krush ExpertPlus, which leads with
-        // strain + rotation on inverted forehands 160 degrees off their natural direction).
-        private const double ROTATION_TECH_SCALE = 4.649;
-        private const double ROTATION_TECH_POWER = 1.5;
+        // 43.948 right after the old power 0.8015 was removed): median tech about 2.1, p99 about 8.9. 5.971 with the swing
+        // tech below: the closest to the Dev database's p1 / median / p99 (0.30 / 3.88 / 11.87) a plain scale gets, about
+        // 0.38 / 3.51 / 10.4 (5.933 with both parts linear: 0.37 / 4.04 / 9.4). 6.917 (5.971 x 1.1584): the top end on Dev's
+        // instead (p90 7.30, p95 / p99 about 8.97 / 12.2 vs 8.89 / 11.87; median about 4.07 vs 3.88), PpFormula's
+        // TechTopKnee and TechWeight scaled with it. 6.2457 (6.917 x 0.90294): the top map's tech on Dev Acc's (stasis
+        // ExpertPlus 17.41, was 19.28), PpFormula's TechTopKnee and TechWeight scaled with it.
+        private const double BALANCED_TECH_SCALER = 6.2457;
+        // Swing tech = STRAIN_WEIGHT x angle strain^STRAIN_POWER + ROTATION_WEIGHT x rotation^ROTATION_POWER. The powers (smaller
+        // than the old squared strain and rotation^1.5 with 4.649) spread the tech's top towards Dev's. 6.475: angle strain and
+        // rotation each make half of the tech of the hardest half of the swings, over all ranked maps.
+        private const double ROTATION_WEIGHT = 6.475;
+        private const double ROTATION_POWER = 1.5;
+        private const double STRAIN_WEIGHT = 1.000;
+        private const double STRAIN_POWER = 1.25;
         // Linear maps: pass x (1 + LINEAR_PASS_SLOPE x (linear share of the swings - LINEAR_PASS_KNEE)) above the knee,
         // applied after the tech so tech is unaffected. In a linear run each swing continues where the last one came from
         // (cut the top row, travel back down along the same line, cut the bottom note), so the swings register almost no
@@ -252,13 +259,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 {
                     double buff = NjsBuff.CalculateNjsBuff(swing.Cubes[0].Njs, modifiers);
                     swing.AngleStrain *= buff;
-                    swing.AngleStrainTech *= buff;
                     swing.RepositioningDistance *= buff;
                     swing.RotationAmount *= buff;
-                    // Tech is the wrist work: angle strain and rotation (ROTATION_TECH_SCALE x rotation^ROTATION_TECH_POWER).
+                    // Tech is the wrist work: angle strain and rotation.
                     // Repositioning (arm movement) belongs to pass; tech fits players' accuracy loss beyond the Acc AI prediction
                     // better without it.
-                    swing.SwingTech = swing.AngleStrainTech + ROTATION_TECH_SCALE * Math.Pow(swing.RotationAmount, ROTATION_TECH_POWER);
+                    swing.SwingTech = STRAIN_WEIGHT * Math.Pow(swing.AngleStrain, STRAIN_POWER) + ROTATION_WEIGHT * Math.Pow(swing.RotationAmount, ROTATION_POWER);
                     // Resets aren't tech in the players' eyes: without this, reset-heavy maps get top tech ratings
                     if (swing.ParityErrors) swing.SwingTech /= 2;
                 }
