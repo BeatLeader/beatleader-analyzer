@@ -35,6 +35,12 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
                 }
             }
             Interlocked.Increment(ref Applied);
+            SetDirection(swing, direction);
+        }
+
+        /// <summary>Sets the swing's direction, its entry / exit points following it</summary>
+        public static void SetDirection(SwingData swing, double direction)
+        {
             swing.Direction = direction;
 
             double rad = ConvertDegreesToRadians(direction);
