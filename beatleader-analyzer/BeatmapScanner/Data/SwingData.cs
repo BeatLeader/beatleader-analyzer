@@ -30,6 +30,7 @@ namespace Analyzer.BeatmapScanner.Data
         public double StressMultiplier { get; set; } = 0;
         public double NjsBuff { get; set; } = 1.0;
         public double WallBuff { get; set; } = 1.0;
+        public double HighSpeedBuff { get; set; } = 1.0;
         public bool IsStream { get; set; } = false;
         public double SwingDiff { get; set; } = 0;
         public double SwingTech { get; set; } = 0;
