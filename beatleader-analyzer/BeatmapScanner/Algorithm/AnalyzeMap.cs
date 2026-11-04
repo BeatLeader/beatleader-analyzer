@@ -37,12 +37,12 @@ namespace Analyzer.BeatmapScanner.Algorithm
         // instead (p90 7.30, p95 / p99 about 8.97 / 12.2 vs 8.89 / 11.87; median about 4.07 vs 3.88), PpFormula's
         // TechTopKnee and TechWeight scaled with it. 6.2457 (6.917 x 0.90294): the top map's tech on Dev Acc's (stasis
         // ExpertPlus 17.41, was 19.28), PpFormula's TechTopKnee and TechWeight scaled with it.
-        private const double BALANCED_TECH_SCALER = 6.2457;
+        private const double BALANCED_TECH_SCALER = 6.0;
         // Swing tech = STRAIN_WEIGHT x angle strain^STRAIN_POWER + ROTATION_WEIGHT x rotation^ROTATION_POWER. The powers (smaller
         // than the old squared strain and rotation^1.5 with 4.649) spread the tech's top towards Dev's. 6.475: angle strain and
         // rotation each make half of the tech of the hardest half of the swings, over all ranked maps.
-        private const double ROTATION_WEIGHT = 6.475;
-        private const double ROTATION_POWER = 1.5;
+        private const double ROTATION_WEIGHT = 6.0;
+        private const double ROTATION_POWER = 1.25;
         private const double STRAIN_WEIGHT = 1.000;
         private const double STRAIN_POWER = 1.25;
         // Linear maps: pass x (1 + LINEAR_PASS_SLOPE x (linear share of the swings - LINEAR_PASS_KNEE)) above the knee,
