@@ -14,10 +14,10 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
     public static class HighSpeedBuff
     {
         public static double StartEbpm { get; set; } = 350;
-        public static double FullEbpm { get; set; } = 390;
+        public static double FullEbpm { get; set; } = 500;
         /// <summary>Extra pass difficulty at FullEbpm and over (0.1 = x1.1); 0 turns it off. 0.15: maps at 350+ EBPM (nomod)
         /// get 26 plays at 750pp+ (13 without), the best at 800.1 and 799.9 (0.3 made 13 plays at 800+)</summary>
-        public static double Buff { get; set; } = 0.15;
+        public static double Buff { get; set; } = 0.1;
         public static int WindowSwings { get; set; } = 4;
 
         /// <summary>Sets a setting by name, for experiments (rerate HighSpeed.Buff=0.1)</summary>
