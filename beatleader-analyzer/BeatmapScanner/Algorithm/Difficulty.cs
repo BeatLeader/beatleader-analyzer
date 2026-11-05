@@ -48,7 +48,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             var wallBuffs = (dodgeWalls != null || crouchWalls != null) ? AnalyzeWallInfluence(swingData, dodgeWalls, crouchWalls) : new Dictionary<int, double>();
             var otherHandGap = OtherHandGaps(swingData);
-            var highSpeedBuffs = HighSpeedBuff.Calculate(swingData, modifiers.speedMult);
 
             for (int i = 0; i < swingData.Count; i++)
             {
@@ -80,9 +79,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double njsBuff = NjsBuff.CalculateNjsBuff(swing.Cubes[0].Njs, modifiers);
                 swing.NjsBuff = njsBuff;
                 swing.SwingDiff *= njsBuff;
-
-                swing.HighSpeedBuff = highSpeedBuffs[i];
-                swing.SwingDiff *= swing.HighSpeedBuff;
 
                 int currentHand = swing.Cubes[0].Type;
                 if (previousHand.HasValue && previousHand.Value != currentHand)
