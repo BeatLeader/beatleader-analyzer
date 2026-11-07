@@ -13,7 +13,6 @@ namespace Benchmark
     public static class DifficultyBreakdownHtmlExporter
     {
         private const double PASS_CALIBRATION_FACTOR = 0.866;
-        private const double ONE_SABER_NERF = 0.51;
         private const double BALANCED_TECH_SCALER = 6.2457;
 
         public static string GenerateBreakdownHtml(Ratings ratings, float bpm)
@@ -155,14 +154,14 @@ namespace Benchmark
                 handsRatio = Math.Min(easierHand / Math.Max(Math.Min(harderHand, passDiffCombined), 0.0001), 1.0);
             }
             
-            double nerfMultiplier = 1.0 - (1.0 - handsRatio) * ONE_SABER_NERF;
+            // Each hand is half of the pass (AnalyzeMap)
+            double nerfMultiplier = (1.0 + handsRatio) / 2;
 
             html.AppendLine("            <div class=\"calculation-steps\">");
             html.AppendLine($"                <p><strong>Easier Hand:</strong> {easierHand:F4}</p>");
             html.AppendLine($"                <p><strong>Harder Hand:</strong> {harderHand:F4}</p>");
             html.AppendLine($"                <p><strong>Hands Ratio:</strong> {handsRatio:F4} = min(easier / max(min(harder, combined), 0.0001), 1.0)</p>");
-            html.AppendLine($"                <p><strong>One Saber Nerf Constant:</strong> {ONE_SABER_NERF}</p>");
-            html.AppendLine($"                <p><strong>Nerf Multiplier:</strong> {nerfMultiplier:F4} = 1.0 - (1.0 - {handsRatio:F4}) × {ONE_SABER_NERF}</p>");
+            html.AppendLine($"                <p><strong>Hands Multiplier:</strong> {nerfMultiplier:F4} = (1.0 + {handsRatio:F4}) / 2 (each hand half of the pass)</p>");
             html.AppendLine("            </div>");
 
             // Final calculation

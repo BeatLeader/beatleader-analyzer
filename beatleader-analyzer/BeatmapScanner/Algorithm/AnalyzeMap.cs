@@ -21,13 +21,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
         // difficulty or the windows change, recalibrate the median with it, then check the balance. 0.6917 (was 0.7115) with the
         // linear angle strain: it raised the pass 2.8% about evenly (median 4.49 -> 4.62).
         private const double PASS_CALIBRATION_FACTOR = 0.6917;
-        // Pass nerf when one hand is much easier than the other (OneSaber and one-sided maps), tuned so OneSaber maps are
-        // worth the same as Standard maps of their stars. Retune with the balance tuner when the acc curve or
-        // AccRating.HardSwingMultiplier (which leaves one hand maps out) changes. 0.474 (was 0.39): the balance tuner on the
-        // P75 worth with the new parity (OneSaber gap +0.010 -> 0). It nerfs any map by how one-handed its pass is, so Standard
-        // maps with one-handed parts move too (pass of 2138 maps lower, P75 worth spread unchanged at 0.0292). 0.343 with the
-        // parity model's directions (ModelDirections; OneSaber gap -0.014 at 0.474 -> about 0).
-        private const double ONE_SABER_NERF = 0.343;
         // Scale of the tech: TechRating = BALANCED_TECH_SCALER x average swing tech x Ratings.TechPassFactor(pass), linear (no
         // power or top compression to look like prod's). Tech pp is proportional to it, so changing it changes tech pp unless
         // RatingAPI's PpFormula.TechWeight compensates (and PpFormula.TechTopKnee, in tech units, moves with it). 10 (was
@@ -248,9 +241,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     handsRatio = Math.Min(easierHand / Math.Max(Math.Min(harderHand, passDiffCombined), 0.0001), 1.0);
                 }
 
-                // https://www.desmos.com/calculator/ibkvqjsuoo
-                double nerfMultiplier = 1.0 - (1.0 - handsRatio) * ONE_SABER_NERF;
-                balancedPass = passDiffCombined * nerfMultiplier * PASS_CALIBRATION_FACTOR;
+                // Each hand is half of the pass: the easier hand counts for handsRatio of its half (OneSaber maps: 50%). No
+                // tuned nerf any more (was ONE_SABER_NERF 0.343, OneSaber pass x0.657); OneSaber maps are balanced in the pp
+                // formula instead (RatingAPI PpFormula.OneSaberMultiplier, on acc pp around the predicted acc).
+                double handsMultiplier = (1.0 + handsRatio) / 2;
+                balancedPass = passDiffCombined * handsMultiplier * PASS_CALIBRATION_FACTOR;
             }
 
             if (combinedSwingData.Count > 2)
