@@ -28,6 +28,10 @@ namespace Benchmark
     //       MlParityModel against paritymodel/production.py's reference maps: every feature, score and decoded parity.
     //   Benchmark paritybench <parity3-maps folder> [count] [--maps <map cache>]
     //       Analyzer time per map with ParityPredictor and with MlParityModel, single threaded.
+    //   Benchmark accaimaps <parity3-maps folder> <output folder> [--maps <map cache>] [--force]
+    //       The Acc AI's swing features (AccAiSwingFeatures) of every map of the parity3-maps folder (its hash,
+    //       difficulty and mode), with the Analyzer as RatingAPI runs it (MlParityModel): beatsaber-replays-ai-2's
+    //       ACCAI_SWING_MAPS.
     //
     // Maps come from the map cache folder (default "maps": extracted maps in folders named by hash, as portaBLe's cache,
     // or <hash>.zip), downloaded from BeatSaver into it when missing.
@@ -46,6 +50,9 @@ namespace Benchmark
                 case "parityml-verify" when args.Length >= 3:
                     Verify(args[1], args[2], source).GetAwaiter().GetResult();
                     break;
+                case "accaimaps" when args.Length >= 3:
+                    ExportAccAiMaps(args[1], args[2], source, force).GetAwaiter().GetResult();
+                    break;
                 case "paritybench" when args.Length >= 2:
                     Bench(args[1], args.Length > 2 ? int.Parse(args[2]) : 200, source).GetAwaiter().GetResult();
                     break;
@@ -53,11 +60,12 @@ namespace Benchmark
                     Console.WriteLine("Usage: paritymaps <parity3 folder> <output folder> [--maps <map cache>] [--force]");
                     Console.WriteLine("       parityml-verify <parity_reference.json.gz> <parity3-maps folder> [--maps <map cache>]");
                     Console.WriteLine("       paritybench <parity3-maps folder> [count] [--maps <map cache>]");
+                    Console.WriteLine("       accaimaps <parity3-maps folder> <output folder> [--maps <map cache>] [--force]");
                     break;
             }
         }
 
-        public static bool IsCommand(string command) => command is "paritymaps" or "parityml-verify" or "paritybench";
+        public static bool IsCommand(string command) => command is "paritymaps" or "parityml-verify" or "paritybench" or "accaimaps";
 
         static string? Option(ref string[] args, string name)
         {
@@ -84,8 +92,10 @@ namespace Benchmark
         sealed class MapSource
         {
             static readonly HttpClient http = new() { Timeout = TimeSpan.FromMinutes(2) };
+            // --maps may list several caches separated by ';': each is searched, downloads go to the first
             readonly string folder;
-            public MapSource(string folder) { this.folder = folder; }
+            readonly string[] folders;
+            public MapSource(string folder) { folders = folder.Split(';', StringSplitOptions.RemoveEmptyEntries); this.folder = folders[0]; }
 
             public async Task<(DifficultyV3 Data, float Bpm, string Name, string Mapper)?> Load(string hash, string mode, string difficulty)
             {
@@ -98,10 +108,15 @@ namespace Benchmark
 
             async Task<Parser.Map.BeatmapV3?> LoadMapset(string hash)
             {
-                foreach (var name in new[] { hash.ToLowerInvariant(), hash.ToUpperInvariant() })
+                foreach (var cache in folders)
                 {
-                    string dir = Path.Combine(folder, name);
-                    if (Directory.Exists(dir)) return new Parse().TryLoadPath(dir);
+                    foreach (var name in new[] { hash.ToLowerInvariant(), hash.ToUpperInvariant() })
+                    {
+                        string dir = Path.Combine(cache, name);
+                        if (Directory.Exists(dir)) return new Parse().TryLoadPath(dir);
+                    }
+                    string cached = Path.Combine(cache, hash.ToLowerInvariant() + ".zip");
+                    if (File.Exists(cached)) return new Parse().TryLoadZip(new MemoryStream(await File.ReadAllBytesAsync(cached)));
                 }
                 string zip = Path.Combine(folder, hash.ToLowerInvariant() + ".zip");
                 if (!File.Exists(zip))
@@ -350,6 +365,62 @@ namespace Benchmark
                 R(c.Seconds), c.Color, c.x, c.y, c.CutDirection, c.tx, c.ty, c.SliceCount, R(c.Squish),
             }).ToList();
             return map;
+        }
+
+        // ------------------------------------------------------------------
+        // accaimaps
+        // ------------------------------------------------------------------
+
+        static async Task ExportAccAiMaps(string mapsFolder, string outputFolder, MapSource source, bool force)
+        {
+            var timer = Stopwatch.StartNew();
+            Directory.CreateDirectory(outputFolder);
+            var files = Directory.EnumerateFiles(mapsFolder, "*.json.gz").ToList();
+            Console.WriteLine($"Acc AI maps: {files.Count} maps -> {outputFolder} (parity: {ParityModel.Current?.GetType().Name ?? "ParityPredictor"})");
+            int written = 0, skipped = 0, failed = 0;
+            var columns = new[] { "Seconds", "X", "Y", "Color" }.Concat(beatleader_analyzer.BeatmapScanner.Helper.AccAiSwingFeatures.Names).ToArray();
+            await Parallel.ForEachAsync(files, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, async (file, ct) =>
+            {
+                string id = Path.GetFileName(file)[..^".json.gz".Length];
+                string output = Path.Combine(outputFolder, $"{id}.json.gz");
+                if (!force && File.Exists(output))
+                {
+                    Interlocked.Increment(ref skipped);
+                    return;
+                }
+                try
+                {
+                    var (hash, difficulty, mode) = MapKey(file);
+                    var loaded = await source.Load(hash, mode, difficulty);
+                    var ratings = loaded == null ? null : new Analyze().GetRating(loaded.Value.Data, mode, difficulty, loaded.Value.Bpm);
+                    if (ratings == null)
+                    {
+                        Interlocked.Increment(ref failed);
+                        return;
+                    }
+                    var features = beatleader_analyzer.BeatmapScanner.Helper.AccAiSwingFeatures.Compute(ratings.SwingData);
+                    var empty = new float[beatleader_analyzer.BeatmapScanner.Helper.AccAiSwingFeatures.Size];
+                    var notes = loaded!.Value.Data.Notes.Where(n => n.Color == 0 || n.Color == 1).OrderBy(n => n.Seconds)
+                        .Select(n => new double[] { R(n.Seconds), n.x, n.y, n.Color }
+                            .Concat((features.TryGetValue(n, out var f) ? f : empty).Select(v => R(v))).ToArray())
+                        .ToList();
+                    var map = new { Version = 2, LeaderboardId = id, Hash = hash, Difficulty = difficulty, Mode = mode, Columns = columns, Notes = notes };
+                    string tmp = output + ".tmp";
+                    await using (var stream = new GZipStream(File.Create(tmp), CompressionLevel.Optimal))
+                    {
+                        await JsonSerializer.SerializeAsync(stream, map, cancellationToken: ct);
+                    }
+                    File.Move(tmp, output, true);
+                    int n = Interlocked.Increment(ref written);
+                    if (n % 500 == 0) Console.WriteLine($"Acc AI maps: {n} written ({timer.Elapsed:mm\\:ss})");
+                }
+                catch (Exception e)
+                {
+                    Interlocked.Increment(ref failed);
+                    Console.WriteLine($"Acc AI maps: {id} failed ({e.Message})");
+                }
+            });
+            Console.WriteLine($"Acc AI maps: {written} written, {skipped} already there, {failed} failed ({timer.Elapsed:mm\\:ss})");
         }
 
         // ------------------------------------------------------------------
