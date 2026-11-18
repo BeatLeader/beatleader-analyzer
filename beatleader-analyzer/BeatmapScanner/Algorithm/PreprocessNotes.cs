@@ -69,18 +69,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     // If previous note was a slider, we want to compare head note to current note for direction
                     Cube previous = cubes[group[0]];
 
-                    // We need grid distance to calculate approx duration.
-                    // 1 = No distance, 2 = window, 3 = full grid
+                    // Grid distance scales the expected slider duration (1 = same spot, 2 = window, 3 = full grid).
                     float gridDistance = Math.Max(Math.Max(Math.Abs(previous.X - cubes[j].X), Math.Abs(previous.Y - cubes[j].Y)), 1);
 
-                    // Some maps have reversed sliders, so distance <= 0.1f is a catch-all.
-                    // Example map: Meowchine, Break, Grave of the Fireflies.
-                    // 1.3f is for G1ll35 d3 R415 specifically (0.070s dot inline at 18NJS).
-                    // Might be unnecessary, but it's overweighted otherwise.
-                    // Example map with slow sliders: Alone intelligence, Lost It (require 1.2f), etc.
-                    // Map with high EBPM dot placement: CHUTEN, Apocalyse Simulator v2.0
+                    // distance <= 0.2 is a catch-all for reversed or misaligned sliders. The 1.3 limit also groups slow
+                    // sliders and very fast inline dots, which would be overweighted as separate swings, without merging
+                    // high-EBPM dot streams.
                     isSlider = ValidateSliders(previous, cubes[j]);
-                    if ((distance < 1.3f && isSlider && cubes[j].JsonTime - previous.JsonTime <= expectedDuration * gridDistance * 2) || distance <= 0.1f)
+                    if ((distance < 1.3f && isSlider && cubes[j].JsonTime - previous.JsonTime <= expectedDuration * gridDistance * 2) || distance <= 0.2f)
                     {
                         if (expectedDuration == 1000)
                         {
@@ -131,11 +127,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return;
             }
             
-            // Create list of (index, time) pairs and sort by time
             var indexedNotes = group.Select(idx => new { Index = idx, Time = cubes[idx].BpmTime }).ToList();
             indexedNotes.Sort((a, b) => a.Time.CompareTo(b.Time));
             
-            // Update group with sorted indices
             for (int i = 0; i < group.Count; i++)
             {
                 group[i] = indexedNotes[i].Index;
@@ -170,10 +164,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
             // Case 0: Both are dots
             if (previous.CutDirection == 8 && current.CutDirection == 8)
             {
-                // We just assume that it is. It's not worth it getting false negative.
-                // Mostly due to singular dot note before sliders (so we don't know the actual expected direction)
-                // Or bomb resets, which can completely change the expected direction.
-                // Trying to verify dot direction will create some pretty horrible false positive.
+                // Always accepted: dot directions are unreliable here (a lone dot before a slider or a bomb reset can
+                // change the expected direction), so verifying them causes more misclassification than it prevents.
                 previous.Direction = geometricAngle;
                 current.Direction = geometricAngle;
                 return true;
@@ -216,7 +208,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (IsSameDir(geometricAngle, current.Direction) || IsSameDir(geometricAngle, previous.Direction)) return true;
             }
 
-            // Fallback
             return false;
         }
 
@@ -238,10 +229,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 
                 if (headCube.CutDirection != 8)
                 {
-                    // Arrow: use literal direction
-                    headCube.Direction = headCube.Direction;
-
-                    // Check for bomb avoidance
+                    // Arrow: keeps its own direction. Check for bomb avoidance
                     var bombInfluence = FlagBombAvoidance(cubes, previousCubeIndex, headIndex, bombs);
                     groupHasBombAvoidance = bombInfluence.hasBombs && (bombInfluence.playerX >= 0 || bombInfluence.playerY >= 0);
                 }
@@ -285,17 +273,8 @@ namespace Analyzer.BeatmapScanner.Algorithm
                         }
                         else
                         {
-                            // No bomb avoidance: normal flow
-                            // If bomb avoidance suggests parity flip, keep previous direction
-                            // Otherwise, reverse direction
-                            if (bombInfluence.parityFlip)
-                            {
-                                headCube.Direction = FindAngleViaPos(headCube, cubes[previousCubeIndex], Mod(previousDirection + 180, 360), false);
-                            }
-                            else
-                            {
-                                headCube.Direction = FindAngleViaPos(headCube, cubes[previousCubeIndex], previousDirection, false);
-                            }
+                            // No bomb avoidance: normal flow, reverse of the previous direction
+                            headCube.Direction = FindAngleViaPos(headCube, cubes[previousCubeIndex], previousDirection, false);
                         }
                     }
                 }
@@ -303,7 +282,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 previousDirection = headCube.Direction;
                 previousCubeIndex = headIndex;
 
-                // Mark head
                 headCube.Head = true;
 
                 // Mark tail if group has multiple notes
@@ -323,15 +301,13 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
         }
         
-        private static (bool hasBombs, bool parityFlip, double playerX, double playerY) FlagBombAvoidance(List<Cube> cubes, int previousIndex, int currentIndex, List<Bomb> bombs)
+        private static (bool hasBombs, double playerX, double playerY) FlagBombAvoidance(List<Cube> cubes, int previousIndex, int currentIndex, List<Bomb> bombs)
         {
-            // Check for bomb avoidance
             var bombInfluence = AnalyzeBombInfluence(cubes, previousIndex, currentIndex, bombs);
 
             // If bomb avoidance occurred
             if (bombInfluence.hasBombs && (bombInfluence.playerX >= 0 || bombInfluence.playerY >= 0))
             {
-                // Mark bomb avoidance
                 cubes[currentIndex].BombAvoidance = true;
             }
 
@@ -352,7 +328,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 
                 if (group.Count < 2)
                 {
-                    // Single note: just copy head direction to itself (already set)
+                    // Single note keeps the direction set in SetInitialDirections
                     continue;
                 }
                 
@@ -407,7 +383,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 double angleRad = Math.Atan2(layerDiff, lineDiff);
                 double geometricAngle = (angleRad * 180.0 / Math.PI + 360.0) % 360.0;
                 
-                // Calculate reverse angle
                 double reverseAngle = Mod(geometricAngle + 180, 360);
                 
                 // Default to geometric angle (head to tail)
@@ -451,6 +426,14 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     // If not equidistant, keep geometric angle (head to tail is always primary)
                 }
                 
+                // A group with an arrow is swung the way the arrow points: a stack or tower of down arrows goes down even
+                // though its notes might run bottom to top (replays agree with the arrow over the geometry).
+                int arrowPosition = group.FindIndex(idx => cubes[idx].CutDirection != 8);
+                if (arrowPosition >= 0 && Math.Abs(Mod(chosenAngle - cubes[group[arrowPosition]].Direction + 180, 360) - 180) > 90)
+                {
+                    chosenAngle = Mod(chosenAngle + 180, 360);
+                }
+
                 // Apply chosen angle to ALL notes in the group
                 foreach (int idx in group)
                 {
@@ -507,11 +490,11 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
         }
 
-        public static (bool hasBombs, bool parityFlip, double playerX, double playerY) AnalyzeBombInfluence(List<Cube> cubes, int prevSwingHeadIndex, int currentSwingHeadIndex, List<Bomb> bombs)
+        public static (bool hasBombs, double playerX, double playerY) AnalyzeBombInfluence(List<Cube> cubes, int prevSwingHeadIndex, int currentSwingHeadIndex, List<Bomb> bombs)
         {
             if (bombs == null || bombs.Count == 0)
             {
-                return (false, false, -1, -1);
+                return (false, -1, -1);
             }
 
             // Get the tail of the previous swing (for patterns) or the head itself (for single notes)
@@ -541,7 +524,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
             if (allRelevantBombs.Count == 0)
             {
-                return (false, false, -1, -1);
+                return (false, -1, -1);
             }
 
             // Calculate player's position after previous swing in meter-based coordinates
@@ -562,8 +545,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
             double playerY = Math.Clamp(targetY, GridYToMeters(0), GridYToMeters(2));
 
             bool encounteredBomb = false;
-            int reversalCount = 0;
-            bool parityFlip = false;
 
             // Simulate player trying to recover from swing and encountering bombs
             foreach (var bomb in allRelevantBombs)
@@ -579,9 +560,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 if (distToBomb < 0.48)
                 {
                     // Bomb is at player's position! Player must avoid it
-                    reversalCount++;
                     encounteredBomb = true;
-                    parityFlip = !parityFlip;
 
                     // Player moves maximum 2 grid spaces away from bomb (1.2 meters)
                     // Determine if bomb is in a corner or edge
@@ -622,7 +601,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
             }
 
             // Return player position after bomb avoidance (or -1,-1 if no bombs encountered)
-            return (encounteredBomb, parityFlip, encounteredBomb ? playerX : -1, encounteredBomb ? playerY : -1);
+            return (encounteredBomb, encounteredBomb ? playerX : -1, encounteredBomb ? playerY : -1);
         }
     }
 }

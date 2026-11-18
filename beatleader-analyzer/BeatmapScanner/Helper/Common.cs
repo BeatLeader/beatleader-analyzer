@@ -6,7 +6,7 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
     {
         // Beat Saber grid spacing constants (in meters)
         // Based on ArcViewer: https://github.com/AllPoland/ArcViewer/blob/c3522d320c41a60d74830bca8f657a1a9c2b4e9d/Assets/__Scripts/Previewer/MapControl/Objects/ObjectManager.cs#L44
-        // Note: For accurate grid-to-meter position conversions with centered grid (0,0) and proper Y spacing, use GridPositionHelper
+        // For grid-to-meter position conversions (centered grid, uneven row spacing), use GridPosition
         public const double LANE_SPACING = 0.6; // Distance between grid positions in meters (X-axis spacing)
         public const double NOTE_SIZE = 0.3; // Half the distance between grid positions (note radius)
         

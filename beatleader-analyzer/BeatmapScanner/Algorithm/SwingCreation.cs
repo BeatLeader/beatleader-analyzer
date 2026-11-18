@@ -1,12 +1,12 @@
 ﻿using Analyzer.BeatmapScanner.Data;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using static beatleader_analyzer.BeatmapScanner.Helper.EntryExit;
 using static beatleader_analyzer.BeatmapScanner.Helper.Common;
 using static beatleader_analyzer.BeatmapScanner.Helper.AngleStrain;
 using beatleader_analyzer.BeatmapScanner.Data;
+using beatleader_analyzer.BeatmapScanner.Helper;
 
 namespace Analyzer.BeatmapScanner.Algorithm
 {
@@ -32,7 +32,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 
                 if (obj.Head)
                 {
-                    // Close previous group if exists
                     if (current != null)
                     {
                         groups.Add(current);
@@ -73,39 +72,21 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 return new List<SwingData>();
             }
             
-            var swingData = new List<SwingData>(groups.Count)
+            // One swing per group, each with its own entry/exit; multi-note swings get their multi-note exit.
+            var swingData = new List<SwingData>(groups.Count);
+            foreach (var group in groups)
             {
-                new SwingData(groups[0])
-            };
-
-            int groupIndex = 0;
-
-            for (int i = 0; i < cubes.Count; i++)
-            {
-                var currentBeat = cubes[i].BpmTime;
-
-                if (!cubes[i].Pattern || cubes[i].Head)
+                var swing = new SwingData(group);
+                // Also handles a single note with a chain (exit at the chain's tail)
+                CalcEntryExit(swing);
+                if (group.Count > 1)
                 {
-                    groupIndex++;
-                    
-                    if (groupIndex >= groups.Count)
-                    {
-                        break;
-                    }
-
-                    swingData.Add(new SwingData(groups[groupIndex]));
-                    // This also take into account individual note with a chain.
-                    CalcEntryExit(swingData[^1]);
+                    CalcMultiNoteExit(swing, modifiers.strictAngles);
                 }
-                else
-                {
-                    // Calculate multi-note exit position with averaged angle
-                    Cube headCube = groupIndex >= 0 ? groups[groupIndex][0] : null;
-                    CalcMultiNoteExit(swingData[^1], modifiers.strictAngles);
-                }
+                swingData.Add(swing);
             }
 
-            // Second pass: verify that direction match geometry for multi-note swings
+            // Second pass: dot-only multi-note swings take their direction from geometry, notes are reordered along it
             VerifyMultiNotes(swingData, modifiers.strictAngles);
 
             // Calculate swing frequency
@@ -114,18 +95,27 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 if (previousSwing != null)
                 {
-                    swing.SwingFrequency = 1 / (swing.BpmTime - previousSwing.BpmTime);
+                    float deltaTime = swing.Cubes[0].Seconds - previousSwing.Cubes[0].Seconds;
+                    if (deltaTime != 0)
+                    {
+                        swing.SwingFrequency = 1 / deltaTime;
+                        // A reset adds a motion in the same time
+                        if (swing.ParityErrors) swing.SwingFrequency *= 2;
+                    }
+                    else // Same time as the previous swing: fixed high frequency
+                    {
+                        swing.SwingFrequency = 64;
+                    }
                 }
 
                 previousSwing = swing;
             }
 
-            // Normalize angles between swings based on angle tolerance
-            // Recalculate entry and exit position
-            // Skip notes with bomb avoidance as they have special direction calculation
+            // Bend each swing towards the path from the previous one (within angle tolerance), updating entry/exit.
+            // Bomb avoidance swings have their own direction logic; single dots are handled below.
             for (int i = 1; i < swingData.Count; i++)
             {
-                if (swingData[i].Cubes[0].BombAvoidance)
+                if (swingData[i].Cubes[0].BombAvoidance || DotDirections.IsSingleDot(swingData[i]))
                 {
                     continue;
                 }
@@ -133,13 +123,24 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 NormalizeAngle(swingData[i - 1], swingData[i], modifiers);
             }
 
-            // Calculate hit distance
+            // Single dots take the direction top players cut them at
+            foreach (var swing in swingData)
+            {
+                if (DotDirections.IsSingleDot(swing)) DotDirections.Apply(swing);
+            }
+
+            // The parity model's directions, when it gave them (top players' cut directions; ModelDirections)
+            foreach (var swing in swingData) ModelDirections.Apply(swing, modifiers.strictAngles);
+
+            // Back and forth jumps between two positions are swung straight along their line
+            SustainedJumps.Apply(swingData, modifiers.strictAngles);
+
+            // Hit distance: straight-line distance between consecutive entry positions
             previousSwing = null;
             foreach (SwingData swing in swingData)
             {
                 if (previousSwing != null)
                 {
-                    // Calculate straight-line distance between positions
                     double dx = swing.EntryPosition.x - previousSwing.EntryPosition.x;
                     double dy = swing.EntryPosition.y - previousSwing.EntryPosition.y;
                     swing.HitDistance = Math.Sqrt(dx * dx + dy * dy);
@@ -155,11 +156,10 @@ namespace Analyzer.BeatmapScanner.Algorithm
             {
                 swingData[i].AngleStrain = SwingAngleStrainCalc(swingData[i], swingData[i - 1], isRightHand) * 4;
 
-                // Check if it's linear
-                // First we check if the expected direction matches the reverse diretion of the previous swing
+                // Linear: the swing reverses the previous direction and the notes move along it.
+                // IsLinear is only set when the previous swing was linear too.
                 double target = ReverseCutDirection(swingData[i - 1].Direction);
                 bool directionMatches = IsSameDir(target, swingData[i].Direction, 22.5);
-                // Then we check if the note placement matches the expected geometric direction
                 var prevPos = swingData[i - 1].Cubes[^1];
                 var currPos = swingData[i].Cubes[0];
                 double dx = currPos.X - prevPos.X;
@@ -168,7 +168,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 bool movementMatchesDirection = IsSameDir(target, geometricAngle, 22.5);
                 if (directionMatches && (movementMatchesDirection || (dx == 0 && dy == 0))) // We can't deduce anything from same position
                 {
-                    // Can be considered linear movement, reduce strain
                     if (isLinear)
                     {
                         swingData[i].IsLinear = true;
@@ -183,7 +182,6 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
         public static void VerifyMultiNotes(List<SwingData> swingData, bool strictAngles)
         {
-            // Calculate geometric direction for multi-note swings
             for (int i = 0; i < swingData.Count; i++)
             {
                 var swing = swingData[i];
@@ -194,7 +192,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
 
                 if(swing.Cubes.All(x => x.CutDirection == 8))
                 {
-                    // Compute geometric angle based on head → tail
+                    // Dot-only swing: direction is the head -> tail line or its reverse, whichever strains less
                     var entry = swing.Cubes[0];
                     var exit = swing.Cubes[^1];
                     var deltaX = exit.X - entry.X;
@@ -203,24 +201,19 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     var geometricAngle = Math.Atan2(deltaY, deltaX) * (180.0 / Math.PI);
                     if (geometricAngle < 0) geometricAngle += 360.0;
 
-                    // Calculate the reverse of the geometric angle
                     var reverseGeometricAngle = (geometricAngle + 180.0) % 360.0;
 
-                    // Use angle strain based on parity to decide
                     bool isRightHand = entry.Type == 1; // 0 = red/left, 1 = blue/right
                     bool currentParity = swing.Forehand;
 
                     SwingData previousSwing = i > 0 ? swingData[i - 1] : null;
 
-                    // Test geometric angle
                     var tempSwingGeometric = new SwingData(swing.Cubes, geometricAngle, currentParity);
                     double strainGeometric = SwingAngleStrainCalc(tempSwingGeometric, previousSwing, isRightHand);
 
-                    // Test reverse angle
                     var tempSwingReverse = new SwingData(swing.Cubes, reverseGeometricAngle, currentParity);
                     double strainReverse= SwingAngleStrainCalc(tempSwingReverse, previousSwing, isRightHand);
 
-                    // Find which combination has the lowest strain
                     double minStrain = Math.Min(strainGeometric, strainReverse);
 
                     double selectedAngle;
@@ -228,8 +221,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     if (minStrain == strainGeometric) selectedAngle = geometricAngle;
                     else selectedAngle = reverseGeometricAngle;
 
-                    // Check if this angle is too similar to the previous swing's angle
-                    // If so, use the reverse angle instead
+                    // Within 45 degrees of the previous swing's direction: flip it (swings alternate)
                     if (i > 0)
                     {
                         double previousAngle = swingData[i - 1].Direction;
@@ -239,11 +231,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                             angleDiffToPrevious = 360 - angleDiffToPrevious;
                         }
                         
-                        // If the selected angle is within 45 degrees of the previous swing, use the reverse
                         const double SIMILARITY_THRESHOLD = 45.0;
                         if (angleDiffToPrevious < SIMILARITY_THRESHOLD)
                         {
-                            // Use the opposite direction
                             selectedAngle = selectedAngle == geometricAngle ? reverseGeometricAngle : geometricAngle;
                         }
                     }
@@ -252,20 +242,17 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swing.Cubes.ForEach(n => n.Direction = swing.Direction);
                 }
 
-                // Reorder notes based on their projection along the swing direction
-                // Calculate direction vector
+                // Reorder notes by their projection along the swing direction
                 double directionRadians = swing.Direction * Math.PI / 180.0;
                 double dirX = Math.Cos(directionRadians);
                 double dirY = Math.Sin(directionRadians);
 
-                // Calculate projection of each note onto the direction vector
                 var notesWithProjection = swing.Cubes.Select(note => new
                 {
                     Note = note,
                     Projection = note.X * dirX + note.Y * dirY
                 }).OrderBy(x => x.Projection).ToList();
 
-                // Reorder the notes list
                 swing.Cubes.Clear();
                 swing.Cubes.AddRange(notesWithProjection.Select(x => x.Note));
 
@@ -275,6 +262,9 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swing.Cubes[j].Head = j == 0;
                     swing.Cubes[j].Tail = j == swing.Cubes.Count - 1;
                 }
+
+                // Keep SwingData.BpmTime in sync with the (possibly reordered) head cube
+                swing.BpmTime = swing.Cubes[0].BpmTime;
             }
         }
     }

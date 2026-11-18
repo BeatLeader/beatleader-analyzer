@@ -361,3 +361,11 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/attempts-1-of-8.bin
+/attempts-2-of-8.bin
+/attempts-3-of-8.bin
+/attempts-4-of-8.bin
+/attempts-5-of-8.bin
+/attempts-6-of-8.bin
+/attempts-7-of-8.bin
+/attempts-8-of-8.bin

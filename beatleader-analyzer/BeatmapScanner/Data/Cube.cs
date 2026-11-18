@@ -20,6 +20,11 @@ namespace Analyzer.BeatmapScanner.Data
         public int CutDirection { get; set; } = 0;
         public double AngleOffset { get; set; } = 0;
         public double Direction { get; set; } = -1;
+        // Direction the parity predictor saw (Direction can be changed afterwards by swing creation)
+        public double ParityDirection { get; set; } = -1;
+        // Direction of the note's swing from the parity model (ParityModel), degrees, -1 when none: the swing's direction
+        // (ModelDirections)
+        public double ModelDirection { get; set; } = -1;
         public float Njs { get; set; } = 0;
         public bool Head { get; set; } = false;
         public bool Tail { get; set; } = false;
@@ -50,6 +55,8 @@ namespace Analyzer.BeatmapScanner.Data
             CutDirection = cube.CutDirection;
             AngleOffset = cube.AngleOffset;
             Direction = cube.Direction;
+            ParityDirection = cube.ParityDirection;
+            ModelDirection = cube.ModelDirection;
             Njs = cube.Njs;
             Head = cube.Head;
             Tail = cube.Tail;

@@ -9,6 +9,9 @@ namespace beatleader_analyzer.BeatmapScanner.Helper
             // We need to take into account of both speed modifier and njs modifier
             njs = njs * modifiers.speedMult * modifiers.njsMult;
 
+            // Cap at 50
+            if (njs > 50) njs = 50;
+
             double buff = 1f;
             if (njs > 24)
             {

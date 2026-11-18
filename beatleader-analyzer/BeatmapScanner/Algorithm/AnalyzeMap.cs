@@ -1,4 +1,4 @@
-using Analyzer.BeatmapScanner.Data;
+﻿using Analyzer.BeatmapScanner.Data;
 using System.Collections.Generic;
 using System;
 using static beatleader_analyzer.BeatmapScanner.Helper.Performance;
@@ -17,19 +17,122 @@ namespace Analyzer.BeatmapScanner.Algorithm
     /// </summary>
     internal class AnalyzeMap
     {
-        private const double PASS_CALIBRATION_FACTOR = 0.825;
-        private const double ONE_SABER_NERF = 0.5;
-        private const double BALANCED_TECH_SCALER = 14.0;
+        // Scale of the pass, calibrated so ranked maps' pass matches prod's distribution (median and top end). When the swing
+        // difficulty or the windows change, recalibrate the median with it, then check the balance. 0.6917 (was 0.7115) with the
+        // linear angle strain: it raised the pass 2.8% about evenly (median 4.49 -> 4.62).
+        private const double PASS_CALIBRATION_FACTOR = 0.6917;
+        // Pass nerf when one hand is much easier than the other (OneSaber and one-sided maps), tuned so OneSaber maps are
+        // worth the same as Standard maps of their stars. Retune with the balance tuner when the acc curve or
+        // AccRating.HardSwingMultiplier (which leaves one hand maps out) changes. 0.474 (was 0.39): the balance tuner on the
+        // P75 worth with the new parity (OneSaber gap +0.010 -> 0). It nerfs any map by how one-handed its pass is, so Standard
+        // maps with one-handed parts move too (pass of 2138 maps lower, P75 worth spread unchanged at 0.0292). 0.343 with the
+        // parity model's directions (ModelDirections; OneSaber gap -0.014 at 0.474 -> about 0).
+        private const double ONE_SABER_NERF = 0.343;
+        // Scale of the tech: TechRating = BALANCED_TECH_SCALER x average swing tech x Ratings.TechPassFactor(pass), linear (no
+        // power or top compression to look like prod's). Tech pp is proportional to it, so changing it changes tech pp unless
+        // RatingAPI's PpFormula.TechWeight compensates (and PpFormula.TechTopKnee, in tech units, moves with it). 10 (was
+        // 43.948 right after the old power 0.8015 was removed): median tech about 2.1, p99 about 8.9. 5.971 with the swing
+        // tech below: the closest to the Dev database's p1 / median / p99 (0.30 / 3.88 / 11.87) a plain scale gets, about
+        // 0.38 / 3.51 / 10.4 (5.933 with both parts linear: 0.37 / 4.04 / 9.4). 6.917 (5.971 x 1.1584): the top end on Dev's
+        // instead (p90 7.30, p95 / p99 about 8.97 / 12.2 vs 8.89 / 11.87; median about 4.07 vs 3.88), PpFormula's
+        // TechTopKnee and TechWeight scaled with it. 6.2457 (6.917 x 0.90294): the top map's tech on Dev Acc's (stasis
+        // ExpertPlus 17.41, was 19.28), PpFormula's TechTopKnee and TechWeight scaled with it.
+        private const double BALANCED_TECH_SCALER = 6.0;
+        // Swing tech = STRAIN_WEIGHT x angle strain^STRAIN_POWER + ROTATION_WEIGHT x rotation^ROTATION_POWER. The powers (smaller
+        // than the old squared strain and rotation^1.5 with 4.649) spread the tech's top towards Dev's. 6.475: angle strain and
+        // rotation each make half of the tech of the hardest half of the swings, over all ranked maps.
+        private const double ROTATION_WEIGHT = 6.0;
+        private const double ROTATION_POWER = 1.25;
+        private const double STRAIN_WEIGHT = 1.000;
+        private const double STRAIN_POWER = 1.25;
+        // Linear maps: pass x (1 + LINEAR_PASS_SLOPE x (linear share of the swings - LINEAR_PASS_KNEE)) above the knee,
+        // applied after the tech so tech is unaffected. In a linear run each swing continues where the last one came from
+        // (cut the top row, travel back down along the same line, cut the bottom note), so the swings register almost no
+        // stress (repositioning only counts movement across the swing, no rotation or angle strain) even though the arm
+        // covers the whole height every time. Without this, mostly linear maps are underpaid. Counting the travel along the
+        // swing as stress instead overpays moderately linear maps, since the shortfall comes from the whole map being linear.
+        // 0.15 (was 0.375) with the parity model's directions: real cut directions find more linear swings and the swings
+        // register some of the travel, so 0.375 overpaid linear maps (worth slope by linear share above 0.3 +0.054, now -0.021).
+        private const double LINEAR_PASS_KNEE = 0.3;
+        private const double LINEAR_PASS_SLOPE = 0.15;
+        // Pass windows (see UseAlgorithm), in seconds. Windows in swings (prod) last only a few seconds on fast maps, so short
+        // dense bursts set the pass; much longer windows overvalue long dense streams and undervalue peak-driven speed maps.
+        // 4-32 s balances the two. Changing them shifts the tech share, so recheck portaBLe's PpFormula.TechWeight.
+        private static readonly double[] WindowSeconds = { 4, 8, 16, 32 };
+        private static readonly int[] WindowSwings = { 16, 32, 64, 128 };
+        // Weight of the windows in seconds in the pass: 1 = seconds only, 0 = swings only (prod). Changing it or the windows
+        // changes the pass scale, so recalibrate PASS_CALIBRATION_FACTOR and check the balance after.
+        private static readonly double SECONDS_WINDOW_WEIGHT = 1.0;
+        // Swing density in the seconds windows: each window's average swing difficulty times (swings per second /
+        // DENSITY_REFERENCE)^DENSITY_WEIGHT (half the reference for one hand, and for both when only one hand plays, as on
+        // OneSaber). 0 = average per swing only.
+        private static readonly double DENSITY_WEIGHT = 0.25;
+        private const double DENSITY_REFERENCE = 8;
+
+        // Inline: a note hidden behind the previous note in the same column and row (either color), at most 1/4 beat after it
+        // (JsonTime). Notes at the same time aren't inlines.
+        public const double INLINE_MAX_GAP = 0.25;
+        public const double INLINE_MIN_GAP = 0.001;
+
+        private static int CountInlines(List<Cube> red, List<Cube> blue)
+        {
+            int count = 0;
+            foreach (var spot in red.Concat(blue).GroupBy(c => (c.X, c.Y)))
+            {
+                var ordered = spot.OrderBy(c => c.JsonTime).ToList();
+                for (int i = 1; i < ordered.Count; i++)
+                {
+                    double gap = ordered[i].JsonTime - ordered[i - 1].JsonTime;
+                    if (gap >= INLINE_MIN_GAP && gap <= INLINE_MAX_GAP + INLINE_MIN_GAP) count++;
+                }
+            }
+            return count;
+        }
 
         public static Ratings UseAlgorithm(List<Cube> red, List<Cube> blue, 
             Modifiers modifiers, List<Wall> walls = null, List<Bomb> bombs = null)
         {
+            // Counted before the preprocessing, on the notes as mapped
+            int inlines = CountInlines(red, blue);
             List<SwingData> redSwingData = [];
             List<SwingData> blueSwingData = [];
             List<SwingData> combinedSwingData = [];
             double peakSustainedEBPM = 0.0;
 
-            if (red.Count > 2)
+            if (ParityModel.Current != null)
+            {
+                // External parity model (ParityModel.cs): it reads both hands, so both are preprocessed first
+                if (red.Count > 2) PreprocessNotes.Detect(red, bombs, false);
+                if (blue.Count > 2) PreprocessNotes.Detect(blue, bombs, true);
+                ParityModel.Current.Predict(new ParityModelInput
+                {
+                    Red = red.Count > 2 ? red : [],
+                    Blue = blue.Count > 2 ? blue : [],
+                    Bombs = bombs ?? [],
+                    Walls = walls ?? [],
+                    Bpm = modifiers.baseBPM,
+                    MapVersion = modifiers.MapVersion,
+                });
+                if (red.Count > 2)
+                {
+                    redSwingData = SwingCreation.Process(red, false, modifiers);
+                    if (redSwingData.Count > 0)
+                    {
+                        SwingMovement.Calc(redSwingData, false);
+                        combinedSwingData.AddRange(redSwingData);
+                    }
+                }
+                if (blue.Count > 2)
+                {
+                    blueSwingData = SwingCreation.Process(blue, true, modifiers);
+                    if (blueSwingData.Count > 0)
+                    {
+                        SwingMovement.Calc(blueSwingData, true);
+                        combinedSwingData.AddRange(blueSwingData);
+                    }
+                }
+            }
+            else if (red.Count > 2)
             {
                 PreprocessNotes.Detect(red, bombs, false);
                 ParityPredictor.Predict(red, false, bombs);
@@ -42,7 +145,7 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
 
-            if (blue.Count > 2)
+            if (ParityModel.Current == null && blue.Count > 2)
             {
                 PreprocessNotes.Detect(blue, bombs, true);
                 ParityPredictor.Predict(blue, true, bombs);
@@ -55,51 +158,91 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 }
             }
             
-            combinedSwingData.Sort((a, b) => a.BpmTime.CompareTo(b.BpmTime));
+            combinedSwingData.Sort((a, b) =>
+            {
+                int cmp = a.Cubes[0].Seconds.CompareTo(b.Cubes[0].Seconds);
+                if (cmp != 0) return cmp;
+                return a.Cubes[0].Type.CompareTo(b.Cubes[0].Type);
+            });
+
             double balancedPass = 0.0;
             double balancedTech = 0.0;
 
             // Classify all walls (for difficulty calculation) and count unique dodge actions (for statistics)
-            var (dodgeWallsAll, crouchWallsAll, dodgeWallsCount, crouchWallsCount) = walls != null 
+            var (dodgeWallsAll, crouchWallsAll, dodgeWallsCount, crouchWallsCount, dodgeDuration, crouchDuration) = walls != null 
                 ? ClassifyWalls(walls) 
-                : (new List<Wall>(), new List<Wall>(), 0, 0);
+                : (new List<Wall>(), new List<Wall>(), 0, 0, 0, 0);
 
             if (combinedSwingData.Count > 0)
             {
-                // Use all classified walls for difficulty calculation
-                Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
-                
                 redSwingData = combinedSwingData.Where(x => x.Cubes[0].Type == 0).ToList();
                 blueSwingData = combinedSwingData.Where(x => x.Cubes[0].Type == 1).ToList();
 
-                var windowSizes = new HashSet<int> { 8, 16, 32, 64, 128 };
+                // Peak over 8 swings, only used to flag false positive parity errors; recomputed below once they're fixed
+                if (redSwingData.Count > 1)
+                {
+                    peakSustainedEBPM = CalculatePeakSustainedEBPM(redSwingData, 8);
+                }
+                if (blueSwingData.Count > 1)
+                {
+                    peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData, 8), peakSustainedEBPM);
+                }
+
+                // Resets faster than the map's peak sustained EBPM are probably not real: halve their doubled frequency
+                DetermineFalsePositive(combinedSwingData, peakSustainedEBPM);
+
+                if (redSwingData.Count > 1)
+                {
+                    peakSustainedEBPM = CalculatePeakSustainedEBPM(redSwingData);
+                }
+                if (blueSwingData.Count > 1)
+                {
+                    peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData), peakSustainedEBPM);
+                }
+
+                Difficulty.CalcSwingDiff(combinedSwingData, modifiers, dodgeWallsAll, crouchWallsAll);
+
+                // Blend of windows in seconds (real time: how long the hard parts last matters for failing, and very fast maps
+                // aren't rated on a few seconds of burst) and windows in swings (prod: dense sections count more)
                 double passDiffRed = 0.0;
                 double passDiffBlue = 0.0;
                 double passDiffCombined = 0.0;
 
-                foreach (var windowSize in windowSizes)
+                double combinedDensityReference = redSwingData.Count > 1 && blueSwingData.Count > 1 ? DENSITY_REFERENCE : DENSITY_REFERENCE / 2;
+                // A kind of window with no weight is skipped (the swing windows cost as much as the seconds ones)
+                foreach (var seconds in SECONDS_WINDOW_WEIGHT > 0 ? WindowSeconds : [])
                 {
+                    double weight = SECONDS_WINDOW_WEIGHT / WindowSeconds.Length;
                     if (redSwingData.Count > 1)
                     {
-                        passDiffRed += Difficulty.CalcAverage(redSwingData, windowSize / 2).Select(x => x.Pass).Max();
-                        peakSustainedEBPM = CalculatePeakSustainedEBPM(redSwingData, modifiers);
+                        passDiffRed += Difficulty.MaxAverageOverSeconds(redSwingData, seconds, modifiers, DENSITY_REFERENCE / 2, DENSITY_WEIGHT) * weight;
                     }
                     if (blueSwingData.Count > 1)
                     {
-                        passDiffBlue += Difficulty.CalcAverage(blueSwingData, windowSize / 2).Select(x => x.Pass).Max();
-                        peakSustainedEBPM = Math.Max(CalculatePeakSustainedEBPM(blueSwingData, modifiers), peakSustainedEBPM);
+                        passDiffBlue += Difficulty.MaxAverageOverSeconds(blueSwingData, seconds, modifiers, DENSITY_REFERENCE / 2, DENSITY_WEIGHT) * weight;
                     }
-                    passDiffCombined += Difficulty.CalcAverage(combinedSwingData, windowSize).Select(x => x.Pass).Max();
+                    passDiffCombined += Difficulty.MaxAverageOverSeconds(combinedSwingData, seconds, modifiers, combinedDensityReference, DENSITY_WEIGHT) * weight;
                 }
-                
-                passDiffRed /= windowSizes.Count;
-                passDiffBlue /= windowSizes.Count;
-                passDiffCombined /= windowSizes.Count;
+
+                foreach (var swings in SECONDS_WINDOW_WEIGHT < 1 ? WindowSwings : [])
+                {
+                    double weight = (1 - SECONDS_WINDOW_WEIGHT) / WindowSwings.Length;
+                    // Half of the window per hand
+                    if (redSwingData.Count > 1)
+                    {
+                        passDiffRed += Difficulty.MaxAverageOverSwings(redSwingData, swings / 2) * weight;
+                    }
+                    if (blueSwingData.Count > 1)
+                    {
+                        passDiffBlue += Difficulty.MaxAverageOverSwings(blueSwingData, swings / 2) * weight;
+                    }
+                    passDiffCombined += Difficulty.MaxAverageOverSwings(combinedSwingData, swings) * weight;
+                }
 
                 double easierHand = Math.Min(passDiffRed, passDiffBlue);
                 double harderHand = Math.Max(passDiffRed, passDiffBlue);
                 double handsRatio = 1.0;
-                
+
                 if (harderHand > 0 || passDiffCombined > 0)
                 {
                     handsRatio = Math.Min(easierHand / Math.Max(Math.Min(harderHand, passDiffCombined), 0.0001), 1.0);
@@ -118,20 +261,26 @@ namespace Analyzer.BeatmapScanner.Algorithm
                     swing.AngleStrain *= buff;
                     swing.RepositioningDistance *= buff;
                     swing.RotationAmount *= buff;
-                    swing.SwingTech = swing.AngleStrain + swing.RepositioningDistance + swing.RotationAmount;
+                    // Tech is the wrist work: angle strain and rotation.
+                    // Repositioning (arm movement) belongs to pass; tech fits players' accuracy loss beyond the Acc AI prediction
+                    // better without it.
+                    swing.SwingTech = STRAIN_WEIGHT * Math.Pow(swing.AngleStrain, STRAIN_POWER) + ROTATION_WEIGHT * Math.Pow(swing.RotationAmount, ROTATION_POWER);
+                    // Resets aren't tech in the players' eyes: without this, reset-heavy maps get top tech ratings
+                    if (swing.ParityErrors) swing.SwingTech /= 2;
                 }
 
                 combinedSwingData.Sort(CompareSwingTech);
-                double tech = AverageSwingTech(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.25)..]);
+                double tech = AverageSwingTech(CollectionsMarshal.AsSpan(combinedSwingData)[(int)(combinedSwingData.Count * 0.50)..]);
 
-                // https://www.desmos.com/calculator/dspid2fyyj
-                balancedTech = tech * (1.0 - Math.Pow(1.4, -balancedPass)) * BALANCED_TECH_SCALER;
+                balancedTech = BALANCED_TECH_SCALER * tech * Ratings.TechPassFactor(balancedPass);
             }
+
+            double linearPercentage = combinedSwingData.Count > 0 ? combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count : 0;
+            balancedPass *= 1 + LINEAR_PASS_SLOPE * Math.Max(0, linearPercentage - LINEAR_PASS_KNEE);
 
             var redMultiNotes = redSwingData.Count > 0 ? CountMultiNoteHits(redSwingData) : new Statistics();
             var blueMultiNotes = blueSwingData.Count > 0 ? CountMultiNoteHits(blueSwingData) : new Statistics();
 
-            // Label multi-note hit types for each swing
             if (redSwingData.Count > 0)
             {
                 LabelSwingMultiNoteHits(redSwingData);
@@ -141,12 +290,18 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 LabelSwingMultiNoteHits(blueSwingData);
             }
 
-            // Use the counted walls (respecting cooldown) for statistics
+            // Statistics use the counted walls (respecting cooldown)
             int dodgeWallCount = dodgeWallsCount;
             int crouchWallCount = crouchWallsCount;
 
             int parityErrorsCount = combinedSwingData.Count(s => s.ParityErrors);
             int bombAvoidanceCount = combinedSwingData.Count(s => s.BombAvoidance);
+
+            int chainCount = 0;
+            if (combinedSwingData.Count > 0)
+            {
+                chainCount = combinedSwingData.Where(x => x.Cubes[0].Chain).Count();
+            }
 
             var combinedStatistics = new Statistics
             {
@@ -156,83 +311,126 @@ namespace Analyzer.BeatmapScanner.Algorithm
                 CurvedSliders = redMultiNotes.CurvedSliders + blueMultiNotes.CurvedSliders,
                 Windows = redMultiNotes.Windows + blueMultiNotes.Windows,
                 SlantedWindows = redMultiNotes.SlantedWindows + blueMultiNotes.SlantedWindows,
+                Chains = chainCount,
                 DodgeWalls = dodgeWallCount,
+                DodgeWallDuration = dodgeDuration,
                 CrouchWalls = crouchWallCount,
+                CrouchWallDuration = crouchDuration,
                 ParityErrors = parityErrorsCount,
                 BombAvoidances = bombAvoidanceCount,
-                LinearSwings = combinedSwingData.Count(s => s.IsLinear)
+                LinearSwings = combinedSwingData.Count(s => s.IsLinear),
+                Inlines = inlines,
             };
 
-            combinedSwingData.Sort((x, y) => x.BpmTime.CompareTo(y.BpmTime));
-            double multiRating = 0;
+            combinedSwingData.Sort((x, y) =>
+            {
+                int cmp = x.Cubes[0].BpmTime.CompareTo(y.Cubes[0].BpmTime);
+                if (cmp != 0) return cmp;
+                return x.Cubes[0].Type.CompareTo(y.Cubes[0].Type);
+            });
+
+            double multiPercentage = 0;
             if (combinedSwingData.Count > 0)
             {
-                multiRating = CalculateMultiNoteRating(combinedStatistics, combinedSwingData.Count);
+                multiPercentage = CalculateMultiNotePercentage(combinedStatistics, combinedSwingData.Count);
             }
 
             Ratings ratings = new Ratings
             {
                 PassRating = balancedPass,
                 TechRating = balancedTech,
-                LowNoteNerf = CalculateLowNoteNerf(combinedSwingData.Count),
                 Statistics = combinedStatistics,
                 SwingData = combinedSwingData,
                 DodgeWalls = dodgeWallsAll,
                 CrouchWalls = crouchWallsAll,
-                LinearPercentage = combinedSwingData.Count(s => s.IsLinear) / (double)combinedSwingData.Count,
+                LinearPercentage = linearPercentage,
                 PeakSustainedEBPM = peakSustainedEBPM,
-                MultiRating = multiRating
+                HitDistance = combinedSwingData.Count > 0 ? combinedSwingData.Average(s => s.HitDistance) : 0,
+                HardSwingRatio = redSwingData.Count > 1 && blueSwingData.Count > 1 ? HardSwingRatio(combinedSwingData) : 0,
+                MultiPercentage = multiPercentage
             };
 
             return ratings;
         }
 
-        // https://www.desmos.com/calculator/i4mh0n2ttd
-        private static double CalculateLowNoteNerf(int noteCount)
+        // Ratings.HardSwingRatio: the hardest 10% of swings' mean difficulty over the highest average of any 8 s of the map
+        // (song time, from each swing on; no density factor). swingData in time order.
+        private const double HARD_SWING_WINDOW = 8;
+        private static double HardSwingRatio(List<SwingData> swingData)
         {
-            double clamped = Math.Max(20, Math.Min(200, noteCount));
-            return 0.6 + (clamped - 20) / 450.0;
+            int count = swingData.Count;
+            if (count < 2) return 0;
+            double last = swingData[count - 1].Cubes[0].Seconds;
+            double peak = 0, sum = 0;
+            int end = 0;
+            for (int start = 0; start < count; start++)
+            {
+                double windowEnd = swingData[start].Cubes[0].Seconds + HARD_SWING_WINDOW;
+                if (windowEnd > last) break;
+                if (end < start) { end = start; sum = 0; }
+                while (end < count && swingData[end].Cubes[0].Seconds < windowEnd) { sum += swingData[end].SwingDiff; end++; }
+                if (end > start) peak = Math.Max(peak, sum / (end - start));
+                sum -= swingData[start].SwingDiff;
+            }
+            if (peak <= 0) return 0;
+            var hardest = swingData.Select(s => s.SwingDiff).OrderByDescending(d => d).Take(Math.Max(1, count / 10));
+            return hardest.Average() / peak;
         }
 
-        private const double STACK_VALUE = 1.05;
-        private const double TOWER_VALUE = 1.1;
-        private const double SLIDER_VALUE = 1.05;
-        private const double CURVED_SLIDER_VALUE = 1.5;
-        private const double WINDOW_VALUE = 1.1;
-
-        private static double CalculateMultiNoteRating(Statistics stats, int swingCount)
+        private static double CalculateMultiNotePercentage(Statistics stats, int swingCount)
         {
-            double multiNoteHits = stats.Stacks * STACK_VALUE + stats.Towers * TOWER_VALUE + stats.Sliders * SLIDER_VALUE + stats.CurvedSliders * CURVED_SLIDER_VALUE +
-                                   (stats.Windows + stats.SlantedWindows) * WINDOW_VALUE;
+            double multiNoteHits = stats.Stacks + stats.Towers + stats.Sliders + stats.CurvedSliders +
+                                   stats.Windows + stats.SlantedWindows + stats.Chains;
             return multiNoteHits / swingCount;
         }
 
         private static readonly Comparer<SwingData> CompareSwingTech = 
             Comparer<SwingData>.Create((a, b) => (a.SwingTech).CompareTo(b.SwingTech));
 
-        private static double CalculatePeakSustainedEBPM(List<SwingData> swingData, Modifiers modifiers)
+        private static double CalculatePeakSustainedEBPM(List<SwingData> swingData, int count = 4)
         {
             if (swingData.Count == 0)
                 return 0.0;
 
-            double bpm = modifiers.modifiedBPM;
-
-            int windowSize = Math.Min(4, swingData.Count);
+            int windowSize = Math.Min(count, swingData.Count);
             double maxEbpm = 0.0;
+
             for (int i = 0; i <= swingData.Count - windowSize; i++)
             {
-                double ebpmSum = 0.0;
+                double freqSum = 0.0;
+
                 for (int j = i; j < i + windowSize; j++)
                 {
-                    ebpmSum += swingData[j].SwingFrequency * (bpm / 2);
+                    freqSum += swingData[j].SwingFrequency; // already 1 / seconds
                 }
-                double averageEbpm = ebpmSum / windowSize;
-                if (averageEbpm > maxEbpm)
+
+                double avgFrequency = freqSum / windowSize;
+
+                // Hz to BPM, divided by 2 because EBPM counts one swing per half beat
+                double ebpm = avgFrequency * 60.0 / 2;
+
+                if (ebpm > maxEbpm)
                 {
-                    maxEbpm = averageEbpm;
+                    maxEbpm = ebpm;
                 }
             }
+
             return maxEbpm;
+        }
+
+        private static void DetermineFalsePositive(List<SwingData> swingData, double peakSustainedEbpm)
+        {
+            foreach(var swing in swingData)
+            {
+                double swingEbpm = swing.SwingFrequency * 60.0 / 2;
+
+                // A reset above the expected EBPM is flagged FalsePositive for EBPM and ratings
+                if (swingEbpm > peakSustainedEbpm + 1 && swing.ParityErrors)
+                {
+                    swing.FalsePositive = true;
+                    swing.SwingFrequency /= 2;
+                }
+            }
         }
 
         private static double AverageSwingTech(Span<SwingData> list)

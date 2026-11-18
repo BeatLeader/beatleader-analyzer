@@ -20,7 +20,22 @@ namespace Analyzer.BeatmapScanner
                 cubes.Add(cube);
             }
 
-            cubes = cubes.OrderBy(c => c.BpmTime).ToList();
+            cubes.Sort((a, b) =>
+            {
+                int cmp = a.BpmTime.CompareTo(b.BpmTime);
+                if (cmp != 0) return cmp;
+
+                cmp = a.Type.CompareTo(b.Type);
+                if (cmp != 0) return cmp;
+
+                cmp = a.X.CompareTo(b.X);
+                if (cmp != 0) return cmp;
+
+                cmp = a.Y.CompareTo(b.Y);
+                if (cmp != 0) return cmp;
+
+                return a.CutDirection.CompareTo(b.CutDirection);
+            });
 
             foreach (var chain in chains)
             {
