@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <ParserProjectPath>..\Parser\beatleader-parser\Parser.csproj</ParserProjectPath>
+  </PropertyGroup>
+</Project>

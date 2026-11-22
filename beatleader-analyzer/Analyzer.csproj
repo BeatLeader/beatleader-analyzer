@@ -17,8 +17,8 @@
     <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Parser\beatleader-parser\Parser.csproj" />
+  <ItemGroup Condition="'$(ParserProjectPath)' != ''">
+    <ProjectReference Include="$(ParserProjectPath)" />
   </ItemGroup>
 
   <!-- Parity model (BeatmapScanner/Parity/MlParityModel.cs), exported by beatsaber-replays-ai-2 paritymodel/production.py -->
